@@ -52,19 +52,20 @@
 - canonical catalog taxonomy slice implemented with tenant-aware tables, API reads, and richer product master fields
 - canonical catalog product identifiers slice implemented with tenant-aware persistence and API reads
 - catalog product description added to the canonical product shape, contracts, and create/read flow
+- platform outbox implemented with transactional event append for `catalog.product_created`
+- production-path JWT/OIDC authentication adapter added while preserving static bootstrap auth for local development
+- database-backed governance thresholds and policies implemented and wired into real runtime behavior
+- contract validation and generation scripts implemented and generating minimal artifacts in `packages/generated`
 
 ## Next
 
 - keep ADR set complete and stable
-- close the contract validation and generation gap behind the current authored contracts
-- introduce real event publication and outbox discipline for at least one mutation flow
-- evolve governance from first database-backed feature flags into broader thresholds and policies
-- expand `catalog` from the current foundation slice to the canonical product model
-- apply the new catalog taxonomy migration and validate the runtime slice end-to-end
-- evolve bootstrap auth toward a production-grade identity integration path
+- validate migrations `0008`, `0009`, and `0010` end-to-end in the running server with smoke coverage
+- enforce contract validation and artifact generation in team workflow and CI
+- connect the JWT/OIDC auth path to a real issuer configuration
+- review the canonical `catalog` as pricing-ready and freeze any last non-pricing gaps
 - continue domain expansion from the proven tenant-aware foundation
-- define real generators and validators behind the script entrypoints
-- prepare phase transition checklist from planning to implementation
+- prepare phase transition checklist from foundation hardening to domain expansion
 - use the MetalDocs reuse matrix to decide the first extracted patterns without copying unsafe defaults
 
 ## Blockers

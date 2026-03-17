@@ -26,7 +26,7 @@ func (f *fakePermissionChecker) HasPermission(context.Context, string, iamdomain
 
 func TestCatalogHandlerCreatesProduct(t *testing.T) {
 	repo := &fakeCatalogRepository{}
-	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true})
+	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true}, &fakeProductDescriptionGuard{})
 	handler := cataloghttp.NewHandler(service, &fakePermissionChecker{allowed: true})
 
 	mux := http.NewServeMux()
@@ -53,7 +53,7 @@ func TestCatalogHandlerCreatesProduct(t *testing.T) {
 
 func TestCatalogHandlerCreatesProductWithIdentifiers(t *testing.T) {
 	repo := &fakeCatalogRepository{}
-	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true})
+	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true}, &fakeProductDescriptionGuard{})
 	handler := cataloghttp.NewHandler(service, &fakePermissionChecker{allowed: true})
 
 	mux := http.NewServeMux()
@@ -91,7 +91,7 @@ func TestCatalogHandlerListsProducts(t *testing.T) {
 			},
 		},
 	}
-	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true})
+	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true}, &fakeProductDescriptionGuard{})
 	handler := cataloghttp.NewHandler(service, &fakePermissionChecker{allowed: true})
 
 	mux := http.NewServeMux()
@@ -127,7 +127,7 @@ func TestCatalogHandlerListsTaxonomyLevels(t *testing.T) {
 			},
 		},
 	}
-	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true})
+	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true}, &fakeProductDescriptionGuard{})
 	handler := cataloghttp.NewHandler(service, &fakePermissionChecker{allowed: true})
 
 	mux := http.NewServeMux()
@@ -162,7 +162,7 @@ func TestCatalogHandlerListsProductIdentifiers(t *testing.T) {
 			},
 		},
 	}
-	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true})
+	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true}, &fakeProductDescriptionGuard{})
 	handler := cataloghttp.NewHandler(service, &fakePermissionChecker{allowed: true})
 
 	mux := http.NewServeMux()
@@ -195,7 +195,7 @@ func TestCatalogHandlerListsTaxonomyNodes(t *testing.T) {
 			},
 		},
 	}
-	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true})
+	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true}, &fakeProductDescriptionGuard{})
 	handler := cataloghttp.NewHandler(service, &fakePermissionChecker{allowed: true})
 
 	mux := http.NewServeMux()
@@ -218,7 +218,7 @@ func TestCatalogHandlerListsTaxonomyNodes(t *testing.T) {
 
 func TestCatalogHandlerRejectsForbiddenUser(t *testing.T) {
 	repo := &fakeCatalogRepository{}
-	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true})
+	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true}, &fakeProductDescriptionGuard{})
 	handler := cataloghttp.NewHandler(service, &fakePermissionChecker{allowed: false})
 
 	mux := http.NewServeMux()
@@ -238,7 +238,7 @@ func TestCatalogHandlerRejectsForbiddenUser(t *testing.T) {
 
 func TestCatalogHandlerRejectsGovernanceDisabledCreate(t *testing.T) {
 	repo := &fakeCatalogRepository{}
-	service := application.NewService(repo, &fakeProductCreationGuard{enabled: false})
+	service := application.NewService(repo, &fakeProductCreationGuard{enabled: false}, &fakeProductDescriptionGuard{})
 	handler := cataloghttp.NewHandler(service, &fakePermissionChecker{allowed: true})
 
 	mux := http.NewServeMux()

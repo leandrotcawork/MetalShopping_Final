@@ -6,19 +6,22 @@ import (
 	"fmt"
 
 	"metalshopping/server_core/internal/modules/catalog/domain"
+	catalogevents "metalshopping/server_core/internal/modules/catalog/events"
 	"metalshopping/server_core/internal/modules/catalog/ports"
 	pgdb "metalshopping/server_core/internal/platform/db/postgres"
+	"metalshopping/server_core/internal/platform/messaging/outbox"
 )
 
 type Repository struct {
-	db *sql.DB
+	db          *sql.DB
+	outboxStore *outbox.Store
 }
 
-func NewRepository(db *sql.DB) *Repository {
-	return &Repository{db: db}
+func NewRepository(db *sql.DB, outboxStore *outbox.Store) *Repository {
+	return &Repository{db: db, outboxStore: outboxStore}
 }
 
-func (r *Repository) CreateProduct(ctx context.Context, product domain.Product) error {
+func (r *Repository) CreateProduct(ctx context.Context, product domain.Product, traceID string) error {
 	tx, err := pgdb.BeginTenantTx(ctx, r.db, product.TenantID, nil)
 	if err != nil {
 		return err
@@ -95,6 +98,16 @@ VALUES (
 			identifier.UpdatedAt,
 		); err != nil {
 			return fmt.Errorf("insert catalog product identifier: %w", err)
+		}
+	}
+
+	if r.outboxStore != nil {
+		record, err := catalogevents.NewProductCreatedOutboxRecord(product, traceID, product.CreatedAt)
+		if err != nil {
+			return err
+		}
+		if err := r.outboxStore.AppendInTx(ctx, tx, []outbox.Record{record}); err != nil {
+			return err
 		}
 	}
 

@@ -10,6 +10,7 @@ import (
 )
 
 type UpsertRoleAssignmentCommand struct {
+	TenantID    string
 	UserID      string
 	DisplayName string
 	Role        string
@@ -18,12 +19,14 @@ type UpsertRoleAssignmentCommand struct {
 
 type AdminService struct {
 	writer ports.RoleAssignmentWriter
+	guard  ports.AdminRoleAssignmentGuard
 	now    func() time.Time
 }
 
-func NewAdminService(writer ports.RoleAssignmentWriter) *AdminService {
+func NewAdminService(writer ports.RoleAssignmentWriter, guard ports.AdminRoleAssignmentGuard) *AdminService {
 	return &AdminService{
 		writer: writer,
+		guard:  guard,
 		now:    func() time.Time { return time.Now().UTC() },
 	}
 }
@@ -37,6 +40,11 @@ func (s *AdminService) UpsertRoleAssignment(ctx context.Context, cmd UpsertRoleA
 	actor := strings.TrimSpace(cmd.AssignedBy)
 	if actor == "" {
 		return domain.ErrActorRequired
+	}
+	if s.guard != nil {
+		if err := s.guard.ValidateAdminRoleAssignment(ctx, strings.TrimSpace(cmd.TenantID), role); err != nil {
+			return err
+		}
 	}
 
 	assignment := domain.RoleAssignment{

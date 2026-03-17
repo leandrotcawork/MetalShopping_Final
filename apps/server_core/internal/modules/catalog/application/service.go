@@ -20,6 +20,7 @@ type CreateProductIdentifierInput struct {
 
 type CreateProductCommand struct {
 	TenantID              string
+	TraceID               string
 	SKU                   string
 	Name                  string
 	Description           string
@@ -33,13 +34,15 @@ type CreateProductCommand struct {
 type Service struct {
 	repo               ports.Repository
 	productCreateGuard ports.ProductCreationGuard
+	descriptionGuard   ports.ProductDescriptionGuard
 	now                func() time.Time
 }
 
-func NewService(repo ports.Repository, productCreateGuard ports.ProductCreationGuard) *Service {
+func NewService(repo ports.Repository, productCreateGuard ports.ProductCreationGuard, descriptionGuard ports.ProductDescriptionGuard) *Service {
 	return &Service{
 		repo:               repo,
 		productCreateGuard: productCreateGuard,
+		descriptionGuard:   descriptionGuard,
 		now:                func() time.Time { return time.Now().UTC() },
 	}
 }
@@ -69,6 +72,11 @@ func (s *Service) CreateProduct(ctx context.Context, cmd CreateProductCommand) (
 	if err := product.ValidateForCreate(); err != nil {
 		return domain.Product{}, err
 	}
+	if s.descriptionGuard != nil {
+		if err := s.descriptionGuard.ValidateDescription(ctx, product.TenantID, product.Description); err != nil {
+			return domain.Product{}, err
+		}
+	}
 	if s.productCreateGuard != nil {
 		enabled, err := s.productCreateGuard.IsProductCreationEnabled(ctx, product.TenantID)
 		if err != nil {
@@ -79,7 +87,7 @@ func (s *Service) CreateProduct(ctx context.Context, cmd CreateProductCommand) (
 		}
 	}
 
-	if err := s.repo.CreateProduct(ctx, product); err != nil {
+	if err := s.repo.CreateProduct(ctx, product, strings.TrimSpace(cmd.TraceID)); err != nil {
 		return domain.Product{}, err
 	}
 	return product, nil

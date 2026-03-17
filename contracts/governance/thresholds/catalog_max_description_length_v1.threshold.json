@@ -1,0 +1,15 @@
+{
+  "threshold_name": "catalog.max_description_length",
+  "version": "v1",
+  "status": "draft",
+  "bounded_context": "catalog",
+  "scope": [
+    "global",
+    "environment",
+    "tenant",
+    "module",
+    "entity/profile"
+  ],
+  "description": "Defines the maximum catalog product description length resolved across runtime governance scopes.",
+  "schema_ref": "../../api/jsonschema/governance_threshold_v1.schema.json"
+}

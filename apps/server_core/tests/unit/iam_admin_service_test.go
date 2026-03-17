@@ -22,9 +22,17 @@ func (f *fakeRoleAssignmentWriter) UpsertRoleAssignment(_ context.Context, assig
 	return nil
 }
 
+type fakeAdminRoleAssignmentGuard struct {
+	err error
+}
+
+func (f *fakeAdminRoleAssignmentGuard) ValidateAdminRoleAssignment(context.Context, string, domain.Role) error {
+	return f.err
+}
+
 func TestAdminServiceUpsertsAssignment(t *testing.T) {
 	writer := &fakeRoleAssignmentWriter{}
-	service := application.NewAdminService(writer)
+	service := application.NewAdminService(writer, &fakeAdminRoleAssignmentGuard{})
 
 	err := service.UpsertRoleAssignment(context.Background(), application.UpsertRoleAssignmentCommand{
 		UserID:      "user-1",
@@ -45,7 +53,7 @@ func TestAdminServiceUpsertsAssignment(t *testing.T) {
 
 func TestAdminServiceRejectsInvalidRole(t *testing.T) {
 	writer := &fakeRoleAssignmentWriter{}
-	service := application.NewAdminService(writer)
+	service := application.NewAdminService(writer, &fakeAdminRoleAssignmentGuard{})
 
 	err := service.UpsertRoleAssignment(context.Background(), application.UpsertRoleAssignmentCommand{
 		UserID:     "user-1",
@@ -59,7 +67,7 @@ func TestAdminServiceRejectsInvalidRole(t *testing.T) {
 
 func TestAdminServiceRequiresActor(t *testing.T) {
 	writer := &fakeRoleAssignmentWriter{}
-	service := application.NewAdminService(writer)
+	service := application.NewAdminService(writer, &fakeAdminRoleAssignmentGuard{})
 
 	err := service.UpsertRoleAssignment(context.Background(), application.UpsertRoleAssignmentCommand{
 		UserID: "user-1",

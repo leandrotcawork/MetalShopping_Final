@@ -179,6 +179,7 @@ func (h *Handler) handleCreateProduct(w http.ResponseWriter, r *http.Request, us
 
 	product, err := h.service.CreateProduct(r.Context(), application.CreateProductCommand{
 		TenantID:              tenantID,
+		TraceID:               requestTraceID(r),
 		SKU:                   req.SKU,
 		Name:                  req.Name,
 		Description:           req.Description,
@@ -190,7 +191,7 @@ func (h *Handler) handleCreateProduct(w http.ResponseWriter, r *http.Request, us
 	})
 	if err != nil {
 		switch {
-		case errors.Is(err, domain.ErrTenantIDRequired), errors.Is(err, domain.ErrSKURequired), errors.Is(err, domain.ErrProductNameRequired), errors.Is(err, domain.ErrInvalidProductStatus), errors.Is(err, domain.ErrProductIDRequired), errors.Is(err, domain.ErrProductIdentifierTypeRequired), errors.Is(err, domain.ErrProductIdentifierValueRequired):
+		case errors.Is(err, domain.ErrTenantIDRequired), errors.Is(err, domain.ErrSKURequired), errors.Is(err, domain.ErrProductNameRequired), errors.Is(err, domain.ErrProductDescriptionTooLong), errors.Is(err, domain.ErrInvalidProductStatus), errors.Is(err, domain.ErrProductIDRequired), errors.Is(err, domain.ErrProductIdentifierTypeRequired), errors.Is(err, domain.ErrProductIdentifierValueRequired):
 			writeAPIError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error(), requestTraceID(r))
 		case errors.Is(err, domain.ErrProductCreationDisabled):
 			writeAPIError(w, http.StatusForbidden, "GOVERNANCE_DISABLED", err.Error(), requestTraceID(r))

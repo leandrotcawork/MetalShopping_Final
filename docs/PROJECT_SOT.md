@@ -88,22 +88,25 @@ The repository now includes:
 
 - executable `server_core` bootstrap
 - Postgres platform foundation
-- centralized auth bootstrap flow
+- centralized auth flow with local static bootstrap and production-path JWT/OIDC adapter
 - tenancy runtime and tenancy-aware Postgres session helpers
 - runtime governance registry and resolvers
+- database-backed governance for feature flags, thresholds, and policies
+- platform outbox foundation and first real mutation-to-event path
 - first structural module: `iam`
 - first tenant-aware business module: `catalog`
 - initial API, event, and governance contracts
+- functional contract validation and generated artifact scripts
 
 ## Current structural gaps
 
 The most important remaining gaps are:
 
-- contract validation and generation are not yet enforced end-to-end
-- event publication and outbox flow are not yet wired into real mutations
-- auth is still bootstrap-grade, not identity-provider-grade
-- governance exists as runtime foundation but is not yet shaping module behavior at execution time
- - catalog product model is still a foundation slice and must be expanded to the canonical model before pricing grows on top of it
+- production identity integration is not yet connected to a real issuer or JWKS source
+- outbox exists and catalog emits real events, but broker delivery and worker consumption are still not in place
+- governance is operational in runtime, but broader operational surfaces still need administrative mutation paths
+- catalog is now a strong canonical foundation, but pricing-readiness still needs one final review before domain expansion
+- contract validation and generation are now functional locally and must next be enforced in team workflow and CI
 
 ## Planning deliverables
 

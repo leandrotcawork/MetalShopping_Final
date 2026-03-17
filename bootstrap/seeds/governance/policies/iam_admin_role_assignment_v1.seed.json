@@ -1,0 +1,10 @@
+{
+  "policy_name": "iam.admin_role_assignment",
+  "scope_type": "global",
+  "scope_key": "global",
+  "policy_json": {
+    "allow_admin_role_assignment": true
+  },
+  "updated_by": "bootstrap",
+  "reason": "Initial IAM bootstrap policy allowing admin role assignment."
+}

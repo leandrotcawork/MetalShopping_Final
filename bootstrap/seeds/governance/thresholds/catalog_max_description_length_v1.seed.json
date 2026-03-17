@@ -1,0 +1,8 @@
+{
+  "threshold_name": "catalog.max_description_length",
+  "scope_type": "global",
+  "scope_key": "global",
+  "threshold_value": 4000,
+  "updated_by": "bootstrap",
+  "reason": "Initial maximum description length for canonical catalog products."
+}

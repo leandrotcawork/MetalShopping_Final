@@ -8,7 +8,7 @@ import (
 )
 
 type Repository interface {
-	CreateProduct(ctx context.Context, product domain.Product) error
+	CreateProduct(ctx context.Context, product domain.Product, traceID string) error
 	ListProducts(ctx context.Context, tenantID string) ([]domain.Product, error)
 	ListProductIdentifiers(ctx context.Context, tenantID, productID string) ([]domain.ProductIdentifier, error)
 	ListTaxonomyNodes(ctx context.Context, tenantID string, filter TaxonomyNodeFilter) ([]domain.TaxonomyNode, error)
@@ -26,4 +26,8 @@ type PermissionChecker interface {
 
 type ProductCreationGuard interface {
 	IsProductCreationEnabled(ctx context.Context, tenantID string) (bool, error)
+}
+
+type ProductDescriptionGuard interface {
+	ValidateDescription(ctx context.Context, tenantID, description string) error
 }

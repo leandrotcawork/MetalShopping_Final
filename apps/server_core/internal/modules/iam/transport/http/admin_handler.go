@@ -64,6 +64,7 @@ func (h *AdminHandler) handleUpsertRoleAssignment(w http.ResponseWriter, r *http
 	}
 
 	err = h.service.UpsertRoleAssignment(r.Context(), application.UpsertRoleAssignmentCommand{
+		TenantID:    principal.TenantID,
 		UserID:      strings.TrimSpace(parts[0]),
 		DisplayName: req.DisplayName,
 		Role:        req.Role,

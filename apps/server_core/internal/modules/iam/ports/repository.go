@@ -13,3 +13,7 @@ type RoleAssignmentWriter interface {
 type RoleAssignmentReader interface {
 	RolesByUserID(ctx context.Context, userID string) ([]domain.Role, error)
 }
+
+type AdminRoleAssignmentGuard interface {
+	ValidateAdminRoleAssignment(ctx context.Context, tenantID string, role domain.Role) error
+}

@@ -2,10 +2,15 @@ package unit
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"metalshopping/server_core/internal/platform/auth"
 )
@@ -127,4 +132,96 @@ func TestAuthMiddlewareReturnsInternalErrorForAuthenticatorFailure(t *testing.T)
 	if rr.Code != http.StatusInternalServerError {
 		t.Fatalf("expected 500, got %d", rr.Code)
 	}
+}
+
+func TestJWTAuthenticatorAuthenticatesValidToken(t *testing.T) {
+	t.Setenv("MS_AUTH_JWT_ALGORITHM", "HS256")
+	t.Setenv("MS_AUTH_JWT_ISSUER", "metalshopping-test")
+	t.Setenv("MS_AUTH_JWT_AUDIENCE", "metalshopping-api")
+	t.Setenv("MS_AUTH_JWT_HMAC_SECRET", "super-secret")
+
+	authenticator, err := auth.NewJWTAuthenticatorFromEnv()
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	token := buildHS256JWT(t, "super-secret", map[string]any{
+		"sub":       "user-123",
+		"iss":       "metalshopping-test",
+		"aud":       "metalshopping-api",
+		"tenant_id": "tenant-xyz",
+		"email":     "user@example.com",
+		"name":      "Example User",
+		"exp":       time.Now().Add(5 * time.Minute).Unix(),
+	})
+
+	principal, err := authenticator.Authenticate(context.Background(), token)
+	if err != nil {
+		t.Fatalf("expected token to authenticate, got %v", err)
+	}
+	if principal.SubjectID != "user-123" || principal.TenantID != "tenant-xyz" {
+		t.Fatalf("unexpected principal: %+v", principal)
+	}
+}
+
+func TestJWTAuthenticatorRejectsInvalidIssuer(t *testing.T) {
+	t.Setenv("MS_AUTH_JWT_ALGORITHM", "HS256")
+	t.Setenv("MS_AUTH_JWT_ISSUER", "metalshopping-prod")
+	t.Setenv("MS_AUTH_JWT_AUDIENCE", "metalshopping-api")
+	t.Setenv("MS_AUTH_JWT_HMAC_SECRET", "super-secret")
+
+	authenticator, err := auth.NewJWTAuthenticatorFromEnv()
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	token := buildHS256JWT(t, "super-secret", map[string]any{
+		"sub":       "user-123",
+		"iss":       "wrong-issuer",
+		"aud":       "metalshopping-api",
+		"tenant_id": "tenant-xyz",
+		"exp":       time.Now().Add(5 * time.Minute).Unix(),
+	})
+
+	if _, err := authenticator.Authenticate(context.Background(), token); !errors.Is(err, auth.ErrUnauthenticated) {
+		t.Fatalf("expected unauthenticated error, got %v", err)
+	}
+}
+
+func TestAuthenticatorFromEnvKeepsStaticDefault(t *testing.T) {
+	t.Setenv("MS_AUTH_MODE", "")
+	t.Setenv("MS_AUTH_STATIC_BEARER_TOKEN", "local-token")
+	t.Setenv("MS_AUTH_STATIC_SUBJECT_ID", "bootstrap-user")
+
+	authenticator, err := auth.NewAuthenticatorFromEnv()
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if _, ok := authenticator.(*auth.StaticBearerAuthenticator); !ok {
+		t.Fatalf("expected static authenticator by default, got %T", authenticator)
+	}
+}
+
+func buildHS256JWT(t *testing.T, secret string, claims map[string]any) string {
+	t.Helper()
+
+	headerJSON, err := json.Marshal(map[string]any{
+		"alg": "HS256",
+		"typ": "JWT",
+	})
+	if err != nil {
+		t.Fatalf("marshal jwt header: %v", err)
+	}
+	payloadJSON, err := json.Marshal(claims)
+	if err != nil {
+		t.Fatalf("marshal jwt claims: %v", err)
+	}
+
+	header := base64.RawURLEncoding.EncodeToString(headerJSON)
+	payload := base64.RawURLEncoding.EncodeToString(payloadJSON)
+	message := header + "." + payload
+	mac := hmac.New(sha256.New, []byte(secret))
+	_, _ = mac.Write([]byte(message))
+	signature := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+	return message + "." + signature
 }

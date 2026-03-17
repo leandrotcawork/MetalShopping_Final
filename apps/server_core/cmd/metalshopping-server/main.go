@@ -12,6 +12,7 @@ import (
 	catalogpg "metalshopping/server_core/internal/modules/catalog/adapters/postgres"
 	catalogapp "metalshopping/server_core/internal/modules/catalog/application"
 	cataloghttp "metalshopping/server_core/internal/modules/catalog/transport/http"
+	iamgov "metalshopping/server_core/internal/modules/iam/adapters/governance"
 	iampg "metalshopping/server_core/internal/modules/iam/adapters/postgres"
 	iamapp "metalshopping/server_core/internal/modules/iam/application"
 	iamhttp "metalshopping/server_core/internal/modules/iam/transport/http"
@@ -19,6 +20,9 @@ import (
 	pgdb "metalshopping/server_core/internal/platform/db/postgres"
 	governancebootstrap "metalshopping/server_core/internal/platform/governance/bootstrap"
 	"metalshopping/server_core/internal/platform/governance/feature_flags"
+	"metalshopping/server_core/internal/platform/governance/policy_resolver"
+	"metalshopping/server_core/internal/platform/governance/threshold_resolver"
+	"metalshopping/server_core/internal/platform/messaging/outbox"
 	"metalshopping/server_core/internal/platform/observability"
 	"metalshopping/server_core/internal/platform/runtime_config"
 	"metalshopping/server_core/internal/platform/tenancy_runtime"
@@ -41,7 +45,7 @@ func main() {
 	}
 	defer func() { _ = db.Close() }()
 
-	authenticator, err := platformauth.NewStaticBearerAuthenticatorFromEnv()
+	authenticator, err := platformauth.NewAuthenticatorFromEnv()
 	if err != nil {
 		log.Fatalf("load bootstrap authenticator: %v", err)
 	}
@@ -50,15 +54,27 @@ func main() {
 	if err != nil {
 		log.Fatalf("load governance feature flags from database: %v", err)
 	}
+	thresholdResolver, err := threshold_resolver.NewPostgresResolver(context.Background(), db, governanceRegistry)
+	if err != nil {
+		log.Fatalf("load governance thresholds from database: %v", err)
+	}
+	policyResolver, err := policy_resolver.NewPostgresResolver(context.Background(), db, governanceRegistry)
+	if err != nil {
+		log.Fatalf("load governance policies from database: %v", err)
+	}
+	outboxStore := outbox.NewStore(db)
+	outboxDispatcher := outbox.NewDispatcher(outboxStore, outbox.NewLoggingPublisher(log.Default()))
+	go outboxDispatcher.Run(context.Background())
 
 	iamRepo := iampg.NewRepository(db)
-	catalogRepo := catalogpg.NewRepository(db)
+	catalogRepo := catalogpg.NewRepository(db, outboxStore)
 	iamAuthorizer := iamapp.NewStaticAuthorizer()
 	iamAuthorization := iamapp.NewAuthorizationService(iamRepo, iamAuthorizer)
-	iamAdminService := iamapp.NewAdminService(iamRepo)
+	iamAdminService := iamapp.NewAdminService(iamRepo, iamgov.NewAdminPolicyGuard(policyResolver, environment))
 	iamAdminHandler := iamhttp.NewAdminHandler(iamAdminService, iamAuthorization)
 	catalogProductCreationGuard := cataloggov.NewProductCreationGuard(featureFlagResolver, environment)
-	catalogService := catalogapp.NewService(catalogRepo, catalogProductCreationGuard)
+	catalogDescriptionGuard := cataloggov.NewDescriptionGuard(thresholdResolver, environment)
+	catalogService := catalogapp.NewService(catalogRepo, catalogProductCreationGuard, catalogDescriptionGuard)
 	catalogHandler := cataloghttp.NewHandler(catalogService, iamAuthorization)
 
 	authMiddleware := platformauth.NewMiddleware(authenticator, []string{

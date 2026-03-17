@@ -12,6 +12,7 @@ import (
 
 type fakeCatalogRepository struct {
 	created       domain.Product
+	traceID       string
 	list          []domain.Product
 	identifiers   []domain.ProductIdentifier
 	taxonomyNodes []domain.TaxonomyNode
@@ -19,11 +20,12 @@ type fakeCatalogRepository struct {
 	err           error
 }
 
-func (f *fakeCatalogRepository) CreateProduct(_ context.Context, product domain.Product) error {
+func (f *fakeCatalogRepository) CreateProduct(_ context.Context, product domain.Product, traceID string) error {
 	if f.err != nil {
 		return f.err
 	}
 	f.created = product
+	f.traceID = traceID
 	return nil
 }
 
@@ -67,12 +69,21 @@ func (f *fakeProductCreationGuard) IsProductCreationEnabled(context.Context, str
 	return f.enabled, nil
 }
 
+type fakeProductDescriptionGuard struct {
+	err error
+}
+
+func (f *fakeProductDescriptionGuard) ValidateDescription(context.Context, string, string) error {
+	return f.err
+}
+
 func TestCatalogServiceCreatesProduct(t *testing.T) {
 	repo := &fakeCatalogRepository{}
-	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true})
+	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true}, &fakeProductDescriptionGuard{})
 
 	product, err := service.CreateProduct(context.Background(), application.CreateProductCommand{
 		TenantID:              "tenant-1",
+		TraceID:               "trace-catalog-create",
 		SKU:                   "SKU-001",
 		Name:                  "Steel Sheet",
 		Description:           "Galvanized steel sheet for roofing.",
@@ -101,6 +112,9 @@ func TestCatalogServiceCreatesProduct(t *testing.T) {
 	if repo.created.Description != "Galvanized steel sheet for roofing." {
 		t.Fatalf("expected description to be propagated, got %q", repo.created.Description)
 	}
+	if repo.traceID != "trace-catalog-create" {
+		t.Fatalf("expected trace id to be propagated, got %q", repo.traceID)
+	}
 	if repo.created.PrimaryTaxonomyNodeID != "txn_leaf_1" {
 		t.Fatalf("expected taxonomy node txn_leaf_1, got %q", repo.created.PrimaryTaxonomyNodeID)
 	}
@@ -111,7 +125,7 @@ func TestCatalogServiceCreatesProduct(t *testing.T) {
 
 func TestCatalogServiceRejectsMissingSKU(t *testing.T) {
 	repo := &fakeCatalogRepository{}
-	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true})
+	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true}, &fakeProductDescriptionGuard{})
 
 	_, err := service.CreateProduct(context.Background(), application.CreateProductCommand{
 		TenantID: "tenant-1",
@@ -124,7 +138,7 @@ func TestCatalogServiceRejectsMissingSKU(t *testing.T) {
 
 func TestCatalogServiceRejectsGovernanceDisabledCreate(t *testing.T) {
 	repo := &fakeCatalogRepository{}
-	service := application.NewService(repo, &fakeProductCreationGuard{enabled: false})
+	service := application.NewService(repo, &fakeProductCreationGuard{enabled: false}, &fakeProductDescriptionGuard{})
 
 	_, err := service.CreateProduct(context.Background(), application.CreateProductCommand{
 		TenantID: "tenant-1",
@@ -143,7 +157,7 @@ func TestCatalogServiceListsTaxonomyLevelDefs(t *testing.T) {
 			{TenantID: "tenant-1", Level: 0, Label: "Department", IsEnabled: true},
 		},
 	}
-	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true})
+	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true}, &fakeProductDescriptionGuard{})
 
 	defs, err := service.ListTaxonomyLevelDefs(context.Background(), "tenant-1")
 	if err != nil {
@@ -168,7 +182,7 @@ func TestCatalogServiceListsProductIdentifiers(t *testing.T) {
 			},
 		},
 	}
-	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true})
+	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true}, &fakeProductDescriptionGuard{})
 
 	identifiers, err := service.ListProductIdentifiers(context.Background(), "tenant-1", "prd_1")
 	if err != nil {

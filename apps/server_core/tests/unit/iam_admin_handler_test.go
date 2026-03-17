@@ -26,7 +26,7 @@ func (f *fakeRoleAssignmentReader) RolesByUserID(context.Context, string) ([]dom
 }
 
 func TestIAMAdminHandlerRequiresAuthenticatedPrincipal(t *testing.T) {
-	service := application.NewAdminService(&fakeRoleAssignmentWriter{})
+	service := application.NewAdminService(&fakeRoleAssignmentWriter{}, &fakeAdminRoleAssignmentGuard{})
 	authz := application.NewAuthorizationService(&fakeRoleAssignmentReader{roles: []domain.Role{domain.RoleAdmin}}, application.NewStaticAuthorizer())
 	handler := iamhttp.NewAdminHandler(service, authz)
 
@@ -44,7 +44,7 @@ func TestIAMAdminHandlerRequiresAuthenticatedPrincipal(t *testing.T) {
 }
 
 func TestIAMAdminHandlerUpsertsRoleAssignment(t *testing.T) {
-	service := application.NewAdminService(&fakeRoleAssignmentWriter{})
+	service := application.NewAdminService(&fakeRoleAssignmentWriter{}, &fakeAdminRoleAssignmentGuard{})
 	authz := application.NewAuthorizationService(&fakeRoleAssignmentReader{roles: []domain.Role{domain.RoleAdmin}}, application.NewStaticAuthorizer())
 	handler := iamhttp.NewAdminHandler(service, authz)
 
@@ -53,7 +53,7 @@ func TestIAMAdminHandlerUpsertsRoleAssignment(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/iam/users/user-1/roles", strings.NewReader(`{"display_name":"User One","role":"viewer"}`))
 	req.Header.Set("Content-Type", "application/json")
-	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{SubjectID: "admin-1"}))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{SubjectID: "admin-1", TenantID: "tenant-1"}))
 
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
@@ -64,7 +64,7 @@ func TestIAMAdminHandlerUpsertsRoleAssignment(t *testing.T) {
 }
 
 func TestIAMAdminHandlerRejectsInsufficientPermission(t *testing.T) {
-	service := application.NewAdminService(&fakeRoleAssignmentWriter{})
+	service := application.NewAdminService(&fakeRoleAssignmentWriter{}, &fakeAdminRoleAssignmentGuard{})
 	authz := application.NewAuthorizationService(&fakeRoleAssignmentReader{roles: []domain.Role{domain.RoleViewer}}, application.NewStaticAuthorizer())
 	handler := iamhttp.NewAdminHandler(service, authz)
 

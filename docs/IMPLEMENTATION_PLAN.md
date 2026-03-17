@@ -79,8 +79,8 @@ Exit criteria:
 Current status:
 
 - substantially in progress
-- Postgres, auth, tenancy, IAM, catalog, and governance runtime foundation are already implemented
-- remaining work in this phase is focused on contract enforcement, event publication, and stronger platform hardening
+- Postgres, auth, tenancy, IAM, catalog, governance runtime foundation, and first event/outbox path are already implemented
+- remaining work in this phase is focused on operating the new hardening path end-to-end and preparing the gate into `pricing`
 
 ## Phase 3A: Foundation hardening
 
@@ -95,8 +95,17 @@ Exit criteria:
 
 - contracts are not only authored but validated and generation-ready
 - at least one runtime path is governed by governance resolution
-- at least one module publishes a real versioned event through a core-owned path
+- at least one module publishes a real versioned event through a core-owned outbox path
 - bootstrap auth has a clear upgrade path to non-static identity
+
+Current status:
+
+- substantially implemented
+- `catalog` create is governed by database-backed feature flags and thresholds
+- IAM admin assignment is governed by database-backed policy resolution
+- `catalog` create writes a real versioned event through platform outbox infrastructure
+- contract validation and generation scripts are functional for the current repo contract set
+- next work in this phase is operational validation, CI enforcement, and the final readiness review before `pricing`
 
 ## Phase 4: Domain expansion
 
@@ -113,8 +122,8 @@ Candidate order:
 
 Phase 4 gate:
 
-- `pricing` should not expand on top of the minimal `catalog_products` slice alone
-- the canonical ownership of product identity, taxonomy, identifiers, and non-catalog data boundaries must be explicit first
+- `pricing` must build on the canonical `catalog`, not on the original minimal `catalog_products` slice
+- the canonical ownership of product identity, taxonomy, identifiers, descriptions, and non-catalog data boundaries must be explicit first
 
 ## Ongoing workstreams
 
