@@ -119,6 +119,7 @@ The most important remaining gaps are:
 - AGENTS guidance for token-efficient work
 - phase-by-phase execution discipline that keeps implementation aligned with the frozen architecture
 - explicit canonical product model for `catalog` before pricing and inventory expansion
+- explicit canonical pricing model before the first pricing implementation slice
 
 ## Key planning docs
 
@@ -138,5 +139,7 @@ The most important remaining gaps are:
 - `docs/SDK_GENERATION_STRATEGY.md`
 - `docs/METALDOCS_REUSE_MATRIX.md` (transitional only, delete after migration execution)
 - `docs/CATALOG_CANONICAL_MODEL.md`
+- `docs/PRICING_READINESS_REVIEW.md`
+- `docs/PRICING_CANONICAL_MODEL.md`
 - `docs/IMPLEMENTATION_PLAN.md`
 - `docs/PROGRESS.md`

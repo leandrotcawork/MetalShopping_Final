@@ -56,6 +56,8 @@
 - production-path JWT/OIDC authentication adapter added while preserving static bootstrap auth for local development
 - database-backed governance thresholds and policies implemented and wired into real runtime behavior
 - contract validation and generation scripts implemented and generating minimal artifacts in `packages/generated`
+- `catalog` reviewed as ready for the first `pricing` slice
+- initial canonical pricing model frozen before implementation
 
 ## Next
 
@@ -63,7 +65,8 @@
 - validate migrations `0008`, `0009`, and `0010` end-to-end in the running server with smoke coverage
 - enforce contract validation and artifact generation in team workflow and CI
 - connect the JWT/OIDC auth path to a real issuer configuration
-- review the canonical `catalog` as pricing-ready and freeze any last non-pricing gaps
+- create the first pricing policy contract and pricing API/event contracts
+- implement the first tenant-aware, governed pricing slice on top of canonical catalog identity
 - continue domain expansion from the proven tenant-aware foundation
 - prepare phase transition checklist from foundation hardening to domain expansion
 - use the MetalDocs reuse matrix to decide the first extracted patterns without copying unsafe defaults

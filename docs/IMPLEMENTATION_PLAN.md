@@ -105,7 +105,7 @@ Current status:
 - IAM admin assignment is governed by database-backed policy resolution
 - `catalog` create writes a real versioned event through platform outbox infrastructure
 - contract validation and generation scripts are functional for the current repo contract set
-- next work in this phase is operational validation, CI enforcement, and the final readiness review before `pricing`
+- catalog readiness for `pricing` is now explicitly reviewed and the next work is freezing the pricing contract and model boundary before implementation
 
 ## Phase 4: Domain expansion
 
