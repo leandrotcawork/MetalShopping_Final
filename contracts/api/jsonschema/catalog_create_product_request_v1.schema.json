@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.metalshopping.local/schema/catalog/create_product_request/v1",
+  "title": "catalog_create_product_request_v1",
+  "description": "Request payload for creating a catalog product.",
+  "type": "object",
+  "additionalProperties": false,
+  "x-metalshopping": {
+    "contract_name": "catalog_create_product_request_v1",
+    "contract_status": "draft",
+    "bounded_context": "catalog",
+    "owner_team": "product_core"
+  },
+  "required": ["sku", "name"],
+  "properties": {
+    "sku": { "type": "string", "minLength": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "status": {
+      "type": "string",
+      "enum": ["active", "inactive"]
+    }
+  }
+}

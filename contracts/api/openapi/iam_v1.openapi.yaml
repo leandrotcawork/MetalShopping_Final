@@ -1,0 +1,58 @@
+openapi: 3.1.0
+info:
+  title: "IAM API"
+  version: "v1"
+  summary: "Public HTTP contract for MetalShopping IAM administration"
+  description: >
+    Draft OpenAPI contract for IAM administrative role assignment.
+  x-metalshopping:
+    contract_name: "iam_v1"
+    contract_status: "draft"
+    bounded_context: "iam"
+    owner_team: "platform"
+servers:
+  - url: https://api.metalshopping.local
+paths:
+  /api/v1/iam/users/{user_id}/roles:
+    post:
+      operationId: upsertIamUserRoleAssignment
+      summary: "Assign or refresh a role assignment for a user"
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "../jsonschema/iam_upsert_role_assignment_request_v1.schema.json"
+      responses:
+        "200":
+          description: "Role assignment accepted"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/iam_role_assignment_v1.schema.json"
+        "400":
+          description: "Validation failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+components:
+  schemas: {}

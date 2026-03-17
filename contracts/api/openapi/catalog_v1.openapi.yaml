@@ -1,0 +1,86 @@
+openapi: 3.1.0
+info:
+  title: "Catalog API"
+  version: "v1"
+  summary: "Public HTTP contract for MetalShopping catalog management"
+  description: >
+    Draft OpenAPI contract for tenant-aware catalog product creation and listing.
+  x-metalshopping:
+    contract_name: "catalog_v1"
+    contract_status: "draft"
+    bounded_context: "catalog"
+    owner_team: "product_core"
+servers:
+  - url: https://api.metalshopping.local
+paths:
+  /api/v1/catalog/products:
+    get:
+      operationId: listCatalogProducts
+      summary: "List catalog products for the authenticated tenant"
+      responses:
+        "200":
+          description: "Catalog products returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/catalog_product_list_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Authorization, tenancy, or governance failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+    post:
+      operationId: createCatalogProduct
+      summary: "Create a catalog product for the authenticated tenant"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "../jsonschema/catalog_create_product_request_v1.schema.json"
+      responses:
+        "201":
+          description: "Catalog product created"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/catalog_product_v1.schema.json"
+        "400":
+          description: "Validation failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Authorization, tenancy, or governance failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+components:
+  schemas: {}

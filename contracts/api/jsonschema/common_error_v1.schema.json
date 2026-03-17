@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.metalshopping.local/schema/common/error/v1",
+  "title": "common_error_v1",
+  "description": "Canonical error envelope for MetalShopping HTTP APIs.",
+  "type": "object",
+  "additionalProperties": false,
+  "x-metalshopping": {
+    "contract_name": "common_error_v1",
+    "contract_status": "draft",
+    "bounded_context": "common",
+    "owner_team": "platform"
+  },
+  "required": [
+    "error"
+  ],
+  "properties": {
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "details",
+        "trace_id"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "object"
+        },
+        "trace_id": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

@@ -2,15 +2,16 @@
 
 ## Purpose
 
-This document is the operational source of truth for the planning phase of MetalShopping Final.
+This document is the operational source of truth for the planning and foundation implementation phases of MetalShopping Final.
 
 ## Current state
 
-- Phase: planning
+- Phase: foundation implementation
 - Architecture status: approved
-- Code status: scaffold only
+- Code status: core foundation running with initial platform and business slices
 - Legacy backend status: intentionally not in use
-- Next gate: freeze the platform rules and implementation sequence before feature coding
+- MetalDocs reuse status: selective reuse only, guided by a transitional reuse matrix
+- Next gate: keep execution aligned with frozen architecture while closing the remaining structural gaps
 
 ## Product identity
 
@@ -81,6 +82,28 @@ MetalShopping is not a traditional e-commerce product. It is an enterprise platf
 - Prefer writing or updating SoT docs, ADRs, and phase plans first
 - Avoid duplicate planning docs that restate the same rule in different wording
 
+## Current implementation baseline
+
+The repository now includes:
+
+- executable `server_core` bootstrap
+- Postgres platform foundation
+- centralized auth bootstrap flow
+- tenancy runtime and tenancy-aware Postgres session helpers
+- runtime governance registry and resolvers
+- first structural module: `iam`
+- first tenant-aware business module: `catalog`
+- initial API, event, and governance contracts
+
+## Current structural gaps
+
+The most important remaining gaps are:
+
+- contract validation and generation are not yet enforced end-to-end
+- event publication and outbox flow are not yet wired into real mutations
+- auth is still bootstrap-grade, not identity-provider-grade
+- governance exists as runtime foundation but is not yet shaping module behavior at execution time
+
 ## Planning deliverables
 
 - official architecture doc
@@ -90,6 +113,7 @@ MetalShopping is not a traditional e-commerce product. It is an enterprise platf
 - implementation plan by phase
 - progress tracker
 - AGENTS guidance for token-efficient work
+- phase-by-phase execution discipline that keeps implementation aligned with the frozen architecture
 
 ## Key planning docs
 
@@ -107,5 +131,6 @@ MetalShopping is not a traditional e-commerce product. It is an enterprise platf
 - `docs/MODULE_CREATION_CHECKLIST.md`
 - `docs/CONTRACT_CONVENTIONS.md`
 - `docs/SDK_GENERATION_STRATEGY.md`
+- `docs/METALDOCS_REUSE_MATRIX.md` (transitional only, delete after migration execution)
 - `docs/IMPLEMENTATION_PLAN.md`
 - `docs/PROGRESS.md`

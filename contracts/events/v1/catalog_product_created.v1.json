@@ -1,0 +1,16 @@
+{
+  "event_name": "catalog.product_created",
+  "version": "v1",
+  "status": "draft",
+  "bounded_context": "catalog",
+  "producer": "apps/server_core",
+  "trigger": "A catalog product is created for a tenant.",
+  "description": "Versioned event for catalog product creation.",
+  "envelope": {
+    "event_id": "string",
+    "occurred_at": "timestamp",
+    "tenant_id": "string",
+    "trace_id": "string"
+  },
+  "payload_schema_ref": "../../api/jsonschema/catalog_product_created_payload_v1.schema.json"
+}

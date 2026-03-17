@@ -1,0 +1,14 @@
+{
+  "policy_name": "iam.admin_role_assignment",
+  "version": "v1",
+  "status": "draft",
+  "bounded_context": "iam",
+  "scope": [
+    "global",
+    "environment",
+    "tenant",
+    "module"
+  ],
+  "description": "Defines runtime policy rules for IAM administrative role assignment behavior.",
+  "schema_ref": "../../api/jsonschema/governance_policy_v1.schema.json"
+}

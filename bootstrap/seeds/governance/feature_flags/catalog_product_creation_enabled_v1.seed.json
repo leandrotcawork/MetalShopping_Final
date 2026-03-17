@@ -1,0 +1,7 @@
+{
+  "flag_name": "catalog.product_creation_enabled",
+  "version": "v1",
+  "default_scope": "global",
+  "default_value": true,
+  "description": "Initial bootstrap default for catalog product creation before database-backed governance state is introduced."
+}

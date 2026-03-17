@@ -1,0 +1,16 @@
+{
+  "event_name": "iam.role_assigned",
+  "version": "v1",
+  "status": "draft",
+  "bounded_context": "iam",
+  "producer": "apps/server_core",
+  "trigger": "An IAM administrator assigns or refreshes a role for a user.",
+  "description": "Versioned event for IAM role assignment mutations.",
+  "envelope": {
+    "event_id": "string",
+    "occurred_at": "timestamp",
+    "tenant_id": "string",
+    "trace_id": "string"
+  },
+  "payload_schema_ref": "../../api/jsonschema/iam_role_assigned_payload_v1.schema.json"
+}

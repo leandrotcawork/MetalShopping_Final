@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.metalshopping.local/schema/governance/threshold/v1",
+  "title": "governance_threshold_v1",
+  "description": "Canonical schema for threshold governance artifacts.",
+  "type": "object",
+  "additionalProperties": false,
+  "x-metalshopping": {
+    "contract_name": "governance_threshold_v1",
+    "contract_status": "draft",
+    "bounded_context": "governance",
+    "owner_team": "platform"
+  },
+  "required": ["threshold_name", "version", "status", "bounded_context", "scope", "schema_ref"],
+  "properties": {
+    "threshold_name": { "type": "string", "minLength": 1 },
+    "version": { "type": "string", "const": "v1" },
+    "status": { "type": "string", "enum": ["draft", "proposed", "accepted", "deprecated"] },
+    "bounded_context": { "type": "string", "minLength": 1 },
+    "scope": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["global", "environment", "tenant", "module", "entity/profile"]
+      }
+    },
+    "description": { "type": "string" },
+    "schema_ref": { "type": "string", "minLength": 1 }
+  }
+}

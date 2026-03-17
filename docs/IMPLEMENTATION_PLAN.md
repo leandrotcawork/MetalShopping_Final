@@ -76,12 +76,34 @@ Exit criteria:
 - workers have clear consumption boundaries
 - frontend can depend on generated contracts only
 
+Current status:
+
+- substantially in progress
+- Postgres, auth, tenancy, IAM, catalog, and governance runtime foundation are already implemented
+- remaining work in this phase is focused on contract enforcement, event publication, and stronger platform hardening
+
+## Phase 3A: Foundation hardening
+
+Priority order:
+
+1. contract validation and generation flow
+2. governance influencing real runtime behavior
+3. event and outbox publication for real mutations
+4. stronger production-grade auth evolution path
+
+Exit criteria:
+
+- contracts are not only authored but validated and generation-ready
+- at least one runtime path is governed by governance resolution
+- at least one module publishes a real versioned event through a core-owned path
+- bootstrap auth has a clear upgrade path to non-static identity
+
 ## Phase 4: Domain expansion
 
 Candidate order:
 
-1. catalog
-2. pricing
+1. pricing
+2. inventory
 3. market_intelligence
 4. analytics_serving
 5. procurement

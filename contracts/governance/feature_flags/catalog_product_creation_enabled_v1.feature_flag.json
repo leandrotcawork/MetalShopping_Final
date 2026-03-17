@@ -1,0 +1,14 @@
+{
+  "flag_name": "catalog.product_creation_enabled",
+  "version": "v1",
+  "status": "draft",
+  "bounded_context": "catalog",
+  "scope": [
+    "global",
+    "environment",
+    "tenant",
+    "feature-target"
+  ],
+  "description": "Controls whether catalog product creation is enabled for the resolved runtime scope.",
+  "schema_ref": "../../api/jsonschema/governance_feature_flag_v1.schema.json"
+}

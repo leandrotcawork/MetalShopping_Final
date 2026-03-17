@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.metalshopping.local/schema/iam/upsert_role_assignment_request/v1",
+  "title": "iam_upsert_role_assignment_request_v1",
+  "description": "Request payload for assigning a role to a user in IAM.",
+  "type": "object",
+  "additionalProperties": false,
+  "x-metalshopping": {
+    "contract_name": "iam_upsert_role_assignment_request_v1",
+    "contract_status": "draft",
+    "bounded_context": "iam",
+    "owner_team": "platform"
+  },
+  "required": [
+    "role"
+  ],
+  "properties": {
+    "display_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "tenant_admin",
+        "catalog_manager",
+        "pricing_manager",
+        "sales_manager",
+        "analyst",
+        "automation_owner",
+        "viewer"
+      ]
+    }
+  }
+}

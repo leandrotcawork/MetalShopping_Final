@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.metalshopping.local/schema/iam/role_assigned_payload/v1",
+  "title": "iam_role_assigned_payload_v1",
+  "description": "Event payload for an IAM role assignment mutation.",
+  "type": "object",
+  "additionalProperties": false,
+  "x-metalshopping": {
+    "contract_name": "iam_role_assigned_payload_v1",
+    "contract_status": "draft",
+    "bounded_context": "iam",
+    "owner_team": "platform"
+  },
+  "required": [
+    "user_id",
+    "display_name",
+    "role",
+    "assigned_by"
+  ],
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "tenant_admin",
+        "catalog_manager",
+        "pricing_manager",
+        "sales_manager",
+        "analyst",
+        "automation_owner",
+        "viewer"
+      ]
+    },
+    "assigned_by": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}
