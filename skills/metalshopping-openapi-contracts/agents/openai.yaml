@@ -1,0 +1,8 @@
+interface:
+  display_name: "MetalShopping OpenAPI"
+  short_description: "Create or review MetalShopping OpenAPI specs."
+  default_prompt: "Use $metalshopping-openapi-contracts to create or review a MetalShopping OpenAPI contract under contracts/api/openapi."
+
+policy:
+  allow_implicit_invocation: true
+

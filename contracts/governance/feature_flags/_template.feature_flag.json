@@ -1,0 +1,15 @@
+{
+  "flag_name": "<flag_name>",
+  "version": "v1",
+  "status": "draft",
+  "bounded_context": "<bounded_context>",
+  "scope": [
+    "global",
+    "environment",
+    "tenant",
+    "feature-target"
+  ],
+  "description": "Draft feature flag template for runtime governance.",
+  "schema_ref": "../../api/jsonschema/<feature_flag_schema>.schema.json"
+}
+

@@ -1,0 +1,17 @@
+Thumbs.db
+.DS_Store
+.idea/
+.vscode/
+.venv/
+__pycache__/
+.pytest_cache/
+node_modules/
+dist/
+build/
+coverage/
+.env
+.env.*
+*.pyc
+*.pyo
+*.pyd
+

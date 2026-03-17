@@ -1,0 +1,8 @@
+interface:
+  display_name: "MetalShopping Events"
+  short_description: "Create or review MetalShopping event specs."
+  default_prompt: "Use $metalshopping-event-contracts to create or review a MetalShopping event contract under contracts/events/v1."
+
+policy:
+  allow_implicit_invocation: true
+

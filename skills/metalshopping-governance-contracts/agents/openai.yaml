@@ -1,0 +1,8 @@
+interface:
+  display_name: "MetalShopping Governance"
+  short_description: "Create or review governance contracts."
+  default_prompt: "Use $metalshopping-governance-contracts to create or review a MetalShopping governance contract under contracts/governance."
+
+policy:
+  allow_implicit_invocation: true
+

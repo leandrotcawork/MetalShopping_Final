@@ -1,0 +1,17 @@
+{
+  "event_name": "<bounded_context>.<event_name>",
+  "version": "v1",
+  "status": "draft",
+  "bounded_context": "<bounded_context>",
+  "producer": "apps/server_core",
+  "trigger": "<business_trigger>",
+  "description": "Draft event template for versioned async integration.",
+  "envelope": {
+    "event_id": "string",
+    "occurred_at": "timestamp",
+    "tenant_id": "string",
+    "trace_id": "string"
+  },
+  "payload_schema_ref": "../../api/jsonschema/<artifact_name>.schema.json"
+}
+

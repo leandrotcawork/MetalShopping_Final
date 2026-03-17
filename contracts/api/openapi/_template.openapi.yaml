@@ -1,0 +1,29 @@
+openapi: 3.1.0
+info:
+  title: "<bounded_context> API"
+  version: "v1"
+  summary: "Public HTTP contract for <bounded_context>"
+  description: >
+    Draft OpenAPI contract template for MetalShopping bounded contexts.
+  x-metalshopping:
+    contract_name: "<bounded_context>_v1"
+    contract_status: "draft"
+    bounded_context: "<bounded_context>"
+    owner_team: "<team_or_owner>"
+servers:
+  - url: https://api.metalshopping.local
+paths:
+  /api/v1/<bounded_context>/health:
+    get:
+      operationId: get<BoundedContext>Health
+      summary: "Health probe for the bounded context surface"
+      responses:
+        "200":
+          description: "Successful health response"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_health_v1.schema.json"
+components:
+  schemas: {}
+

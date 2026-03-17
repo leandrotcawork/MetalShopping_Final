@@ -1,0 +1,8 @@
+interface:
+  display_name: "MetalShopping Workers"
+  short_description: "Create or review worker patterns."
+  default_prompt: "Use $metalshopping-worker-patterns to create or review a MetalShopping worker structure or responsibility."
+
+policy:
+  allow_implicit_invocation: true
+

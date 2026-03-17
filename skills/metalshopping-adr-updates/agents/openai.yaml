@@ -1,0 +1,8 @@
+interface:
+  display_name: "MetalShopping ADRs"
+  short_description: "Update ADRs and planning docs."
+  default_prompt: "Use $metalshopping-adr-updates to update MetalShopping ADRs and planning docs for a structural decision change."
+
+policy:
+  allow_implicit_invocation: true
+

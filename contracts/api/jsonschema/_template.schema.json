@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.metalshopping.local/schema/<bounded_context>/<artifact_name>/v1",
+  "title": "<artifact_name>",
+  "description": "Draft schema template for MetalShopping canonical contracts.",
+  "type": "object",
+  "additionalProperties": false,
+  "x-metalshopping": {
+    "contract_name": "<artifact_name>_v1",
+    "contract_status": "draft",
+    "bounded_context": "<bounded_context>",
+    "owner_team": "<team_or_owner>"
+  },
+  "required": [
+    "id"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Canonical identifier."
+    }
+  }
+}
+

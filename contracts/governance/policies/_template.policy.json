@@ -1,0 +1,15 @@
+{
+  "policy_name": "<policy_name>",
+  "version": "v1",
+  "status": "draft",
+  "bounded_context": "<bounded_context>",
+  "scope": [
+    "global",
+    "environment",
+    "tenant",
+    "module"
+  ],
+  "description": "Draft policy template for runtime governance.",
+  "schema_ref": "../../api/jsonschema/<policy_schema>.schema.json"
+}
+

@@ -1,0 +1,8 @@
+interface:
+  display_name: "MetalShopping SDK Gen"
+  short_description: "Plan or review SDK generation workflows."
+  default_prompt: "Use $metalshopping-sdk-generation to plan or review a MetalShopping SDK generation workflow."
+
+policy:
+  allow_implicit_invocation: true
+

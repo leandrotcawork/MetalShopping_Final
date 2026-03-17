@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.metalshopping.local/schema/common/health/v1",
+  "title": "common_health_v1",
+  "description": "Shared health payload for basic service probes.",
+  "type": "object",
+  "additionalProperties": false,
+  "x-metalshopping": {
+    "contract_name": "common_health_v1",
+    "contract_status": "draft",
+    "bounded_context": "common",
+    "owner_team": "platform"
+  },
+  "required": [
+    "status"
+  ],
+  "properties": {
+    "status": {
+      "type": "string"
+    }
+  }
+}
+

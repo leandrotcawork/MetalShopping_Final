@@ -1,0 +1,16 @@
+{
+  "threshold_name": "<threshold_name>",
+  "version": "v1",
+  "status": "draft",
+  "bounded_context": "<bounded_context>",
+  "scope": [
+    "global",
+    "environment",
+    "tenant",
+    "module",
+    "entity/profile"
+  ],
+  "description": "Draft threshold template for runtime governance.",
+  "schema_ref": "../../api/jsonschema/<threshold_schema>.schema.json"
+}
+
