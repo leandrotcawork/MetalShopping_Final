@@ -81,6 +81,7 @@ Minimum target fields for the aggregate:
 - `tenant_id`
 - `sku`
 - `name`
+- `description`
 - `brand_name`
 - `stock_profile_code`
 - `is_active`

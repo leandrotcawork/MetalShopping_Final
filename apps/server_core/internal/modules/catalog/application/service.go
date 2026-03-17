@@ -22,6 +22,7 @@ type CreateProductCommand struct {
 	TenantID              string
 	SKU                   string
 	Name                  string
+	Description           string
 	BrandName             string
 	StockProfileCode      string
 	PrimaryTaxonomyNodeID string
@@ -56,6 +57,7 @@ func (s *Service) CreateProduct(ctx context.Context, cmd CreateProductCommand) (
 		TenantID:              strings.TrimSpace(cmd.TenantID),
 		SKU:                   strings.TrimSpace(cmd.SKU),
 		Name:                  strings.TrimSpace(cmd.Name),
+		Description:           strings.TrimSpace(cmd.Description),
 		BrandName:             strings.TrimSpace(cmd.BrandName),
 		StockProfileCode:      strings.TrimSpace(cmd.StockProfileCode),
 		PrimaryTaxonomyNodeID: strings.TrimSpace(cmd.PrimaryTaxonomyNodeID),

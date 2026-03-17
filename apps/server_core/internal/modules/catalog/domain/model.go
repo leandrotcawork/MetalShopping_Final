@@ -18,6 +18,7 @@ type Product struct {
 	TenantID              string
 	SKU                   string
 	Name                  string
+	Description           string
 	BrandName             string
 	StockProfileCode      string
 	PrimaryTaxonomyNodeID string

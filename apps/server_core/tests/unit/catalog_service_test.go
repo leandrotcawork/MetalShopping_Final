@@ -75,6 +75,7 @@ func TestCatalogServiceCreatesProduct(t *testing.T) {
 		TenantID:              "tenant-1",
 		SKU:                   "SKU-001",
 		Name:                  "Steel Sheet",
+		Description:           "Galvanized steel sheet for roofing.",
 		BrandName:             "Acme Steel",
 		StockProfileCode:      "standard",
 		PrimaryTaxonomyNodeID: "txn_leaf_1",
@@ -96,6 +97,9 @@ func TestCatalogServiceCreatesProduct(t *testing.T) {
 	}
 	if repo.created.BrandName != "Acme Steel" {
 		t.Fatalf("expected brand Acme Steel, got %q", repo.created.BrandName)
+	}
+	if repo.created.Description != "Galvanized steel sheet for roofing." {
+		t.Fatalf("expected description to be propagated, got %q", repo.created.Description)
 	}
 	if repo.created.PrimaryTaxonomyNodeID != "txn_leaf_1" {
 		t.Fatalf("expected taxonomy node txn_leaf_1, got %q", repo.created.PrimaryTaxonomyNodeID)

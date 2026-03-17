@@ -31,6 +31,7 @@ INSERT INTO catalog_products (
   tenant_id,
   sku,
   name,
+  description,
   brand_name,
   stock_profile_code,
   primary_taxonomy_node_id,
@@ -51,7 +52,7 @@ VALUES (
   $9
 )
 `
-	if _, err := tx.ExecContext(ctx, insertSQL, product.ProductID, product.SKU, product.Name, nullableText(product.BrandName), nullableText(product.StockProfileCode), nullableText(product.PrimaryTaxonomyNodeID), string(product.Status), product.CreatedAt, product.UpdatedAt); err != nil {
+	if _, err := tx.ExecContext(ctx, insertSQL, product.ProductID, product.SKU, product.Name, nullableText(product.Description), nullableText(product.BrandName), nullableText(product.StockProfileCode), nullableText(product.PrimaryTaxonomyNodeID), string(product.Status), product.CreatedAt, product.UpdatedAt); err != nil {
 		return fmt.Errorf("insert catalog product: %w", err)
 	}
 
@@ -110,7 +111,7 @@ func (r *Repository) ListProducts(ctx context.Context, tenantID string) ([]domai
 	defer func() { _ = tx.Rollback() }()
 
 	const querySQL = `
-SELECT product_id, tenant_id, sku, name, COALESCE(brand_name, ''), COALESCE(stock_profile_code, ''), COALESCE(primary_taxonomy_node_id, ''), status, created_at, updated_at
+SELECT product_id, tenant_id, sku, name, COALESCE(description, ''), COALESCE(brand_name, ''), COALESCE(stock_profile_code, ''), COALESCE(primary_taxonomy_node_id, ''), status, created_at, updated_at
 FROM catalog_products
 ORDER BY sku ASC
 `
@@ -128,6 +129,7 @@ ORDER BY sku ASC
 			&product.TenantID,
 			&product.SKU,
 			&product.Name,
+			&product.Description,
 			&product.BrandName,
 			&product.StockProfileCode,
 			&product.PrimaryTaxonomyNodeID,

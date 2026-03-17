@@ -23,6 +23,7 @@ type Handler struct {
 type CreateProductRequest struct {
 	SKU                   string                           `json:"sku"`
 	Name                  string                           `json:"name"`
+	Description           string                           `json:"description,omitempty"`
 	BrandName             string                           `json:"brand_name,omitempty"`
 	StockProfileCode      string                           `json:"stock_profile_code,omitempty"`
 	PrimaryTaxonomyNodeID string                           `json:"primary_taxonomy_node_id,omitempty"`
@@ -180,6 +181,7 @@ func (h *Handler) handleCreateProduct(w http.ResponseWriter, r *http.Request, us
 		TenantID:              tenantID,
 		SKU:                   req.SKU,
 		Name:                  req.Name,
+		Description:           req.Description,
 		BrandName:             req.BrandName,
 		StockProfileCode:      req.StockProfileCode,
 		PrimaryTaxonomyNodeID: req.PrimaryTaxonomyNodeID,
@@ -286,6 +288,7 @@ func mapProduct(product domain.Product) map[string]any {
 		"tenant_id":                product.TenantID,
 		"sku":                      product.SKU,
 		"name":                     product.Name,
+		"description":              product.Description,
 		"brand_name":               product.BrandName,
 		"stock_profile_code":       product.StockProfileCode,
 		"primary_taxonomy_node_id": product.PrimaryTaxonomyNodeID,

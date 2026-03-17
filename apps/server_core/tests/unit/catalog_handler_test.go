@@ -32,7 +32,7 @@ func TestCatalogHandlerCreatesProduct(t *testing.T) {
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/catalog/products", strings.NewReader(`{"sku":"SKU-001","name":"Steel Sheet","brand_name":"Acme","stock_profile_code":"standard","primary_taxonomy_node_id":"txn_leaf_1","status":"active"}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/catalog/products", strings.NewReader(`{"sku":"SKU-001","name":"Steel Sheet","description":"Galvanized steel sheet","brand_name":"Acme","stock_profile_code":"standard","primary_taxonomy_node_id":"txn_leaf_1","status":"active"}`))
 	req.Header.Set("Content-Type", "application/json")
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{SubjectID: "admin-local", TenantID: "tenant-1"}))
 	req = req.WithContext(tenancy_runtime.WithTenant(req.Context(), tenancy_runtime.Tenant{ID: "tenant-1"}))
@@ -45,6 +45,9 @@ func TestCatalogHandlerCreatesProduct(t *testing.T) {
 	}
 	if !strings.Contains(rr.Body.String(), `"brand_name":"Acme"`) {
 		t.Fatalf("expected brand_name in response, got %s", rr.Body.String())
+	}
+	if !strings.Contains(rr.Body.String(), `"description":"Galvanized steel sheet"`) {
+		t.Fatalf("expected description in response, got %s", rr.Body.String())
 	}
 }
 
@@ -80,6 +83,7 @@ func TestCatalogHandlerListsProducts(t *testing.T) {
 				TenantID:              "tenant-1",
 				SKU:                   "SKU-001",
 				Name:                  "Steel Sheet",
+				Description:           "Galvanized steel sheet",
 				BrandName:             "Acme",
 				StockProfileCode:      "standard",
 				PrimaryTaxonomyNodeID: "txn_leaf_1",
@@ -105,6 +109,9 @@ func TestCatalogHandlerListsProducts(t *testing.T) {
 	}
 	if !strings.Contains(rr.Body.String(), `"primary_taxonomy_node_id":"txn_leaf_1"`) {
 		t.Fatalf("expected taxonomy node in response, got %s", rr.Body.String())
+	}
+	if !strings.Contains(rr.Body.String(), `"description":"Galvanized steel sheet"`) {
+		t.Fatalf("expected description in response, got %s", rr.Body.String())
 	}
 }
 
