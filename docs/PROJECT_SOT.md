@@ -97,6 +97,7 @@ The repository now includes:
 - first tenant-aware business module: `catalog`
 - initial API, event, and governance contracts
 - functional contract validation and generated artifact scripts
+- explicit canonical SKU data ownership model aligned to legacy `products` and `product_erp`
 
 ## Current structural gaps
 
@@ -105,7 +106,7 @@ The most important remaining gaps are:
 - production identity integration is not yet connected to a real issuer or JWKS source
 - outbox exists and catalog emits real events, but broker delivery and worker consumption are still not in place
 - governance is operational in runtime, but broader operational surfaces still need administrative mutation paths
-- catalog is now a strong canonical foundation, but pricing-readiness still needs one final review before domain expansion
+- catalog is now a strong canonical foundation, but pricing semantics must now be revised against the accepted SKU ownership model before further pricing expansion
 - contract validation and generation are now functional locally and must next be enforced in team workflow and CI
 
 ## Planning deliverables
@@ -119,6 +120,7 @@ The most important remaining gaps are:
 - AGENTS guidance for token-efficient work
 - phase-by-phase execution discipline that keeps implementation aligned with the frozen architecture
 - explicit canonical product model for `catalog` before pricing and inventory expansion
+- explicit canonical SKU data ownership model spanning `catalog`, `pricing`, `inventory`, `procurement`, and analytics
 - explicit canonical pricing model before the first pricing implementation slice
 - explicit decision record for the next implementation area
 
@@ -140,6 +142,7 @@ The most important remaining gaps are:
 - `docs/SDK_GENERATION_STRATEGY.md`
 - `docs/METALDOCS_REUSE_MATRIX.md` (transitional only, delete after migration execution)
 - `docs/CATALOG_CANONICAL_MODEL.md`
+- `docs/SKU_CANONICAL_DATA_MODEL.md`
 - `docs/PRICING_READINESS_REVIEW.md`
 - `docs/PRICING_CANONICAL_MODEL.md`
 - `docs/PRICING_IMPLEMENTATION_PLAN.md`
