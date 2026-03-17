@@ -62,6 +62,9 @@
 - full first-slice pricing implementation plan documented before code
 - pricing phase 1 contracts completed across governance, API, JSON Schemas, and events
 - generated artifacts refreshed after pricing contract authoring
+- first tenant-aware `pricing` module slice implemented in `server_core`
+- pricing runtime guards, outbox publication path, HTTP transport, and bootstrap wiring implemented
+- pricing unit tests added and passing
 
 ## Next
 
@@ -69,7 +72,8 @@
 - validate migrations `0008`, `0009`, and `0010` end-to-end in the running server with smoke coverage
 - enforce contract validation and artifact generation in team workflow and CI
 - connect the JWT/OIDC auth path to a real issuer configuration
-- implement the first tenant-aware, governed pricing slice on top of canonical catalog identity
+- apply pricing migrations and database-backed governance defaults in runtime
+- validate pricing write/list/current and outbox publication through smoke tests
 - continue domain expansion from the proven tenant-aware foundation
 - prepare phase transition checklist from foundation hardening to domain expansion
 - use the MetalDocs reuse matrix to decide the first extracted patterns without copying unsafe defaults

@@ -16,6 +16,10 @@ import (
 	iampg "metalshopping/server_core/internal/modules/iam/adapters/postgres"
 	iamapp "metalshopping/server_core/internal/modules/iam/application"
 	iamhttp "metalshopping/server_core/internal/modules/iam/transport/http"
+	pricinggov "metalshopping/server_core/internal/modules/pricing/adapters/governance"
+	pricingpg "metalshopping/server_core/internal/modules/pricing/adapters/postgres"
+	pricingapp "metalshopping/server_core/internal/modules/pricing/application"
+	pricinghttp "metalshopping/server_core/internal/modules/pricing/transport/http"
 	platformauth "metalshopping/server_core/internal/platform/auth"
 	pgdb "metalshopping/server_core/internal/platform/db/postgres"
 	governancebootstrap "metalshopping/server_core/internal/platform/governance/bootstrap"
@@ -68,6 +72,7 @@ func main() {
 
 	iamRepo := iampg.NewRepository(db)
 	catalogRepo := catalogpg.NewRepository(db, outboxStore)
+	pricingRepo := pricingpg.NewRepository(db, outboxStore)
 	iamAuthorizer := iamapp.NewStaticAuthorizer()
 	iamAuthorization := iamapp.NewAuthorizationService(iamRepo, iamAuthorizer)
 	iamAdminService := iamapp.NewAdminService(iamRepo, iamgov.NewAdminPolicyGuard(policyResolver, environment))
@@ -76,6 +81,10 @@ func main() {
 	catalogDescriptionGuard := cataloggov.NewDescriptionGuard(thresholdResolver, environment)
 	catalogService := catalogapp.NewService(catalogRepo, catalogProductCreationGuard, catalogDescriptionGuard)
 	catalogHandler := cataloghttp.NewHandler(catalogService, iamAuthorization)
+	pricingManualOverrideGuard := pricinggov.NewManualOverrideGuard(policyResolver, environment)
+	pricingMarginFloorGuard := pricinggov.NewMarginFloorGuard(thresholdResolver, environment)
+	pricingService := pricingapp.NewService(pricingRepo, pricingManualOverrideGuard, pricingMarginFloorGuard)
+	pricingHandler := pricinghttp.NewHandler(pricingService, iamAuthorization)
 
 	authMiddleware := platformauth.NewMiddleware(authenticator, []string{
 		"/health/live",
@@ -92,6 +101,7 @@ func main() {
 	mux.Handle("/health/ready", observability.NewReadyHandler(postgresReadiness(db)))
 	iamAdminHandler.RegisterRoutes(mux)
 	catalogHandler.RegisterRoutes(mux)
+	pricingHandler.RegisterRoutes(mux)
 
 	server := &http.Server{
 		Addr:              addr,

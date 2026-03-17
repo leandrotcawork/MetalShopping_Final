@@ -8,6 +8,7 @@ const (
 	CatalogProductCreationEnabledKey = "catalog.product_creation_enabled"
 	CatalogMaxDescriptionLengthKey   = "catalog.max_description_length"
 	PricingDefaultMarginFloorKey     = "pricing.default_margin_floor"
+	PricingManualPriceOverrideKey    = "pricing.manual_price_override"
 	IAMAdminRoleAssignmentKey        = "iam.admin_role_assignment"
 )
 
@@ -51,6 +52,19 @@ func NewRegistry() *config_registry.Registry {
 			config_registry.ScopeTenant,
 		},
 		Description: "Defines the default pricing margin floor for the resolved runtime scope.",
+	})
+	registry.MustRegister(config_registry.Entry{
+		Key:            PricingManualPriceOverrideKey,
+		Kind:           config_registry.ArtifactPolicy,
+		BoundedContext: "pricing",
+		ValueType:      config_registry.ValueTypeJSON,
+		Scopes: []config_registry.Scope{
+			config_registry.ScopeGlobal,
+			config_registry.ScopeEnvironment,
+			config_registry.ScopeTenant,
+			config_registry.ScopeModule,
+		},
+		Description: "Defines the policy for manual product price override decisions.",
 	})
 	registry.MustRegister(config_registry.Entry{
 		Key:            IAMAdminRoleAssignmentKey,
