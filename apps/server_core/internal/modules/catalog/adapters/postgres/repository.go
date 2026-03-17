@@ -49,7 +49,8 @@ VALUES (
   $6,
   $7,
   $8,
-  $9
+  $9,
+  $10
 )
 `
 	if _, err := tx.ExecContext(ctx, insertSQL, product.ProductID, product.SKU, product.Name, nullableText(product.Description), nullableText(product.BrandName), nullableText(product.StockProfileCode), nullableText(product.PrimaryTaxonomyNodeID), string(product.Status), product.CreatedAt, product.UpdatedAt); err != nil {
