@@ -34,6 +34,5 @@ export const governanceKeys = [
   "catalog.max_description_length",
   "catalog.product_creation_enabled",
   "iam.admin_role_assignment",
-  "pricing.default_margin_floor",
   "pricing.manual_price_override"
 ] as const;

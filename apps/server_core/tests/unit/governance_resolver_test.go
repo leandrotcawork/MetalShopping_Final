@@ -48,9 +48,9 @@ func TestFeatureFlagResolverHonorsMostSpecificScope(t *testing.T) {
 func TestThresholdResolverHonorsTenantOverEnvironment(t *testing.T) {
 	registry := config_registry.NewRegistry()
 	registry.MustRegister(config_registry.Entry{
-		Key:            "pricing.default_margin_floor",
+		Key:            "catalog.max_description_length",
 		Kind:           config_registry.ArtifactThreshold,
-		BoundedContext: "pricing",
+		BoundedContext: "catalog",
 		ValueType:      config_registry.ValueTypeNumber,
 		Scopes: []config_registry.Scope{
 			config_registry.ScopeGlobal,
@@ -61,14 +61,14 @@ func TestThresholdResolverHonorsTenantOverEnvironment(t *testing.T) {
 
 	global := 10.0
 	resolver := threshold_resolver.NewResolver(registry, map[string]threshold_resolver.ScopeValues{
-		"pricing.default_margin_floor": {
+		"catalog.max_description_length": {
 			Global:      &global,
 			Environment: map[string]float64{"local": 12.5},
 			Tenant:      map[string]float64{"tenant-a": 15.0},
 		},
 	})
 
-	value, ok, err := resolver.Resolve("pricing.default_margin_floor", threshold_resolver.ResolutionContext{
+	value, ok, err := resolver.Resolve("catalog.max_description_length", threshold_resolver.ResolutionContext{
 		Environment: "local",
 		TenantID:    "tenant-a",
 	})

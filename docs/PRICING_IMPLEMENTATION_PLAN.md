@@ -72,7 +72,7 @@ Important rule:
 
 The first slice of `pricing` should solve one clean problem:
 
-`server_core` must be able to set and read a governed internal product price for a canonical product in one tenant, with explicit cost basis, margin floor, effective window, origin, and event publication.
+`server_core` must be able to set and read a governed internal product price for a canonical product in one tenant, with explicit replacement cost semantics, optional average cost, effective window, origin, and event publication.
 
 ## First-slice scope
 
@@ -81,10 +81,9 @@ The first slice of `pricing` should solve one clean problem:
 - set internal product price
 - list product prices
 - current effective price view
-- explicit cost basis on write
-- explicit margin floor on write or resolution
+- explicit replacement cost on write
+- optional average cost on write
 - validity window
-- runtime threshold enforcement
 - runtime policy enforcement
 - versioned event publication
 - tenant-aware persistence and RLS
@@ -140,12 +139,6 @@ The first slice of `pricing` should solve one clean problem:
 
 ### Governance
 
-Already present:
-
-- `pricing.default_margin_floor`
-
-Still required:
-
 - `pricing.manual_price_override`
 
 ### Generated artifacts
@@ -183,8 +176,8 @@ No pricing path should bypass those platform layers.
 - `product_id`
 - `currency_code`
 - `price_amount`
-- `cost_basis_amount`
-- `margin_floor_value`
+- `replacement_cost_amount`
+- `average_cost_amount`
 - `pricing_status`
 - `effective_from`
 - `effective_to`
@@ -205,15 +198,6 @@ No pricing path should bypass those platform layers.
 - RLS enabled and forced
 
 ## Runtime governance plan
-
-### Threshold
-
-Use `pricing.default_margin_floor`.
-
-First behavior:
-
-- when a write omits explicit margin floor, resolve it from governance
-- when a write proposes a price below the effective floor, reject it
 
 ### Policy
 

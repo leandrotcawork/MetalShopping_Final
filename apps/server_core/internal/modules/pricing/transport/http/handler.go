@@ -21,16 +21,16 @@ type Handler struct {
 }
 
 type SetProductPriceRequest struct {
-	CurrencyCode     string  `json:"currency_code"`
-	PriceAmount      float64 `json:"price_amount"`
-	CostBasisAmount  float64 `json:"cost_basis_amount"`
-	MarginFloorValue float64 `json:"margin_floor_value,omitempty"`
-	PricingStatus    string  `json:"pricing_status,omitempty"`
-	EffectiveFrom    string  `json:"effective_from"`
-	EffectiveTo      string  `json:"effective_to,omitempty"`
-	OriginType       string  `json:"origin_type,omitempty"`
-	OriginRef        string  `json:"origin_ref,omitempty"`
-	ReasonCode       string  `json:"reason_code"`
+	CurrencyCode          string   `json:"currency_code"`
+	PriceAmount           float64  `json:"price_amount"`
+	ReplacementCostAmount float64  `json:"replacement_cost_amount"`
+	AverageCostAmount     *float64 `json:"average_cost_amount,omitempty"`
+	PricingStatus         string   `json:"pricing_status,omitempty"`
+	EffectiveFrom         string   `json:"effective_from"`
+	EffectiveTo           string   `json:"effective_to,omitempty"`
+	OriginType            string   `json:"origin_type,omitempty"`
+	OriginRef             string   `json:"origin_ref,omitempty"`
+	ReasonCode            string   `json:"reason_code"`
 }
 
 func NewHandler(service *application.Service, permissionChecker ports.PermissionChecker) *Handler {
@@ -103,20 +103,20 @@ func (h *Handler) handleSetProductPrice(w http.ResponseWriter, r *http.Request, 
 	}
 
 	price, err := h.service.SetProductPrice(r.Context(), application.SetProductPriceCommand{
-		TenantID:         tenantID,
-		TraceID:          requestTraceID(r),
-		ProductID:        productID,
-		CurrencyCode:     req.CurrencyCode,
-		PriceAmount:      req.PriceAmount,
-		CostBasisAmount:  req.CostBasisAmount,
-		MarginFloorValue: req.MarginFloorValue,
-		PricingStatus:    req.PricingStatus,
-		EffectiveFrom:    effectiveFrom,
-		EffectiveTo:      effectiveTo,
-		OriginType:       req.OriginType,
-		OriginRef:        req.OriginRef,
-		ReasonCode:       req.ReasonCode,
-		UpdatedBy:        userID,
+		TenantID:              tenantID,
+		TraceID:               requestTraceID(r),
+		ProductID:             productID,
+		CurrencyCode:          req.CurrencyCode,
+		PriceAmount:           req.PriceAmount,
+		ReplacementCostAmount: req.ReplacementCostAmount,
+		AverageCostAmount:     req.AverageCostAmount,
+		PricingStatus:         req.PricingStatus,
+		EffectiveFrom:         effectiveFrom,
+		EffectiveTo:           effectiveTo,
+		OriginType:            req.OriginType,
+		OriginRef:             req.OriginRef,
+		ReasonCode:            req.ReasonCode,
+		UpdatedBy:             userID,
 	})
 	if err != nil {
 		switch {
@@ -125,8 +125,8 @@ func (h *Handler) handleSetProductPrice(w http.ResponseWriter, r *http.Request, 
 			errors.Is(err, domain.ErrCurrencyCodeRequired),
 			errors.Is(err, domain.ErrInvalidCurrencyCode),
 			errors.Is(err, domain.ErrPriceAmountInvalid),
-			errors.Is(err, domain.ErrCostBasisAmountInvalid),
-			errors.Is(err, domain.ErrMarginFloorValueInvalid),
+			errors.Is(err, domain.ErrReplacementCostAmountInvalid),
+			errors.Is(err, domain.ErrAverageCostAmountInvalid),
 			errors.Is(err, domain.ErrInvalidPricingStatus),
 			errors.Is(err, domain.ErrInvalidOriginType),
 			errors.Is(err, domain.ErrReasonCodeRequired),
@@ -134,7 +134,7 @@ func (h *Handler) handleSetProductPrice(w http.ResponseWriter, r *http.Request, 
 			errors.Is(err, domain.ErrEffectiveFromRequired),
 			errors.Is(err, domain.ErrInvalidEffectiveWindow):
 			writeAPIError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error(), requestTraceID(r))
-		case errors.Is(err, domain.ErrManualPriceOverrideDisabled), errors.Is(err, domain.ErrPriceBelowMarginFloor):
+		case errors.Is(err, domain.ErrManualPriceOverrideDisabled):
 			writeAPIError(w, http.StatusForbidden, "GOVERNANCE_DISABLED", err.Error(), requestTraceID(r))
 		default:
 			writeAPIError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to set product price", requestTraceID(r))
@@ -209,19 +209,21 @@ func (h *Handler) requirePrincipalAndTenant(w http.ResponseWriter, r *http.Reque
 
 func mapProductPrice(price domain.ProductPrice) map[string]any {
 	payload := map[string]any{
-		"price_id":           price.PriceID,
-		"tenant_id":          price.TenantID,
-		"product_id":         price.ProductID,
-		"currency_code":      price.CurrencyCode,
-		"price_amount":       price.PriceAmount,
-		"cost_basis_amount":  price.CostBasisAmount,
-		"margin_floor_value": price.MarginFloorValue,
-		"pricing_status":     string(price.PricingStatus),
-		"effective_from":     price.EffectiveFrom.Format(time.RFC3339),
-		"origin_type":        string(price.OriginType),
-		"origin_ref":         price.OriginRef,
-		"reason_code":        price.ReasonCode,
-		"updated_by":         price.UpdatedBy,
+		"price_id":                price.PriceID,
+		"tenant_id":               price.TenantID,
+		"product_id":              price.ProductID,
+		"currency_code":           price.CurrencyCode,
+		"price_amount":            price.PriceAmount,
+		"replacement_cost_amount": price.ReplacementCostAmount,
+		"pricing_status":          string(price.PricingStatus),
+		"effective_from":          price.EffectiveFrom.Format(time.RFC3339),
+		"origin_type":             string(price.OriginType),
+		"origin_ref":              price.OriginRef,
+		"reason_code":             price.ReasonCode,
+		"updated_by":              price.UpdatedBy,
+	}
+	if price.AverageCostAmount != nil {
+		payload["average_cost_amount"] = *price.AverageCostAmount
 	}
 	if price.EffectiveTo != nil {
 		payload["effective_to"] = price.EffectiveTo.Format(time.RFC3339)

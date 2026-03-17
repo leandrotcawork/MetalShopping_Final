@@ -49,35 +49,25 @@ func (f *fakeManualOverrideGuard) ValidateManualOverride(context.Context, string
 	return f.err
 }
 
-type fakeMarginFloorResolver struct {
-	value float64
-	err   error
-}
-
-func (f *fakeMarginFloorResolver) ResolveMarginFloor(context.Context, string, float64) (float64, error) {
-	if f.err != nil {
-		return 0, f.err
-	}
-	return f.value, nil
-}
-
 func TestPricingServiceSetsProductPrice(t *testing.T) {
 	repo := &fakePricingRepository{}
-	service := application.NewService(repo, &fakeManualOverrideGuard{}, &fakeMarginFloorResolver{value: 15})
+	avg := 85.0
+	service := application.NewService(repo, &fakeManualOverrideGuard{})
 
 	effectiveFrom := time.Date(2026, 3, 17, 12, 0, 0, 0, time.UTC)
 	price, err := service.SetProductPrice(context.Background(), application.SetProductPriceCommand{
-		TenantID:        "tenant-1",
-		TraceID:         "trace-pricing-set",
-		ProductID:       "prd_1",
-		CurrencyCode:    "brl",
-		PriceAmount:     120,
-		CostBasisAmount: 90,
-		PricingStatus:   "active",
-		EffectiveFrom:   effectiveFrom,
-		OriginType:      "manual",
-		ReasonCode:      "initial_price",
-		UpdatedBy:       "admin-local",
+		TenantID:              "tenant-1",
+		TraceID:               "trace-pricing-set",
+		ProductID:             "prd_1",
+		CurrencyCode:          "brl",
+		PriceAmount:           120,
+		ReplacementCostAmount: 90,
+		AverageCostAmount:     &avg,
+		PricingStatus:         "active",
+		EffectiveFrom:         effectiveFrom,
+		OriginType:            "manual",
+		ReasonCode:            "initial_price",
+		UpdatedBy:             "admin-local",
 	})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -85,8 +75,11 @@ func TestPricingServiceSetsProductPrice(t *testing.T) {
 	if price.PriceID == "" {
 		t.Fatal("expected generated price id")
 	}
-	if repo.created.MarginFloorValue != 15 {
-		t.Fatalf("expected resolved margin floor 15, got %v", repo.created.MarginFloorValue)
+	if repo.created.ReplacementCostAmount != 90 {
+		t.Fatalf("expected replacement cost 90, got %v", repo.created.ReplacementCostAmount)
+	}
+	if repo.created.AverageCostAmount == nil || *repo.created.AverageCostAmount != 85 {
+		t.Fatalf("expected average cost 85, got %v", repo.created.AverageCostAmount)
 	}
 	if repo.created.CurrencyCode != "BRL" {
 		t.Fatalf("expected normalized currency BRL, got %q", repo.created.CurrencyCode)
@@ -96,42 +89,21 @@ func TestPricingServiceSetsProductPrice(t *testing.T) {
 	}
 }
 
-func TestPricingServiceRejectsPriceBelowMarginFloor(t *testing.T) {
-	repo := &fakePricingRepository{}
-	service := application.NewService(repo, &fakeManualOverrideGuard{}, &fakeMarginFloorResolver{value: 30})
-
-	_, err := service.SetProductPrice(context.Background(), application.SetProductPriceCommand{
-		TenantID:        "tenant-1",
-		ProductID:       "prd_1",
-		CurrencyCode:    "BRL",
-		PriceAmount:     100,
-		CostBasisAmount: 90,
-		PricingStatus:   "active",
-		EffectiveFrom:   time.Now().UTC(),
-		OriginType:      "manual",
-		ReasonCode:      "too_low",
-		UpdatedBy:       "admin-local",
-	})
-	if !errors.Is(err, domain.ErrPriceBelowMarginFloor) {
-		t.Fatalf("expected ErrPriceBelowMarginFloor, got %v", err)
-	}
-}
-
 func TestPricingServiceRejectsManualOverrideWhenDisabled(t *testing.T) {
 	repo := &fakePricingRepository{}
-	service := application.NewService(repo, &fakeManualOverrideGuard{err: domain.ErrManualPriceOverrideDisabled}, &fakeMarginFloorResolver{value: 10})
+	service := application.NewService(repo, &fakeManualOverrideGuard{err: domain.ErrManualPriceOverrideDisabled})
 
 	_, err := service.SetProductPrice(context.Background(), application.SetProductPriceCommand{
-		TenantID:        "tenant-1",
-		ProductID:       "prd_1",
-		CurrencyCode:    "BRL",
-		PriceAmount:     120,
-		CostBasisAmount: 80,
-		PricingStatus:   "active",
-		EffectiveFrom:   time.Now().UTC(),
-		OriginType:      "manual",
-		ReasonCode:      "blocked",
-		UpdatedBy:       "admin-local",
+		TenantID:              "tenant-1",
+		ProductID:             "prd_1",
+		CurrencyCode:          "BRL",
+		PriceAmount:           120,
+		ReplacementCostAmount: 80,
+		PricingStatus:         "active",
+		EffectiveFrom:         time.Now().UTC(),
+		OriginType:            "manual",
+		ReasonCode:            "blocked",
+		UpdatedBy:             "admin-local",
 	})
 	if !errors.Is(err, domain.ErrManualPriceOverrideDisabled) {
 		t.Fatalf("expected ErrManualPriceOverrideDisabled, got %v", err)

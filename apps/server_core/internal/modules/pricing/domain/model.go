@@ -24,22 +24,22 @@ const (
 )
 
 type ProductPrice struct {
-	PriceID          string
-	TenantID         string
-	ProductID        string
-	CurrencyCode     string
-	PriceAmount      float64
-	CostBasisAmount  float64
-	MarginFloorValue float64
-	PricingStatus    PricingStatus
-	EffectiveFrom    time.Time
-	EffectiveTo      *time.Time
-	OriginType       OriginType
-	OriginRef        string
-	ReasonCode       string
-	UpdatedBy        string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	PriceID               string
+	TenantID              string
+	ProductID             string
+	CurrencyCode          string
+	PriceAmount           float64
+	ReplacementCostAmount float64
+	AverageCostAmount     *float64
+	PricingStatus         PricingStatus
+	EffectiveFrom         time.Time
+	EffectiveTo           *time.Time
+	OriginType            OriginType
+	OriginRef             string
+	ReasonCode            string
+	UpdatedBy             string
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
 }
 
 var currencyCodePattern = regexp.MustCompile(`^[A-Z]{3}$`)
@@ -63,11 +63,11 @@ func (p ProductPrice) ValidateForWrite() error {
 	if p.PriceAmount < 0 {
 		return ErrPriceAmountInvalid
 	}
-	if p.CostBasisAmount < 0 {
-		return ErrCostBasisAmountInvalid
+	if p.ReplacementCostAmount < 0 {
+		return ErrReplacementCostAmountInvalid
 	}
-	if p.MarginFloorValue < 0 {
-		return ErrMarginFloorValueInvalid
+	if p.AverageCostAmount != nil && *p.AverageCostAmount < 0 {
+		return ErrAverageCostAmountInvalid
 	}
 	if !p.PricingStatus.IsValid() {
 		return fmt.Errorf("%w: %s", ErrInvalidPricingStatus, p.PricingStatus)
@@ -96,14 +96,4 @@ func (s PricingStatus) IsValid() bool {
 
 func (o OriginType) IsValid() bool {
 	return o == OriginTypeManual || o == OriginTypePolicy || o == OriginTypeImport
-}
-
-func (p ProductPrice) MarginPercent() float64 {
-	if p.PriceAmount <= 0 {
-		if p.CostBasisAmount == 0 {
-			return 0
-		}
-		return -100
-	}
-	return ((p.PriceAmount - p.CostBasisAmount) / p.PriceAmount) * 100
 }

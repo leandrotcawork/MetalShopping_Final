@@ -14,7 +14,7 @@
   "required": [
     "currency_code",
     "price_amount",
-    "cost_basis_amount",
+    "replacement_cost_amount",
     "origin_type",
     "reason_code",
     "effective_from"
@@ -28,11 +28,11 @@
       "type": "number",
       "minimum": 0
     },
-    "cost_basis_amount": {
+    "replacement_cost_amount": {
       "type": "number",
       "minimum": 0
     },
-    "margin_floor_value": {
+    "average_cost_amount": {
       "type": "number",
       "minimum": 0
     },

@@ -48,8 +48,8 @@ INSERT INTO pricing_product_prices (
   product_id,
   currency_code,
   price_amount,
-  cost_basis_amount,
-  margin_floor_value,
+  replacement_cost_amount,
+  average_cost_amount,
   pricing_status,
   effective_from,
   effective_to,
@@ -86,8 +86,8 @@ VALUES (
 		price.ProductID,
 		price.CurrencyCode,
 		price.PriceAmount,
-		price.CostBasisAmount,
-		price.MarginFloorValue,
+		price.ReplacementCostAmount,
+		nullableFloat(price.AverageCostAmount),
 		string(price.PricingStatus),
 		price.EffectiveFrom,
 		nullableTime(price.EffectiveTo),
@@ -125,7 +125,7 @@ func (r *Repository) ListProductPrices(ctx context.Context, tenantID, productID 
 	defer func() { _ = tx.Rollback() }()
 
 	const querySQL = `
-SELECT price_id, tenant_id, product_id, currency_code, price_amount, cost_basis_amount, margin_floor_value, pricing_status, effective_from, effective_to, origin_type, COALESCE(origin_ref, ''), reason_code, updated_by, created_at, updated_at
+SELECT price_id, tenant_id, product_id, currency_code, price_amount, replacement_cost_amount, average_cost_amount, pricing_status, effective_from, effective_to, origin_type, COALESCE(origin_ref, ''), reason_code, updated_by, created_at, updated_at
 FROM pricing_product_prices
 WHERE product_id = $1
 ORDER BY effective_from DESC, created_at DESC
@@ -161,7 +161,7 @@ func (r *Repository) GetCurrentProductPrice(ctx context.Context, tenantID, produ
 	defer func() { _ = tx.Rollback() }()
 
 	const querySQL = `
-SELECT price_id, tenant_id, product_id, currency_code, price_amount, cost_basis_amount, margin_floor_value, pricing_status, effective_from, effective_to, origin_type, COALESCE(origin_ref, ''), reason_code, updated_by, created_at, updated_at
+SELECT price_id, tenant_id, product_id, currency_code, price_amount, replacement_cost_amount, average_cost_amount, pricing_status, effective_from, effective_to, origin_type, COALESCE(origin_ref, ''), reason_code, updated_by, created_at, updated_at
 FROM pricing_product_prices
 WHERE product_id = $1
   AND effective_from <= NOW()
@@ -192,14 +192,15 @@ func scanProductPrice(s scanner) (domain.ProductPrice, error) {
 	var status string
 	var originType string
 	var effectiveTo sql.NullTime
+	var averageCost sql.NullFloat64
 	if err := s.Scan(
 		&item.PriceID,
 		&item.TenantID,
 		&item.ProductID,
 		&item.CurrencyCode,
 		&item.PriceAmount,
-		&item.CostBasisAmount,
-		&item.MarginFloorValue,
+		&item.ReplacementCostAmount,
+		&averageCost,
 		&status,
 		&item.EffectiveFrom,
 		&effectiveTo,
@@ -214,6 +215,10 @@ func scanProductPrice(s scanner) (domain.ProductPrice, error) {
 	}
 	item.PricingStatus = domain.PricingStatus(status)
 	item.OriginType = domain.OriginType(originType)
+	if averageCost.Valid {
+		value := averageCost.Float64
+		item.AverageCostAmount = &value
+	}
 	if effectiveTo.Valid {
 		value := effectiveTo.Time.UTC()
 		item.EffectiveTo = &value
@@ -233,4 +238,11 @@ func nullableTime(value *time.Time) any {
 		return nil
 	}
 	return value.UTC()
+}
+
+func nullableFloat(value *float64) any {
+	if value == nil {
+		return nil
+	}
+	return *value
 }

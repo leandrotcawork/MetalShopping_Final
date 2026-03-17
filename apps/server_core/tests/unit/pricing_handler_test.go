@@ -16,13 +16,13 @@ import (
 
 func TestPricingHandlerSetsProductPrice(t *testing.T) {
 	repo := &fakePricingRepository{}
-	service := application.NewService(repo, &fakeManualOverrideGuard{}, &fakeMarginFloorResolver{value: 15})
+	service := application.NewService(repo, &fakeManualOverrideGuard{})
 	handler := pricinghttp.NewHandler(service, &fakePermissionChecker{allowed: true})
 
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/pricing/products/prd_1/prices", strings.NewReader(`{"currency_code":"BRL","price_amount":120,"cost_basis_amount":90,"pricing_status":"active","effective_from":"2026-03-17T12:00:00Z","origin_type":"manual","reason_code":"initial_price"}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/pricing/products/prd_1/prices", strings.NewReader(`{"currency_code":"BRL","price_amount":120,"replacement_cost_amount":90,"average_cost_amount":84.5,"pricing_status":"active","effective_from":"2026-03-17T12:00:00Z","origin_type":"manual","reason_code":"initial_price"}`))
 	req.Header.Set("Content-Type", "application/json")
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{SubjectID: "pricing-admin", TenantID: "tenant-1"}))
 	req = req.WithContext(tenancy_runtime.WithTenant(req.Context(), tenancy_runtime.Tenant{ID: "tenant-1"}))
@@ -42,22 +42,21 @@ func TestPricingHandlerListsProductPrices(t *testing.T) {
 	repo := &fakePricingRepository{
 		list: []domain.ProductPrice{
 			{
-				PriceID:          "prc_1",
-				TenantID:         "tenant-1",
-				ProductID:        "prd_1",
-				CurrencyCode:     "BRL",
-				PriceAmount:      120,
-				CostBasisAmount:  90,
-				MarginFloorValue: 15,
-				PricingStatus:    domain.PricingStatusActive,
-				EffectiveFrom:    time.Date(2026, 3, 17, 12, 0, 0, 0, time.UTC),
-				OriginType:       domain.OriginTypeManual,
-				ReasonCode:       "initial_price",
-				UpdatedBy:        "pricing-admin",
+				PriceID:               "prc_1",
+				TenantID:              "tenant-1",
+				ProductID:             "prd_1",
+				CurrencyCode:          "BRL",
+				PriceAmount:           120,
+				ReplacementCostAmount: 90,
+				PricingStatus:         domain.PricingStatusActive,
+				EffectiveFrom:         time.Date(2026, 3, 17, 12, 0, 0, 0, time.UTC),
+				OriginType:            domain.OriginTypeManual,
+				ReasonCode:            "initial_price",
+				UpdatedBy:             "pricing-admin",
 			},
 		},
 	}
-	service := application.NewService(repo, &fakeManualOverrideGuard{}, &fakeMarginFloorResolver{value: 15})
+	service := application.NewService(repo, &fakeManualOverrideGuard{})
 	handler := pricinghttp.NewHandler(service, &fakePermissionChecker{allowed: true})
 
 	mux := http.NewServeMux()
@@ -81,21 +80,20 @@ func TestPricingHandlerListsProductPrices(t *testing.T) {
 func TestPricingHandlerGetsCurrentProductPrice(t *testing.T) {
 	repo := &fakePricingRepository{
 		current: domain.ProductPrice{
-			PriceID:          "prc_2",
-			TenantID:         "tenant-1",
-			ProductID:        "prd_1",
-			CurrencyCode:     "BRL",
-			PriceAmount:      130,
-			CostBasisAmount:  95,
-			MarginFloorValue: 15,
-			PricingStatus:    domain.PricingStatusActive,
-			EffectiveFrom:    time.Date(2026, 3, 17, 12, 0, 0, 0, time.UTC),
-			OriginType:       domain.OriginTypeManual,
-			ReasonCode:       "current_price",
-			UpdatedBy:        "pricing-admin",
+			PriceID:               "prc_2",
+			TenantID:              "tenant-1",
+			ProductID:             "prd_1",
+			CurrencyCode:          "BRL",
+			PriceAmount:           130,
+			ReplacementCostAmount: 95,
+			PricingStatus:         domain.PricingStatusActive,
+			EffectiveFrom:         time.Date(2026, 3, 17, 12, 0, 0, 0, time.UTC),
+			OriginType:            domain.OriginTypeManual,
+			ReasonCode:            "current_price",
+			UpdatedBy:             "pricing-admin",
 		},
 	}
-	service := application.NewService(repo, &fakeManualOverrideGuard{}, &fakeMarginFloorResolver{value: 15})
+	service := application.NewService(repo, &fakeManualOverrideGuard{})
 	handler := pricinghttp.NewHandler(service, &fakePermissionChecker{allowed: true})
 
 	mux := http.NewServeMux()
@@ -118,13 +116,13 @@ func TestPricingHandlerGetsCurrentProductPrice(t *testing.T) {
 
 func TestPricingHandlerRejectsGovernanceBlockedWrite(t *testing.T) {
 	repo := &fakePricingRepository{}
-	service := application.NewService(repo, &fakeManualOverrideGuard{err: domain.ErrManualPriceOverrideDisabled}, &fakeMarginFloorResolver{value: 15})
+	service := application.NewService(repo, &fakeManualOverrideGuard{err: domain.ErrManualPriceOverrideDisabled})
 	handler := pricinghttp.NewHandler(service, &fakePermissionChecker{allowed: true})
 
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/pricing/products/prd_1/prices", strings.NewReader(`{"currency_code":"BRL","price_amount":120,"cost_basis_amount":90,"pricing_status":"active","effective_from":"2026-03-17T12:00:00Z","origin_type":"manual","reason_code":"blocked"}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/pricing/products/prd_1/prices", strings.NewReader(`{"currency_code":"BRL","price_amount":120,"replacement_cost_amount":90,"pricing_status":"active","effective_from":"2026-03-17T12:00:00Z","origin_type":"manual","reason_code":"blocked"}`))
 	req.Header.Set("Content-Type", "application/json")
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{SubjectID: "pricing-admin", TenantID: "tenant-1"}))
 	req = req.WithContext(tenancy_runtime.WithTenant(req.Context(), tenancy_runtime.Tenant{ID: "tenant-1"}))

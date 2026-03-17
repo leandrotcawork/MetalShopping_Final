@@ -66,6 +66,7 @@
 - pricing runtime guards, outbox publication path, HTTP transport, and bootstrap wiring implemented
 - pricing unit tests added and passing
 - canonical SKU data ownership model frozen from legacy `products` and `product_erp` semantics
+- pricing revision started to replace generic cost-basis and margin-floor persistence with legacy-aligned cost semantics
 
 ## Next
 
@@ -76,6 +77,7 @@
 - apply pricing migrations and database-backed governance defaults in runtime
 - validate pricing write/list/current and outbox publication through smoke tests
 - revise pricing semantics to align with the accepted canonical SKU data ownership model
+- validate the revised pricing slice and migration path end-to-end after semantic alignment
 - continue domain expansion from the proven tenant-aware foundation
 - prepare phase transition checklist from foundation hardening to domain expansion
 - use the MetalDocs reuse matrix to decide the first extracted patterns without copying unsafe defaults

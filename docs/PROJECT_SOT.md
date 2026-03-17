@@ -106,7 +106,7 @@ The most important remaining gaps are:
 - production identity integration is not yet connected to a real issuer or JWKS source
 - outbox exists and catalog emits real events, but broker delivery and worker consumption are still not in place
 - governance is operational in runtime, but broader operational surfaces still need administrative mutation paths
-- catalog is now a strong canonical foundation, but pricing semantics must now be revised against the accepted SKU ownership model before further pricing expansion
+- catalog is now a strong canonical foundation, and pricing semantics are being realigned against the accepted SKU ownership model before further pricing expansion
 - contract validation and generation are now functional locally and must next be enforced in team workflow and CI
 
 ## Planning deliverables

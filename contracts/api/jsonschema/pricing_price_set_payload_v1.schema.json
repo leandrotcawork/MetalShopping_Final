@@ -17,8 +17,7 @@
     "product_id",
     "currency_code",
     "price_amount",
-    "cost_basis_amount",
-    "margin_floor_value",
+    "replacement_cost_amount",
     "pricing_status",
     "effective_from",
     "origin_type",
@@ -31,8 +30,8 @@
     "product_id": { "type": "string", "minLength": 1 },
     "currency_code": { "type": "string", "pattern": "^[A-Z]{3}$" },
     "price_amount": { "type": "number", "minimum": 0 },
-    "cost_basis_amount": { "type": "number", "minimum": 0 },
-    "margin_floor_value": { "type": "number", "minimum": 0 },
+    "replacement_cost_amount": { "type": "number", "minimum": 0 },
+    "average_cost_amount": { "type": "number", "minimum": 0 },
     "pricing_status": {
       "type": "string",
       "enum": ["draft", "active", "inactive"]

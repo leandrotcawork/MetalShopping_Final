@@ -72,8 +72,8 @@ Minimum target fields:
 - `product_id`
 - `currency_code`
 - `price_amount`
-- `cost_basis_amount`
-- `margin_floor_value`
+- `replacement_cost_amount`
+- `average_cost_amount` (optional in the first slice)
 - `pricing_status`
 - `effective_from`
 - `effective_to`
@@ -100,15 +100,15 @@ Minimum target fields:
 
 - canonical current internal commercial price for the effective window
 
-### `cost_basis_amount`
+### `replacement_cost_amount`
 
-- explicit cost basis used to justify or validate the price
+- explicit replacement cost aligned to legacy `custo_variavel`
 - required because future pricing logic, analytics, and explainability depend on it
 
-### `margin_floor_value`
+### `average_cost_amount`
 
-- resolved or recorded floor used at the time of the decision
-- first slice can store the resolved value even if the long-term strategy also depends on event or audit trails
+- optional average cost aligned to legacy `custo_medio`
+- should remain explicit if the product needs to compare replacement cost and average cost without collapsing both meanings
 
 ### `pricing_status`
 
@@ -148,12 +148,6 @@ This keeps future automation and explainability open.
 
 The first pricing slice must use runtime governance for:
 
-### Threshold
-
-- `pricing.default_margin_floor`
-
-This already exists in contracts and registry direction and should become effective runtime input for pricing.
-
 ### Policy
 
 First target policy:
@@ -187,7 +181,6 @@ The first contract set for pricing should include:
 
 ### Governance
 
-- threshold contract already exists for `pricing.default_margin_floor`
 - add policy contract for `pricing.manual_price_override`
 
 ## First migration target

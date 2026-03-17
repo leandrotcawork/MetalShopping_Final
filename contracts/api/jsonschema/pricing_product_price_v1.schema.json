@@ -17,8 +17,7 @@
     "product_id",
     "currency_code",
     "price_amount",
-    "cost_basis_amount",
-    "margin_floor_value",
+    "replacement_cost_amount",
     "pricing_status",
     "effective_from",
     "origin_type",
@@ -46,11 +45,11 @@
       "type": "number",
       "minimum": 0
     },
-    "cost_basis_amount": {
+    "replacement_cost_amount": {
       "type": "number",
       "minimum": 0
     },
-    "margin_floor_value": {
+    "average_cost_amount": {
       "type": "number",
       "minimum": 0
     },

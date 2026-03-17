@@ -82,8 +82,7 @@ func main() {
 	catalogService := catalogapp.NewService(catalogRepo, catalogProductCreationGuard, catalogDescriptionGuard)
 	catalogHandler := cataloghttp.NewHandler(catalogService, iamAuthorization)
 	pricingManualOverrideGuard := pricinggov.NewManualOverrideGuard(policyResolver, environment)
-	pricingMarginFloorGuard := pricinggov.NewMarginFloorGuard(thresholdResolver, environment)
-	pricingService := pricingapp.NewService(pricingRepo, pricingManualOverrideGuard, pricingMarginFloorGuard)
+	pricingService := pricingapp.NewService(pricingRepo, pricingManualOverrideGuard)
 	pricingHandler := pricinghttp.NewHandler(pricingService, iamAuthorization)
 
 	authMiddleware := platformauth.NewMiddleware(authenticator, []string{

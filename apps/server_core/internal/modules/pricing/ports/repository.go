@@ -20,7 +20,3 @@ type PermissionChecker interface {
 type ManualPriceOverrideGuard interface {
 	ValidateManualOverride(ctx context.Context, tenantID string, originType domain.OriginType) error
 }
-
-type MarginFloorResolver interface {
-	ResolveMarginFloor(ctx context.Context, tenantID string, explicitMarginFloor float64) (float64, error)
-}
