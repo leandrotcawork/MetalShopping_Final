@@ -21,12 +21,20 @@ type Handler struct {
 }
 
 type CreateProductRequest struct {
-	SKU                   string `json:"sku"`
-	Name                  string `json:"name"`
-	BrandName             string `json:"brand_name,omitempty"`
-	StockProfileCode      string `json:"stock_profile_code,omitempty"`
-	PrimaryTaxonomyNodeID string `json:"primary_taxonomy_node_id,omitempty"`
-	Status                string `json:"status,omitempty"`
+	SKU                   string                           `json:"sku"`
+	Name                  string                           `json:"name"`
+	BrandName             string                           `json:"brand_name,omitempty"`
+	StockProfileCode      string                           `json:"stock_profile_code,omitempty"`
+	PrimaryTaxonomyNodeID string                           `json:"primary_taxonomy_node_id,omitempty"`
+	Status                string                           `json:"status,omitempty"`
+	Identifiers           []CreateProductIdentifierRequest `json:"identifiers,omitempty"`
+}
+
+type CreateProductIdentifierRequest struct {
+	IdentifierType  string `json:"identifier_type"`
+	IdentifierValue string `json:"identifier_value"`
+	SourceSystem    string `json:"source_system,omitempty"`
+	IsPrimary       bool   `json:"is_primary,omitempty"`
 }
 
 func NewHandler(service *application.Service, permissionChecker ports.PermissionChecker) *Handler {
@@ -38,6 +46,7 @@ func NewHandler(service *application.Service, permissionChecker ports.Permission
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/catalog/products", h.handleProducts)
+	mux.HandleFunc("/api/v1/catalog/products/", h.handleProductSubresources)
 	mux.HandleFunc("/api/v1/catalog/taxonomy/nodes", h.handleTaxonomyNodes)
 	mux.HandleFunc("/api/v1/catalog/taxonomy/levels", h.handleTaxonomyLevels)
 }
@@ -56,6 +65,26 @@ func (h *Handler) handleProducts(w http.ResponseWriter, r *http.Request) {
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
+}
+
+func (h *Handler) handleProductSubresources(w http.ResponseWriter, r *http.Request) {
+	principal, tenant, ok := h.requirePrincipalAndTenant(w, r)
+	if !ok {
+		return
+	}
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	path := strings.TrimPrefix(r.URL.Path, "/api/v1/catalog/products/")
+	productID, subresource, found := strings.Cut(path, "/")
+	if !found || strings.TrimSpace(productID) == "" || subresource != "identifiers" {
+		http.NotFound(w, r)
+		return
+	}
+
+	h.handleListProductIdentifiers(w, r, principal.SubjectID, tenant.ID, strings.TrimSpace(productID))
 }
 
 func (h *Handler) handleTaxonomyNodes(w http.ResponseWriter, r *http.Request) {
@@ -155,10 +184,11 @@ func (h *Handler) handleCreateProduct(w http.ResponseWriter, r *http.Request, us
 		StockProfileCode:      req.StockProfileCode,
 		PrimaryTaxonomyNodeID: req.PrimaryTaxonomyNodeID,
 		Status:                req.Status,
+		Identifiers:           mapCreateProductIdentifierInputs(req.Identifiers),
 	})
 	if err != nil {
 		switch {
-		case errors.Is(err, domain.ErrTenantIDRequired), errors.Is(err, domain.ErrSKURequired), errors.Is(err, domain.ErrProductNameRequired), errors.Is(err, domain.ErrInvalidProductStatus):
+		case errors.Is(err, domain.ErrTenantIDRequired), errors.Is(err, domain.ErrSKURequired), errors.Is(err, domain.ErrProductNameRequired), errors.Is(err, domain.ErrInvalidProductStatus), errors.Is(err, domain.ErrProductIDRequired), errors.Is(err, domain.ErrProductIdentifierTypeRequired), errors.Is(err, domain.ErrProductIdentifierValueRequired):
 			writeAPIError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error(), requestTraceID(r))
 		case errors.Is(err, domain.ErrProductCreationDisabled):
 			writeAPIError(w, http.StatusForbidden, "GOVERNANCE_DISABLED", err.Error(), requestTraceID(r))
@@ -191,6 +221,30 @@ func (h *Handler) handleListProducts(w http.ResponseWriter, r *http.Request, use
 	items := make([]map[string]any, 0, len(products))
 	for _, product := range products {
 		items = append(items, mapProduct(product))
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": items})
+}
+
+func (h *Handler) handleListProductIdentifiers(w http.ResponseWriter, r *http.Request, userID, tenantID, productID string) {
+	allowed, err := h.permissionChecker.HasPermission(r.Context(), userID, iamdomain.PermCatalogRead)
+	if err != nil {
+		writeAPIError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Authorization lookup failed", requestTraceID(r))
+		return
+	}
+	if !allowed {
+		writeAPIError(w, http.StatusForbidden, "AUTH_FORBIDDEN", "Insufficient permissions", requestTraceID(r))
+		return
+	}
+
+	identifiers, err := h.service.ListProductIdentifiers(r.Context(), tenantID, productID)
+	if err != nil {
+		writeAPIError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to list product identifiers", requestTraceID(r))
+		return
+	}
+
+	items := make([]map[string]any, 0, len(identifiers))
+	for _, identifier := range identifiers {
+		items = append(items, mapProductIdentifier(identifier))
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": items})
 }
@@ -235,8 +289,42 @@ func mapProduct(product domain.Product) map[string]any {
 		"brand_name":               product.BrandName,
 		"stock_profile_code":       product.StockProfileCode,
 		"primary_taxonomy_node_id": product.PrimaryTaxonomyNodeID,
+		"identifiers":              mapProductIdentifiers(product.Identifiers),
 		"status":                   string(product.Status),
 	}
+}
+
+func mapProductIdentifier(identifier domain.ProductIdentifier) map[string]any {
+	return map[string]any{
+		"product_identifier_id": identifier.ProductIdentifierID,
+		"product_id":            identifier.ProductID,
+		"tenant_id":             identifier.TenantID,
+		"identifier_type":       identifier.IdentifierType,
+		"identifier_value":      identifier.IdentifierValue,
+		"source_system":         identifier.SourceSystem,
+		"is_primary":            identifier.IsPrimary,
+	}
+}
+
+func mapProductIdentifiers(identifiers []domain.ProductIdentifier) []map[string]any {
+	items := make([]map[string]any, 0, len(identifiers))
+	for _, identifier := range identifiers {
+		items = append(items, mapProductIdentifier(identifier))
+	}
+	return items
+}
+
+func mapCreateProductIdentifierInputs(inputs []CreateProductIdentifierRequest) []application.CreateProductIdentifierInput {
+	identifiers := make([]application.CreateProductIdentifierInput, 0, len(inputs))
+	for _, input := range inputs {
+		identifiers = append(identifiers, application.CreateProductIdentifierInput{
+			IdentifierType:  input.IdentifierType,
+			IdentifierValue: input.IdentifierValue,
+			SourceSystem:    input.SourceSystem,
+			IsPrimary:       input.IsPrimary,
+		})
+	}
+	return identifiers
 }
 
 func mapTaxonomyNode(node domain.TaxonomyNode) map[string]any {

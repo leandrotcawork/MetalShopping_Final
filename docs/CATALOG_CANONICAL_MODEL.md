@@ -261,6 +261,7 @@ The current `catalog_products` table should evolve toward this shape in phases:
 - add `catalog_product_identifiers`
 - move upstream identifiers into explicit supporting structure
 - keep `sku` as the canonical business key
+- status: implemented in the current foundation slice
 
 ### Phase C
 

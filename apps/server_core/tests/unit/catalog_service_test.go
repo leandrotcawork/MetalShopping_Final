@@ -13,6 +13,7 @@ import (
 type fakeCatalogRepository struct {
 	created       domain.Product
 	list          []domain.Product
+	identifiers   []domain.ProductIdentifier
 	taxonomyNodes []domain.TaxonomyNode
 	taxonomyDefs  []domain.TaxonomyLevelDef
 	err           error
@@ -31,6 +32,13 @@ func (f *fakeCatalogRepository) ListProducts(context.Context, string) ([]domain.
 		return nil, f.err
 	}
 	return f.list, nil
+}
+
+func (f *fakeCatalogRepository) ListProductIdentifiers(context.Context, string, string) ([]domain.ProductIdentifier, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return f.identifiers, nil
 }
 
 func (f *fakeCatalogRepository) ListTaxonomyNodes(context.Context, string, ports.TaxonomyNodeFilter) ([]domain.TaxonomyNode, error) {
@@ -71,6 +79,14 @@ func TestCatalogServiceCreatesProduct(t *testing.T) {
 		StockProfileCode:      "standard",
 		PrimaryTaxonomyNodeID: "txn_leaf_1",
 		Status:                "active",
+		Identifiers: []application.CreateProductIdentifierInput{
+			{
+				IdentifierType:  "ean",
+				IdentifierValue: "789000000001",
+				SourceSystem:    "erp",
+				IsPrimary:       true,
+			},
+		},
 	})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -83,6 +99,9 @@ func TestCatalogServiceCreatesProduct(t *testing.T) {
 	}
 	if repo.created.PrimaryTaxonomyNodeID != "txn_leaf_1" {
 		t.Fatalf("expected taxonomy node txn_leaf_1, got %q", repo.created.PrimaryTaxonomyNodeID)
+	}
+	if len(repo.created.Identifiers) != 1 || repo.created.Identifiers[0].IdentifierType != "ean" {
+		t.Fatalf("expected identifiers to be created, got %+v", repo.created.Identifiers)
 	}
 }
 
@@ -128,5 +147,30 @@ func TestCatalogServiceListsTaxonomyLevelDefs(t *testing.T) {
 	}
 	if len(defs) != 1 || defs[0].Label != "Department" {
 		t.Fatalf("unexpected taxonomy defs: %+v", defs)
+	}
+}
+
+func TestCatalogServiceListsProductIdentifiers(t *testing.T) {
+	repo := &fakeCatalogRepository{
+		identifiers: []domain.ProductIdentifier{
+			{
+				ProductIdentifierID: "pid_1",
+				ProductID:           "prd_1",
+				TenantID:            "tenant-1",
+				IdentifierType:      "ean",
+				IdentifierValue:     "789000000001",
+				SourceSystem:        "erp",
+				IsPrimary:           true,
+			},
+		},
+	}
+	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true})
+
+	identifiers, err := service.ListProductIdentifiers(context.Background(), "tenant-1", "prd_1")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(identifiers) != 1 || identifiers[0].IdentifierValue != "789000000001" {
+		t.Fatalf("unexpected identifiers: %+v", identifiers)
 	}
 }

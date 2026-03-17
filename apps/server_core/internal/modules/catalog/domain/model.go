@@ -22,8 +22,21 @@ type Product struct {
 	StockProfileCode      string
 	PrimaryTaxonomyNodeID string
 	Status                ProductStatus
+	Identifiers           []ProductIdentifier
 	CreatedAt             time.Time
 	UpdatedAt             time.Time
+}
+
+type ProductIdentifier struct {
+	ProductIdentifierID string
+	ProductID           string
+	TenantID            string
+	IdentifierType      string
+	IdentifierValue     string
+	SourceSystem        string
+	IsPrimary           bool
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 type TaxonomyNode struct {
@@ -62,6 +75,27 @@ func (p Product) ValidateForCreate() error {
 	}
 	if !p.Status.IsValid() {
 		return fmt.Errorf("%w: %s", ErrInvalidProductStatus, p.Status)
+	}
+	for _, identifier := range p.Identifiers {
+		if err := identifier.ValidateForCreate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (i ProductIdentifier) ValidateForCreate() error {
+	if strings.TrimSpace(i.TenantID) == "" {
+		return ErrTenantIDRequired
+	}
+	if strings.TrimSpace(i.ProductID) == "" {
+		return ErrProductIDRequired
+	}
+	if strings.TrimSpace(i.IdentifierType) == "" {
+		return ErrProductIdentifierTypeRequired
+	}
+	if strings.TrimSpace(i.IdentifierValue) == "" {
+		return ErrProductIdentifierValueRequired
 	}
 	return nil
 }

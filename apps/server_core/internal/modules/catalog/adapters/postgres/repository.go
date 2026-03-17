@@ -55,6 +55,47 @@ VALUES (
 		return fmt.Errorf("insert catalog product: %w", err)
 	}
 
+	const insertIdentifierSQL = `
+INSERT INTO catalog_product_identifiers (
+  product_identifier_id,
+  product_id,
+  tenant_id,
+  identifier_type,
+  identifier_value,
+  source_system,
+  is_primary,
+  created_at,
+  updated_at
+)
+VALUES (
+  $1,
+  $2,
+  current_tenant_id(),
+  $3,
+  $4,
+  $5,
+  $6,
+  $7,
+  $8
+)
+`
+	for _, identifier := range product.Identifiers {
+		if _, err := tx.ExecContext(
+			ctx,
+			insertIdentifierSQL,
+			identifier.ProductIdentifierID,
+			identifier.ProductID,
+			identifier.IdentifierType,
+			identifier.IdentifierValue,
+			nullableText(identifier.SourceSystem),
+			identifier.IsPrimary,
+			identifier.CreatedAt,
+			identifier.UpdatedAt,
+		); err != nil {
+			return fmt.Errorf("insert catalog product identifier: %w", err)
+		}
+	}
+
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit catalog product: %w", err)
 	}
@@ -107,6 +148,54 @@ ORDER BY sku ASC
 	}
 
 	return products, nil
+}
+
+func (r *Repository) ListProductIdentifiers(ctx context.Context, tenantID, productID string) ([]domain.ProductIdentifier, error) {
+	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	const querySQL = `
+SELECT product_identifier_id, product_id, tenant_id, identifier_type, identifier_value, COALESCE(source_system, ''), is_primary, created_at, updated_at
+FROM catalog_product_identifiers
+WHERE product_id = $1
+ORDER BY identifier_type ASC, identifier_value ASC
+`
+	rows, err := tx.QueryContext(ctx, querySQL, productID)
+	if err != nil {
+		return nil, fmt.Errorf("query catalog product identifiers: %w", err)
+	}
+	defer rows.Close()
+
+	identifiers := make([]domain.ProductIdentifier, 0, 8)
+	for rows.Next() {
+		var identifier domain.ProductIdentifier
+		if err := rows.Scan(
+			&identifier.ProductIdentifierID,
+			&identifier.ProductID,
+			&identifier.TenantID,
+			&identifier.IdentifierType,
+			&identifier.IdentifierValue,
+			&identifier.SourceSystem,
+			&identifier.IsPrimary,
+			&identifier.CreatedAt,
+			&identifier.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan catalog product identifier: %w", err)
+		}
+		identifiers = append(identifiers, identifier)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate catalog product identifiers: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit catalog product identifiers: %w", err)
+	}
+
+	return identifiers, nil
 }
 
 func (r *Repository) ListTaxonomyNodes(ctx context.Context, tenantID string, filter ports.TaxonomyNodeFilter) ([]domain.TaxonomyNode, error) {

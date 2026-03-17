@@ -42,6 +42,42 @@ paths:
             application/json:
               schema:
                 $ref: "../jsonschema/common_error_v1.schema.json"
+  /api/v1/catalog/products/{product_id}/identifiers:
+    get:
+      operationId: listCatalogProductIdentifiers
+      summary: "List catalog product identifiers for one product in the authenticated tenant"
+      parameters:
+        - in: path
+          name: product_id
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        "200":
+          description: "Catalog product identifiers returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/catalog_product_identifier_list_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Authorization, tenancy, or governance failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
     post:
       operationId: createCatalogProduct
       summary: "Create a catalog product for the authenticated tenant"

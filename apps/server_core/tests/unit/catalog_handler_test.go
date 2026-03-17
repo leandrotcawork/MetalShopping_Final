@@ -48,6 +48,30 @@ func TestCatalogHandlerCreatesProduct(t *testing.T) {
 	}
 }
 
+func TestCatalogHandlerCreatesProductWithIdentifiers(t *testing.T) {
+	repo := &fakeCatalogRepository{}
+	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true})
+	handler := cataloghttp.NewHandler(service, &fakePermissionChecker{allowed: true})
+
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/catalog/products", strings.NewReader(`{"sku":"SKU-002","name":"Fastener","status":"active","identifiers":[{"identifier_type":"ean","identifier_value":"789000000002","source_system":"erp","is_primary":true}]}`))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{SubjectID: "admin-local", TenantID: "tenant-1"}))
+	req = req.WithContext(tenancy_runtime.WithTenant(req.Context(), tenancy_runtime.Tenant{ID: "tenant-1"}))
+
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d", rr.Code)
+	}
+	if !strings.Contains(rr.Body.String(), `"identifier_type":"ean"`) {
+		t.Fatalf("expected identifier in response, got %s", rr.Body.String())
+	}
+}
+
 func TestCatalogHandlerListsProducts(t *testing.T) {
 	repo := &fakeCatalogRepository{
 		list: []domain.Product{
@@ -114,6 +138,41 @@ func TestCatalogHandlerListsTaxonomyLevels(t *testing.T) {
 	}
 	if !strings.Contains(rr.Body.String(), `"label":"Department"`) {
 		t.Fatalf("expected taxonomy level label, got %s", rr.Body.String())
+	}
+}
+
+func TestCatalogHandlerListsProductIdentifiers(t *testing.T) {
+	repo := &fakeCatalogRepository{
+		identifiers: []domain.ProductIdentifier{
+			{
+				ProductIdentifierID: "pid_1",
+				ProductID:           "prd_1",
+				TenantID:            "tenant-1",
+				IdentifierType:      "ean",
+				IdentifierValue:     "789000000001",
+				SourceSystem:        "erp",
+				IsPrimary:           true,
+			},
+		},
+	}
+	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true})
+	handler := cataloghttp.NewHandler(service, &fakePermissionChecker{allowed: true})
+
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/catalog/products/prd_1/identifiers", nil)
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{SubjectID: "admin-local", TenantID: "tenant-1"}))
+	req = req.WithContext(tenancy_runtime.WithTenant(req.Context(), tenancy_runtime.Tenant{ID: "tenant-1"}))
+
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rr.Code)
+	}
+	if !strings.Contains(rr.Body.String(), `"identifier_value":"789000000001"`) {
+		t.Fatalf("expected identifier value in response, got %s", rr.Body.String())
 	}
 }
 

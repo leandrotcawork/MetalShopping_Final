@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.metalshopping.local/schema/catalog/product_identifier/v1",
+  "title": "catalog_product_identifier_v1",
+  "description": "Canonical catalog product identifier representation.",
+  "type": "object",
+  "additionalProperties": false,
+  "x-metalshopping": {
+    "contract_name": "catalog_product_identifier_v1",
+    "contract_status": "draft",
+    "bounded_context": "catalog",
+    "owner_team": "product_core"
+  },
+  "required": ["product_identifier_id", "product_id", "tenant_id", "identifier_type", "identifier_value", "is_primary"],
+  "properties": {
+    "product_identifier_id": { "type": "string", "minLength": 1 },
+    "product_id": { "type": "string", "minLength": 1 },
+    "tenant_id": { "type": "string", "minLength": 1 },
+    "identifier_type": { "type": "string", "minLength": 1 },
+    "identifier_value": { "type": "string", "minLength": 1 },
+    "source_system": { "type": "string" },
+    "is_primary": { "type": "boolean" }
+  }
+}

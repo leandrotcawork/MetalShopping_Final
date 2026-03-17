@@ -18,6 +18,20 @@
     "brand_name": { "type": "string" },
     "stock_profile_code": { "type": "string" },
     "primary_taxonomy_node_id": { "type": "string" },
+    "identifiers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["identifier_type", "identifier_value"],
+        "properties": {
+          "identifier_type": { "type": "string", "minLength": 1 },
+          "identifier_value": { "type": "string", "minLength": 1 },
+          "source_system": { "type": "string" },
+          "is_primary": { "type": "boolean" }
+        }
+      }
+    },
     "status": {
       "type": "string",
       "enum": ["active", "inactive"]

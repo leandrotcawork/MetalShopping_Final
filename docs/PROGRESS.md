@@ -50,6 +50,7 @@
 - first server_core unit tests added and validated
 - canonical catalog product model analyzed from legacy signals and frozen as the next gate before pricing
 - canonical catalog taxonomy slice implemented with tenant-aware tables, API reads, and richer product master fields
+- canonical catalog product identifiers slice implemented with tenant-aware persistence and API reads
 
 ## Next
 
