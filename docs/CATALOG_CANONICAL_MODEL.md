@@ -26,7 +26,7 @@ The legacy stack contains several useful signals that should inform the new mode
 
 - `products_master` is treated as a canonical integration dataset
 - `inventory_position` is treated as a separate canonical dataset
-- product classification is moving from legacy `products.grupo` to canonical taxonomy
+- product classification in the target system is canonical taxonomy, not `products.grupo`
 - taxonomy is modeled as nodes plus level definitions
 - `marca` is treated as a transversal dimension, not a taxonomy level
 - import flows preserve existing populated values instead of overwriting them with null or empty values
@@ -36,7 +36,7 @@ Relevant legacy references:
 - `contexts/integration/contracts/defaults.py`
 - `db/schema.sql`
 - `db/products_write_repo_pg.py`
-- `docs/analytics/TAXONOMY_GRUPO_TRANSITION_COMPAT_BRIDGE_V1.md`
+- `docs/analytics/TAXONOMY_GRUPO_TRANSITION_COMPAT_BRIDGE_V1.md` (legacy reference only)
 - `docs/analytics/ANALYTICS_PRODUCT_HIERARCHY_TAXONOMY_N_LEVEL_DECISION_V1.md`
 
 ## Frozen ownership boundaries
@@ -50,7 +50,7 @@ Relevant legacy references:
 - taxonomy ownership and classification assignment
 - stable master-data attributes that define what the product is
 - active/inactive commercial state of the product record
-- canonical identifiers and compatibility bridges from upstream systems
+- canonical identifiers from upstream systems
 
 ### `catalog` does not own
 
@@ -182,14 +182,15 @@ Frozen rule:
 - new work must not recreate fixed `categoria/grupo/subgrupo` columns as canonical structure
 - additional hierarchy levels enter only through taxonomy tables
 
-## 4. Compatibility bridge from legacy classification
+## 4. Legacy classification rule
 
-Legacy `products.grupo` should not become the new canonical structure.
+`products.grupo` does not exist in the target architecture as a persisted catalog field.
 
-Accepted transition rule:
+Accepted rule:
 
 - canonical classification is taxonomy
-- legacy group labels may exist only as compatibility input or derived display fallback during migration
+- legacy group labels may be consumed only as migration input at integration time
+- the core must not persist a new `grupo` compatibility field
 - no new fixed structural columns should be introduced for category/group/subgroup
 
 ## 5. Master data ingest semantics
@@ -269,7 +270,7 @@ The current `catalog_products` table should evolve toward this shape in phases:
 
 ### Phase D
 
-- introduce compatibility import rules from `products_master`
+- introduce import rules from `products_master`
 - document no-null-overwrite ingest behavior in implementation
 
 ## Recommended next implementation order

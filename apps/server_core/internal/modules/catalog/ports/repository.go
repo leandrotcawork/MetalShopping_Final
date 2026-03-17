@@ -10,6 +10,13 @@ import (
 type Repository interface {
 	CreateProduct(ctx context.Context, product domain.Product) error
 	ListProducts(ctx context.Context, tenantID string) ([]domain.Product, error)
+	ListTaxonomyNodes(ctx context.Context, tenantID string, filter TaxonomyNodeFilter) ([]domain.TaxonomyNode, error)
+	ListTaxonomyLevelDefs(ctx context.Context, tenantID string) ([]domain.TaxonomyLevelDef, error)
+}
+
+type TaxonomyNodeFilter struct {
+	ParentTaxonomyNodeID string
+	Level                *int
 }
 
 type PermissionChecker interface {

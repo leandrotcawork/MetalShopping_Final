@@ -7,12 +7,15 @@ import (
 
 	"metalshopping/server_core/internal/modules/catalog/application"
 	"metalshopping/server_core/internal/modules/catalog/domain"
+	"metalshopping/server_core/internal/modules/catalog/ports"
 )
 
 type fakeCatalogRepository struct {
-	created domain.Product
-	list    []domain.Product
-	err     error
+	created       domain.Product
+	list          []domain.Product
+	taxonomyNodes []domain.TaxonomyNode
+	taxonomyDefs  []domain.TaxonomyLevelDef
+	err           error
 }
 
 func (f *fakeCatalogRepository) CreateProduct(_ context.Context, product domain.Product) error {
@@ -28,6 +31,20 @@ func (f *fakeCatalogRepository) ListProducts(context.Context, string) ([]domain.
 		return nil, f.err
 	}
 	return f.list, nil
+}
+
+func (f *fakeCatalogRepository) ListTaxonomyNodes(context.Context, string, ports.TaxonomyNodeFilter) ([]domain.TaxonomyNode, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return f.taxonomyNodes, nil
+}
+
+func (f *fakeCatalogRepository) ListTaxonomyLevelDefs(context.Context, string) ([]domain.TaxonomyLevelDef, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return f.taxonomyDefs, nil
 }
 
 type fakeProductCreationGuard struct {
@@ -47,10 +64,13 @@ func TestCatalogServiceCreatesProduct(t *testing.T) {
 	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true})
 
 	product, err := service.CreateProduct(context.Background(), application.CreateProductCommand{
-		TenantID: "tenant-1",
-		SKU:      "SKU-001",
-		Name:     "Steel Sheet",
-		Status:   "active",
+		TenantID:              "tenant-1",
+		SKU:                   "SKU-001",
+		Name:                  "Steel Sheet",
+		BrandName:             "Acme Steel",
+		StockProfileCode:      "standard",
+		PrimaryTaxonomyNodeID: "txn_leaf_1",
+		Status:                "active",
 	})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -58,8 +78,11 @@ func TestCatalogServiceCreatesProduct(t *testing.T) {
 	if product.ProductID == "" {
 		t.Fatal("expected generated product id")
 	}
-	if repo.created.SKU != "SKU-001" {
-		t.Fatalf("expected created SKU-001, got %q", repo.created.SKU)
+	if repo.created.BrandName != "Acme Steel" {
+		t.Fatalf("expected brand Acme Steel, got %q", repo.created.BrandName)
+	}
+	if repo.created.PrimaryTaxonomyNodeID != "txn_leaf_1" {
+		t.Fatalf("expected taxonomy node txn_leaf_1, got %q", repo.created.PrimaryTaxonomyNodeID)
 	}
 }
 
@@ -88,5 +111,22 @@ func TestCatalogServiceRejectsGovernanceDisabledCreate(t *testing.T) {
 	})
 	if !errors.Is(err, domain.ErrProductCreationDisabled) {
 		t.Fatalf("expected ErrProductCreationDisabled, got %v", err)
+	}
+}
+
+func TestCatalogServiceListsTaxonomyLevelDefs(t *testing.T) {
+	repo := &fakeCatalogRepository{
+		taxonomyDefs: []domain.TaxonomyLevelDef{
+			{TenantID: "tenant-1", Level: 0, Label: "Department", IsEnabled: true},
+		},
+	}
+	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true})
+
+	defs, err := service.ListTaxonomyLevelDefs(context.Background(), "tenant-1")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(defs) != 1 || defs[0].Label != "Department" {
+		t.Fatalf("unexpected taxonomy defs: %+v", defs)
 	}
 }

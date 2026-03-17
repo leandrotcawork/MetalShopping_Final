@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.metalshopping.local/schema/catalog/taxonomy_node_list/v1",
+  "title": "catalog_taxonomy_node_list_v1",
+  "description": "Catalog taxonomy node list response envelope.",
+  "type": "object",
+  "additionalProperties": false,
+  "x-metalshopping": {
+    "contract_name": "catalog_taxonomy_node_list_v1",
+    "contract_status": "draft",
+    "bounded_context": "catalog",
+    "owner_team": "product_core"
+  },
+  "required": ["items"],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "./catalog_taxonomy_node_v1.schema.json"
+      }
+    }
+  }
+}

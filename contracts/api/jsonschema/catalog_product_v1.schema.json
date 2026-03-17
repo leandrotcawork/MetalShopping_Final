@@ -17,6 +17,9 @@
     "tenant_id": { "type": "string", "minLength": 1 },
     "sku": { "type": "string", "minLength": 1 },
     "name": { "type": "string", "minLength": 1 },
+    "brand_name": { "type": "string" },
+    "stock_profile_code": { "type": "string" },
+    "primary_taxonomy_node_id": { "type": "string" },
     "status": {
       "type": "string",
       "enum": ["active", "inactive"]

@@ -32,7 +32,7 @@ func TestCatalogHandlerCreatesProduct(t *testing.T) {
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/catalog/products", strings.NewReader(`{"sku":"SKU-001","name":"Steel Sheet","status":"active"}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/catalog/products", strings.NewReader(`{"sku":"SKU-001","name":"Steel Sheet","brand_name":"Acme","stock_profile_code":"standard","primary_taxonomy_node_id":"txn_leaf_1","status":"active"}`))
 	req.Header.Set("Content-Type", "application/json")
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{SubjectID: "admin-local", TenantID: "tenant-1"}))
 	req = req.WithContext(tenancy_runtime.WithTenant(req.Context(), tenancy_runtime.Tenant{ID: "tenant-1"}))
@@ -43,17 +43,23 @@ func TestCatalogHandlerCreatesProduct(t *testing.T) {
 	if rr.Code != http.StatusCreated {
 		t.Fatalf("expected 201, got %d", rr.Code)
 	}
+	if !strings.Contains(rr.Body.String(), `"brand_name":"Acme"`) {
+		t.Fatalf("expected brand_name in response, got %s", rr.Body.String())
+	}
 }
 
 func TestCatalogHandlerListsProducts(t *testing.T) {
 	repo := &fakeCatalogRepository{
 		list: []domain.Product{
 			{
-				ProductID: "prd_1",
-				TenantID:  "tenant-1",
-				SKU:       "SKU-001",
-				Name:      "Steel Sheet",
-				Status:    domain.ProductStatusActive,
+				ProductID:             "prd_1",
+				TenantID:              "tenant-1",
+				SKU:                   "SKU-001",
+				Name:                  "Steel Sheet",
+				BrandName:             "Acme",
+				StockProfileCode:      "standard",
+				PrimaryTaxonomyNodeID: "txn_leaf_1",
+				Status:                domain.ProductStatusActive,
 			},
 		},
 	}
@@ -72,6 +78,75 @@ func TestCatalogHandlerListsProducts(t *testing.T) {
 
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rr.Code)
+	}
+	if !strings.Contains(rr.Body.String(), `"primary_taxonomy_node_id":"txn_leaf_1"`) {
+		t.Fatalf("expected taxonomy node in response, got %s", rr.Body.String())
+	}
+}
+
+func TestCatalogHandlerListsTaxonomyLevels(t *testing.T) {
+	repo := &fakeCatalogRepository{
+		taxonomyDefs: []domain.TaxonomyLevelDef{
+			{
+				TenantID:   "tenant-1",
+				Level:      0,
+				Label:      "Department",
+				ShortLabel: "Dept",
+				IsEnabled:  true,
+			},
+		},
+	}
+	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true})
+	handler := cataloghttp.NewHandler(service, &fakePermissionChecker{allowed: true})
+
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/catalog/taxonomy/levels", nil)
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{SubjectID: "admin-local", TenantID: "tenant-1"}))
+	req = req.WithContext(tenancy_runtime.WithTenant(req.Context(), tenancy_runtime.Tenant{ID: "tenant-1"}))
+
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rr.Code)
+	}
+	if !strings.Contains(rr.Body.String(), `"label":"Department"`) {
+		t.Fatalf("expected taxonomy level label, got %s", rr.Body.String())
+	}
+}
+
+func TestCatalogHandlerListsTaxonomyNodes(t *testing.T) {
+	repo := &fakeCatalogRepository{
+		taxonomyNodes: []domain.TaxonomyNode{
+			{
+				TaxonomyNodeID: "txn_leaf_1",
+				TenantID:       "tenant-1",
+				Name:           "Screws",
+				Level:          2,
+				IsActive:       true,
+			},
+		},
+	}
+	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true})
+	handler := cataloghttp.NewHandler(service, &fakePermissionChecker{allowed: true})
+
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/catalog/taxonomy/nodes?level=2", nil)
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{SubjectID: "admin-local", TenantID: "tenant-1"}))
+	req = req.WithContext(tenancy_runtime.WithTenant(req.Context(), tenancy_runtime.Tenant{ID: "tenant-1"}))
+
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rr.Code)
+	}
+	if !strings.Contains(rr.Body.String(), `"taxonomy_node_id":"txn_leaf_1"`) {
+		t.Fatalf("expected taxonomy node id, got %s", rr.Body.String())
 	}
 }
 

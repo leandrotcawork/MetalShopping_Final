@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.metalshopping.local/schema/catalog/taxonomy_node/v1",
+  "title": "catalog_taxonomy_node_v1",
+  "description": "Canonical catalog taxonomy node representation.",
+  "type": "object",
+  "additionalProperties": false,
+  "x-metalshopping": {
+    "contract_name": "catalog_taxonomy_node_v1",
+    "contract_status": "draft",
+    "bounded_context": "catalog",
+    "owner_team": "product_core"
+  },
+  "required": ["taxonomy_node_id", "tenant_id", "name", "level", "is_active"],
+  "properties": {
+    "taxonomy_node_id": { "type": "string", "minLength": 1 },
+    "tenant_id": { "type": "string", "minLength": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "name_norm": { "type": "string" },
+    "code": { "type": "string" },
+    "parent_taxonomy_node_id": { "type": "string" },
+    "level": { "type": "integer", "minimum": 0 },
+    "path": { "type": "string" },
+    "is_active": { "type": "boolean" }
+  }
+}

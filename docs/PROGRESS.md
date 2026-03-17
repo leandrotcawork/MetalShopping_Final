@@ -49,6 +49,7 @@
 - first database-backed governance slice implemented for feature flags with runtime loading from Postgres
 - first server_core unit tests added and validated
 - canonical catalog product model analyzed from legacy signals and frozen as the next gate before pricing
+- canonical catalog taxonomy slice implemented with tenant-aware tables, API reads, and richer product master fields
 
 ## Next
 
@@ -57,6 +58,7 @@
 - introduce real event publication and outbox discipline for at least one mutation flow
 - evolve governance from first database-backed feature flags into broader thresholds and policies
 - expand `catalog` from the current foundation slice to the canonical product model
+- apply the new catalog taxonomy migration and validate the runtime slice end-to-end
 - evolve bootstrap auth toward a production-grade identity integration path
 - continue domain expansion from the proven tenant-aware foundation
 - define real generators and validators behind the script entrypoints

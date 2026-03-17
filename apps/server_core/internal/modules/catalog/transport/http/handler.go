@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"metalshopping/server_core/internal/modules/catalog/application"
@@ -20,9 +21,12 @@ type Handler struct {
 }
 
 type CreateProductRequest struct {
-	SKU    string `json:"sku"`
-	Name   string `json:"name"`
-	Status string `json:"status,omitempty"`
+	SKU                   string `json:"sku"`
+	Name                  string `json:"name"`
+	BrandName             string `json:"brand_name,omitempty"`
+	StockProfileCode      string `json:"stock_profile_code,omitempty"`
+	PrimaryTaxonomyNodeID string `json:"primary_taxonomy_node_id,omitempty"`
+	Status                string `json:"status,omitempty"`
 }
 
 func NewHandler(service *application.Service, permissionChecker ports.PermissionChecker) *Handler {
@@ -34,17 +38,13 @@ func NewHandler(service *application.Service, permissionChecker ports.Permission
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/catalog/products", h.handleProducts)
+	mux.HandleFunc("/api/v1/catalog/taxonomy/nodes", h.handleTaxonomyNodes)
+	mux.HandleFunc("/api/v1/catalog/taxonomy/levels", h.handleTaxonomyLevels)
 }
 
 func (h *Handler) handleProducts(w http.ResponseWriter, r *http.Request) {
-	principal, ok := platformauth.PrincipalFromContext(r.Context())
+	principal, tenant, ok := h.requirePrincipalAndTenant(w, r)
 	if !ok {
-		writeAPIError(w, http.StatusUnauthorized, "AUTH_UNAUTHORIZED", "Authentication required", requestTraceID(r))
-		return
-	}
-	tenant, ok := tenancy_runtime.TenantFromContext(r.Context())
-	if !ok {
-		writeAPIError(w, http.StatusForbidden, "TENANCY_FORBIDDEN", "Tenant context required", requestTraceID(r))
 		return
 	}
 
@@ -56,6 +56,78 @@ func (h *Handler) handleProducts(w http.ResponseWriter, r *http.Request) {
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
+}
+
+func (h *Handler) handleTaxonomyNodes(w http.ResponseWriter, r *http.Request) {
+	principal, tenant, ok := h.requirePrincipalAndTenant(w, r)
+	if !ok {
+		return
+	}
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	allowed, err := h.permissionChecker.HasPermission(r.Context(), principal.SubjectID, iamdomain.PermCatalogRead)
+	if err != nil {
+		writeAPIError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Authorization lookup failed", requestTraceID(r))
+		return
+	}
+	if !allowed {
+		writeAPIError(w, http.StatusForbidden, "AUTH_FORBIDDEN", "Insufficient permissions", requestTraceID(r))
+		return
+	}
+
+	filter, err := taxonomyNodeFilterFromRequest(r)
+	if err != nil {
+		writeAPIError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error(), requestTraceID(r))
+		return
+	}
+
+	nodes, err := h.service.ListTaxonomyNodes(r.Context(), tenant.ID, filter)
+	if err != nil {
+		writeAPIError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to list taxonomy nodes", requestTraceID(r))
+		return
+	}
+
+	items := make([]map[string]any, 0, len(nodes))
+	for _, node := range nodes {
+		items = append(items, mapTaxonomyNode(node))
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": items})
+}
+
+func (h *Handler) handleTaxonomyLevels(w http.ResponseWriter, r *http.Request) {
+	principal, tenant, ok := h.requirePrincipalAndTenant(w, r)
+	if !ok {
+		return
+	}
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	allowed, err := h.permissionChecker.HasPermission(r.Context(), principal.SubjectID, iamdomain.PermCatalogRead)
+	if err != nil {
+		writeAPIError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Authorization lookup failed", requestTraceID(r))
+		return
+	}
+	if !allowed {
+		writeAPIError(w, http.StatusForbidden, "AUTH_FORBIDDEN", "Insufficient permissions", requestTraceID(r))
+		return
+	}
+
+	defs, err := h.service.ListTaxonomyLevelDefs(r.Context(), tenant.ID)
+	if err != nil {
+		writeAPIError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to list taxonomy levels", requestTraceID(r))
+		return
+	}
+
+	items := make([]map[string]any, 0, len(defs))
+	for _, def := range defs {
+		items = append(items, mapTaxonomyLevelDef(def))
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": items})
 }
 
 func (h *Handler) handleCreateProduct(w http.ResponseWriter, r *http.Request, userID, tenantID string) {
@@ -76,10 +148,13 @@ func (h *Handler) handleCreateProduct(w http.ResponseWriter, r *http.Request, us
 	}
 
 	product, err := h.service.CreateProduct(r.Context(), application.CreateProductCommand{
-		TenantID: tenantID,
-		SKU:      req.SKU,
-		Name:     req.Name,
-		Status:   req.Status,
+		TenantID:              tenantID,
+		SKU:                   req.SKU,
+		Name:                  req.Name,
+		BrandName:             req.BrandName,
+		StockProfileCode:      req.StockProfileCode,
+		PrimaryTaxonomyNodeID: req.PrimaryTaxonomyNodeID,
+		Status:                req.Status,
 	})
 	if err != nil {
 		switch {
@@ -120,13 +195,71 @@ func (h *Handler) handleListProducts(w http.ResponseWriter, r *http.Request, use
 	writeJSON(w, http.StatusOK, map[string]any{"items": items})
 }
 
+func (h *Handler) requirePrincipalAndTenant(w http.ResponseWriter, r *http.Request) (platformauth.Principal, tenancy_runtime.Tenant, bool) {
+	principal, ok := platformauth.PrincipalFromContext(r.Context())
+	if !ok {
+		writeAPIError(w, http.StatusUnauthorized, "AUTH_UNAUTHORIZED", "Authentication required", requestTraceID(r))
+		return platformauth.Principal{}, tenancy_runtime.Tenant{}, false
+	}
+	tenant, ok := tenancy_runtime.TenantFromContext(r.Context())
+	if !ok {
+		writeAPIError(w, http.StatusForbidden, "TENANCY_FORBIDDEN", "Tenant context required", requestTraceID(r))
+		return platformauth.Principal{}, tenancy_runtime.Tenant{}, false
+	}
+	return principal, tenant, true
+}
+
+func taxonomyNodeFilterFromRequest(r *http.Request) (ports.TaxonomyNodeFilter, error) {
+	filter := ports.TaxonomyNodeFilter{
+		ParentTaxonomyNodeID: strings.TrimSpace(r.URL.Query().Get("parent_taxonomy_node_id")),
+	}
+	levelRaw := strings.TrimSpace(r.URL.Query().Get("level"))
+	if levelRaw == "" {
+		return filter, nil
+	}
+
+	level, err := strconv.Atoi(levelRaw)
+	if err != nil || level < 0 {
+		return ports.TaxonomyNodeFilter{}, domain.ErrInvalidTaxonomyLevel
+	}
+	filter.Level = &level
+	return filter, nil
+}
+
 func mapProduct(product domain.Product) map[string]any {
 	return map[string]any{
-		"product_id": product.ProductID,
-		"tenant_id":  product.TenantID,
-		"sku":        product.SKU,
-		"name":       product.Name,
-		"status":     string(product.Status),
+		"product_id":               product.ProductID,
+		"tenant_id":                product.TenantID,
+		"sku":                      product.SKU,
+		"name":                     product.Name,
+		"brand_name":               product.BrandName,
+		"stock_profile_code":       product.StockProfileCode,
+		"primary_taxonomy_node_id": product.PrimaryTaxonomyNodeID,
+		"status":                   string(product.Status),
+	}
+}
+
+func mapTaxonomyNode(node domain.TaxonomyNode) map[string]any {
+	return map[string]any{
+		"taxonomy_node_id":        node.TaxonomyNodeID,
+		"tenant_id":               node.TenantID,
+		"name":                    node.Name,
+		"name_norm":               node.NameNorm,
+		"code":                    node.Code,
+		"parent_taxonomy_node_id": node.ParentTaxonomyNodeID,
+		"level":                   node.Level,
+		"path":                    node.Path,
+		"is_active":               node.IsActive,
+	}
+}
+
+func mapTaxonomyLevelDef(def domain.TaxonomyLevelDef) map[string]any {
+	return map[string]any{
+		"tenant_id":   def.TenantID,
+		"level":       def.Level,
+		"label":       def.Label,
+		"short_label": def.ShortLabel,
+		"is_enabled":  def.IsEnabled,
 	}
 }
 

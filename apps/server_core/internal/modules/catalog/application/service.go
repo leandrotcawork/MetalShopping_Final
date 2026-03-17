@@ -12,10 +12,13 @@ import (
 )
 
 type CreateProductCommand struct {
-	TenantID string
-	SKU      string
-	Name     string
-	Status   string
+	TenantID              string
+	SKU                   string
+	Name                  string
+	BrandName             string
+	StockProfileCode      string
+	PrimaryTaxonomyNodeID string
+	Status                string
 }
 
 type Service struct {
@@ -40,13 +43,16 @@ func (s *Service) CreateProduct(ctx context.Context, cmd CreateProductCommand) (
 
 	now := s.now()
 	product := domain.Product{
-		ProductID: generateProductID(),
-		TenantID:  strings.TrimSpace(cmd.TenantID),
-		SKU:       strings.TrimSpace(cmd.SKU),
-		Name:      strings.TrimSpace(cmd.Name),
-		Status:    status,
-		CreatedAt: now,
-		UpdatedAt: now,
+		ProductID:             generateProductID(),
+		TenantID:              strings.TrimSpace(cmd.TenantID),
+		SKU:                   strings.TrimSpace(cmd.SKU),
+		Name:                  strings.TrimSpace(cmd.Name),
+		BrandName:             strings.TrimSpace(cmd.BrandName),
+		StockProfileCode:      strings.TrimSpace(cmd.StockProfileCode),
+		PrimaryTaxonomyNodeID: strings.TrimSpace(cmd.PrimaryTaxonomyNodeID),
+		Status:                status,
+		CreatedAt:             now,
+		UpdatedAt:             now,
 	}
 	if err := product.ValidateForCreate(); err != nil {
 		return domain.Product{}, err
@@ -69,6 +75,14 @@ func (s *Service) CreateProduct(ctx context.Context, cmd CreateProductCommand) (
 
 func (s *Service) ListProducts(ctx context.Context, tenantID string) ([]domain.Product, error) {
 	return s.repo.ListProducts(ctx, strings.TrimSpace(tenantID))
+}
+
+func (s *Service) ListTaxonomyNodes(ctx context.Context, tenantID string, filter ports.TaxonomyNodeFilter) ([]domain.TaxonomyNode, error) {
+	return s.repo.ListTaxonomyNodes(ctx, strings.TrimSpace(tenantID), filter)
+}
+
+func (s *Service) ListTaxonomyLevelDefs(ctx context.Context, tenantID string) ([]domain.TaxonomyLevelDef, error) {
+	return s.repo.ListTaxonomyLevelDefs(ctx, strings.TrimSpace(tenantID))
 }
 
 func generateProductID() string {

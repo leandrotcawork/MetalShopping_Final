@@ -82,5 +82,79 @@ paths:
             application/json:
               schema:
                 $ref: "../jsonschema/common_error_v1.schema.json"
+  /api/v1/catalog/taxonomy/nodes:
+    get:
+      operationId: listCatalogTaxonomyNodes
+      summary: "List catalog taxonomy nodes for the authenticated tenant"
+      parameters:
+        - in: query
+          name: parent_taxonomy_node_id
+          schema:
+            type: string
+        - in: query
+          name: level
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        "200":
+          description: "Catalog taxonomy nodes returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/catalog_taxonomy_node_list_v1.schema.json"
+        "400":
+          description: "Validation failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Authorization, tenancy, or governance failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+  /api/v1/catalog/taxonomy/levels:
+    get:
+      operationId: listCatalogTaxonomyLevels
+      summary: "List catalog taxonomy level definitions for the authenticated tenant"
+      responses:
+        "200":
+          description: "Catalog taxonomy levels returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/catalog_taxonomy_level_def_list_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Authorization, tenancy, or governance failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
 components:
   schemas: {}

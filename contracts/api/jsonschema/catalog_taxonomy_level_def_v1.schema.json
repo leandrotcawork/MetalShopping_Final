@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.metalshopping.local/schema/catalog/taxonomy_level_def/v1",
+  "title": "catalog_taxonomy_level_def_v1",
+  "description": "Canonical catalog taxonomy level definition representation.",
+  "type": "object",
+  "additionalProperties": false,
+  "x-metalshopping": {
+    "contract_name": "catalog_taxonomy_level_def_v1",
+    "contract_status": "draft",
+    "bounded_context": "catalog",
+    "owner_team": "product_core"
+  },
+  "required": ["tenant_id", "level", "label", "is_enabled"],
+  "properties": {
+    "tenant_id": { "type": "string", "minLength": 1 },
+    "level": { "type": "integer", "minimum": 0 },
+    "label": { "type": "string", "minLength": 1 },
+    "short_label": { "type": "string" },
+    "is_enabled": { "type": "boolean" }
+  }
+}
