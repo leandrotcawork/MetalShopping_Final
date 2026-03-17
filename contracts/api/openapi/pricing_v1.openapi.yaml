@@ -1,0 +1,145 @@
+openapi: 3.1.0
+info:
+  title: "Pricing API"
+  version: "v1"
+  summary: "Public HTTP contract for MetalShopping pricing management"
+  description: >
+    Draft OpenAPI contract for governed tenant-aware product pricing writes and reads.
+  x-metalshopping:
+    contract_name: "pricing_v1"
+    contract_status: "draft"
+    bounded_context: "pricing"
+    owner_team: "product_core"
+servers:
+  - url: https://api.metalshopping.local
+paths:
+  /api/v1/pricing/products/{product_id}/prices:
+    get:
+      operationId: listPricingProductPrices
+      summary: "List price records for one product in the authenticated tenant"
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Price records returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/pricing_product_price_list_v1.schema.json"
+        "400":
+          description: "Validation failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Forbidden"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+    post:
+      operationId: setPricingProductPrice
+      summary: "Set a governed price record for one product in the authenticated tenant"
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "../jsonschema/pricing_set_product_price_request_v1.schema.json"
+      responses:
+        "201":
+          description: "Price record accepted"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/pricing_product_price_v1.schema.json"
+        "400":
+          description: "Validation failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Governance or permission failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+  /api/v1/pricing/products/{product_id}/prices/current:
+    get:
+      operationId: getCurrentPricingProductPrice
+      summary: "Get the current effective price record for one product in the authenticated tenant"
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Current effective price returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/pricing_product_price_v1.schema.json"
+        "404":
+          description: "No current effective price exists"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Forbidden"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+components:
+  schemas: {}

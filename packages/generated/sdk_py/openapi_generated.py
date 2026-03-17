@@ -2,9 +2,12 @@
 OPERATION_IDS = [
     'createCatalogProduct',
     'get',
+    'getCurrentPricingProductPrice',
     'listCatalogProductIdentifiers',
     'listCatalogProducts',
     'listCatalogTaxonomyLevels',
     'listCatalogTaxonomyNodes',
+    'listPricingProductPrices',
+    'setPricingProductPrice',
     'upsertIamUserRoleAssignment',
 ]

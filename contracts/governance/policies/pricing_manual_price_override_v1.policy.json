@@ -1,0 +1,14 @@
+{
+  "policy_name": "pricing.manual_price_override",
+  "version": "v1",
+  "status": "draft",
+  "bounded_context": "pricing",
+  "scope": [
+    "global",
+    "environment",
+    "tenant",
+    "module"
+  ],
+  "description": "Defines whether manual price override writes are allowed for the resolved runtime scope.",
+  "schema_ref": "../../api/jsonschema/governance_policy_v1.schema.json"
+}

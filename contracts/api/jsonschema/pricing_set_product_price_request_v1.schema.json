@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.metalshopping.local/schema/pricing/set_product_price_request/v1",
+  "title": "pricing_set_product_price_request_v1",
+  "description": "Request payload for setting a governed product price.",
+  "type": "object",
+  "additionalProperties": false,
+  "x-metalshopping": {
+    "contract_name": "pricing_set_product_price_request_v1",
+    "contract_status": "draft",
+    "bounded_context": "pricing",
+    "owner_team": "product_core"
+  },
+  "required": [
+    "currency_code",
+    "price_amount",
+    "cost_basis_amount",
+    "origin_type",
+    "reason_code",
+    "effective_from"
+  ],
+  "properties": {
+    "currency_code": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "price_amount": {
+      "type": "number",
+      "minimum": 0
+    },
+    "cost_basis_amount": {
+      "type": "number",
+      "minimum": 0
+    },
+    "margin_floor_value": {
+      "type": "number",
+      "minimum": 0
+    },
+    "pricing_status": {
+      "type": "string",
+      "enum": ["draft", "active", "inactive"]
+    },
+    "effective_from": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "effective_to": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "origin_type": {
+      "type": "string",
+      "enum": ["manual", "policy", "import"]
+    },
+    "origin_ref": {
+      "type": "string"
+    },
+    "reason_code": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

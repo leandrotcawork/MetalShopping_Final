@@ -17,17 +17,23 @@ export const schemaIds = {
   "governance_threshold_v1.schema": "https://contracts.metalshopping.local/schema/governance/threshold/v1",
   "iam_role_assigned_payload_v1.schema": "https://contracts.metalshopping.local/schema/iam/role_assigned_payload/v1",
   "iam_role_assignment_v1.schema": "https://contracts.metalshopping.local/schema/iam/role_assignment/v1",
-  "iam_upsert_role_assignment_request_v1.schema": "https://contracts.metalshopping.local/schema/iam/upsert_role_assignment_request/v1"
+  "iam_upsert_role_assignment_request_v1.schema": "https://contracts.metalshopping.local/schema/iam/upsert_role_assignment_request/v1",
+  "pricing_price_set_payload_v1.schema": "https://contracts.metalshopping.local/schema/pricing/price_set_payload/v1",
+  "pricing_product_price_list_v1.schema": "https://contracts.metalshopping.local/schema/pricing/product_price_list/v1",
+  "pricing_product_price_v1.schema": "https://contracts.metalshopping.local/schema/pricing/product_price/v1",
+  "pricing_set_product_price_request_v1.schema": "https://contracts.metalshopping.local/schema/pricing/set_product_price_request/v1"
 } as const;
 
 export const eventNames = [
   "catalog.product_created",
-  "iam.role_assigned"
+  "iam.role_assigned",
+  "pricing.price_set"
 ] as const;
 
 export const governanceKeys = [
   "catalog.max_description_length",
   "catalog.product_creation_enabled",
   "iam.admin_role_assignment",
-  "pricing.default_margin_floor"
+  "pricing.default_margin_floor",
+  "pricing.manual_price_override"
 ] as const;

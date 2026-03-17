@@ -1,0 +1,16 @@
+{
+  "event_name": "pricing.price_set",
+  "version": "v1",
+  "status": "draft",
+  "bounded_context": "pricing",
+  "producer": "apps/server_core",
+  "trigger": "A governed internal product price is written for a tenant and effective window.",
+  "description": "Versioned event for the first pricing write slice.",
+  "envelope": {
+    "event_id": "string",
+    "occurred_at": "timestamp",
+    "tenant_id": "string",
+    "trace_id": "string"
+  },
+  "payload_schema_ref": "../../api/jsonschema/pricing_price_set_payload_v1.schema.json"
+}

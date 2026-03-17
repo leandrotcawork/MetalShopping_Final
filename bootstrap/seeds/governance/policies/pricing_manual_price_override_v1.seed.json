@@ -1,0 +1,10 @@
+{
+  "policy_name": "pricing.manual_price_override",
+  "scope_type": "global",
+  "scope_key": "global",
+  "policy_json": {
+    "allow_manual_price_override": true
+  },
+  "updated_by": "bootstrap",
+  "reason": "Initial pricing bootstrap policy allowing manual price override in the first pricing slice."
+}

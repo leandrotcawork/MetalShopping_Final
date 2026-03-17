@@ -60,6 +60,8 @@
 - initial canonical pricing model frozen before implementation
 - next implementation area explicitly frozen as `pricing`
 - full first-slice pricing implementation plan documented before code
+- pricing phase 1 contracts completed across governance, API, JSON Schemas, and events
+- generated artifacts refreshed after pricing contract authoring
 
 ## Next
 
@@ -67,7 +69,6 @@
 - validate migrations `0008`, `0009`, and `0010` end-to-end in the running server with smoke coverage
 - enforce contract validation and artifact generation in team workflow and CI
 - connect the JWT/OIDC auth path to a real issuer configuration
-- create the first pricing policy contract and pricing API/event contracts
 - implement the first tenant-aware, governed pricing slice on top of canonical catalog identity
 - continue domain expansion from the proven tenant-aware foundation
 - prepare phase transition checklist from foundation hardening to domain expansion

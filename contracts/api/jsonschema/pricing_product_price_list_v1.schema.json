@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.metalshopping.local/schema/pricing/product_price_list/v1",
+  "title": "pricing_product_price_list_v1",
+  "description": "List response for product price records.",
+  "type": "object",
+  "additionalProperties": false,
+  "x-metalshopping": {
+    "contract_name": "pricing_product_price_list_v1",
+    "contract_status": "draft",
+    "bounded_context": "pricing",
+    "owner_team": "product_core"
+  },
+  "required": ["items"],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "./pricing_product_price_v1.schema.json"
+      }
+    }
+  }
+}
