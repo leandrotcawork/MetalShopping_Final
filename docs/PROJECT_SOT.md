@@ -103,6 +103,7 @@ The most important remaining gaps are:
 - event publication and outbox flow are not yet wired into real mutations
 - auth is still bootstrap-grade, not identity-provider-grade
 - governance exists as runtime foundation but is not yet shaping module behavior at execution time
+ - catalog product model is still a foundation slice and must be expanded to the canonical model before pricing grows on top of it
 
 ## Planning deliverables
 
@@ -114,6 +115,7 @@ The most important remaining gaps are:
 - progress tracker
 - AGENTS guidance for token-efficient work
 - phase-by-phase execution discipline that keeps implementation aligned with the frozen architecture
+- explicit canonical product model for `catalog` before pricing and inventory expansion
 
 ## Key planning docs
 
@@ -132,5 +134,6 @@ The most important remaining gaps are:
 - `docs/CONTRACT_CONVENTIONS.md`
 - `docs/SDK_GENERATION_STRATEGY.md`
 - `docs/METALDOCS_REUSE_MATRIX.md` (transitional only, delete after migration execution)
+- `docs/CATALOG_CANONICAL_MODEL.md`
 - `docs/IMPLEMENTATION_PLAN.md`
 - `docs/PROGRESS.md`

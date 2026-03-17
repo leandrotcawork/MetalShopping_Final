@@ -102,13 +102,19 @@ Exit criteria:
 
 Candidate order:
 
-1. pricing
-2. inventory
-3. market_intelligence
-4. analytics_serving
-5. procurement
-6. CRM
-7. alerts and notifications
+1. freeze the canonical `catalog` product model from legacy signals
+2. pricing
+3. inventory
+4. market_intelligence
+5. analytics_serving
+6. procurement
+7. CRM
+8. alerts and notifications
+
+Phase 4 gate:
+
+- `pricing` should not expand on top of the minimal `catalog_products` slice alone
+- the canonical ownership of product identity, taxonomy, identifiers, and non-catalog data boundaries must be explicit first
 
 ## Ongoing workstreams
 
