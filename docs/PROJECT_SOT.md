@@ -120,6 +120,7 @@ The most important remaining gaps are:
 - phase-by-phase execution discipline that keeps implementation aligned with the frozen architecture
 - explicit canonical product model for `catalog` before pricing and inventory expansion
 - explicit canonical pricing model before the first pricing implementation slice
+- explicit decision record for the next implementation area
 
 ## Key planning docs
 
@@ -141,5 +142,7 @@ The most important remaining gaps are:
 - `docs/CATALOG_CANONICAL_MODEL.md`
 - `docs/PRICING_READINESS_REVIEW.md`
 - `docs/PRICING_CANONICAL_MODEL.md`
+- `docs/PRICING_IMPLEMENTATION_PLAN.md`
+- `docs/NEXT_EXECUTION_DECISION.md`
 - `docs/IMPLEMENTATION_PLAN.md`
 - `docs/PROGRESS.md`

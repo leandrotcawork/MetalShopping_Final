@@ -58,6 +58,8 @@
 - contract validation and generation scripts implemented and generating minimal artifacts in `packages/generated`
 - `catalog` reviewed as ready for the first `pricing` slice
 - initial canonical pricing model frozen before implementation
+- next implementation area explicitly frozen as `pricing`
+- full first-slice pricing implementation plan documented before code
 
 ## Next
 
