@@ -102,6 +102,10 @@ export function AppShell({ activeItemKey, children }: AppShellProps) {
             <p className={styles.userName}>MetalShopping</p>
             <p className={styles.userRole}>Operational Surface</p>
           </div>
+          <button type="button" className={styles.logout} title="Sair">
+            <span className={styles.logoutIcon} aria-hidden>↩</span>
+            <span className={styles.logoutLabel}>Sair</span>
+          </button>
         </footer>
       </aside>
 

@@ -183,7 +183,7 @@
 
 .section {
   display: grid;
-  gap: 3px;
+  gap: 0;
 }
 
 .sectionLabel {
@@ -265,9 +265,10 @@
 }
 
 .linkActive {
-  background: linear-gradient(180deg, rgba(145, 19, 42, 0.12), rgba(145, 19, 42, 0.06));
-  border-color: rgba(145, 19, 42, 0.18);
-  color: #7b1b32;
+  background: #f7eff1;
+  border-color: #e7e2e4;
+  box-shadow: inset 2px 0 0 #91132a;
+  color: #91132a;
 }
 
 .linkMain {
@@ -342,51 +343,148 @@
   padding: 4px 8px;
 }
 
+@media (min-width: 1101px) {
+  .shell:not(.shellExpanded) .linkActive {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  .shell:not(.shellExpanded) .linkActive::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 46px;
+    height: 38px;
+    transform: translate(-50%, -50%);
+    border-radius: 10px;
+    background: #f7eff1;
+    border: 1px solid #e7e2e4;
+    box-shadow: inset 2px 0 0 #91132a;
+    pointer-events: none;
+  }
+}
+
 .footer {
+  margin-top: auto;
   display: grid;
-  grid-template-columns: 40px 1fr;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  justify-items: center;
   align-items: center;
+  padding: 12px 8px 4px;
+  border-top: 1px solid #91132a;
+  border-bottom: 0;
+}
+
+.shellExpanded .footer {
+  grid-template-columns: 40px 1fr auto;
   gap: 10px;
-  padding-top: 14px;
-  border-top: 1px solid rgba(145, 19, 42, 0.14);
+  justify-items: stretch;
 }
 
 .userAvatar {
-  display: grid;
-  place-items: center;
   width: 40px;
   height: 40px;
-  border-radius: 12px;
-  background: linear-gradient(180deg, #a92745, #7e1831);
+  border-radius: 11px;
+  background: linear-gradient(135deg, #91132a, #6a0d1e);
   color: #fff;
-  font-weight: 900;
-  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .userMeta {
-  display: grid;
-  gap: 2px;
+  min-width: 0;
   opacity: 0;
-  max-width: 0;
+  max-height: 0;
   overflow: hidden;
-  transition: opacity 180ms ease, max-width 180ms ease;
+  transition: opacity 0.28s ease, max-height 0.32s ease;
 }
 
 .shellExpanded .userMeta {
   opacity: 1;
-  max-width: 180px;
+  max-height: 46px;
 }
 
 .userName {
-  color: #211a1e;
-  font-weight: 800;
-  font-size: 0.9rem;
+  margin: 0;
+  color: #1e1b1c;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .userRole {
-  color: #7a6870;
-  font-size: 0.75rem;
+  margin: 2px 0 0;
+  color: #6f676a;
+  font-size: 11px;
+}
+
+.logout {
+  border: 1px solid #e7e2e4;
+  background: #fcf8f9;
+  color: #5e5458;
+  border-radius: 10px;
+  padding: 7px 8px;
+  font-size: 12px;
   font-weight: 700;
+  cursor: pointer;
+  transition: all 0.22s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.shell:not(.shellExpanded) .logout {
+  gap: 0;
+}
+
+.logoutIcon {
+  width: 20px;
+  height: 20px;
+  border-radius: 7px;
+  background: #f3e6ea;
+  color: #7d1f34;
+  display: inline-grid;
+  place-items: center;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 900;
+  flex: 0 0 20px;
+}
+
+.logoutLabel {
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  transition: opacity 0.28s ease, max-width 0.32s ease;
+}
+
+.shellExpanded .logout {
+  padding: 7px 10px;
+}
+
+.shellExpanded .logoutLabel {
+  opacity: 1;
+  max-width: 80px;
+}
+
+.logout:hover {
+  border-color: #91132a;
+  color: #91132a;
+  background: #fdf9fa;
+}
+
+.logout:hover .logoutIcon {
+  background: #91132a;
+  color: #fff;
 }
 
 .content {
