@@ -478,27 +478,23 @@ export function ProductsPortfolioPage() {
         <SurfaceCard
           title="Produtos Cadastrados"
           actions={
-            <span className={styles.tableMeta}>
-              {loading ? "Atualizando..." : `Mostrando ${result?.paging.returned ?? 0} de ${result?.paging.total ?? 0}`}
-            </span>
+            <div className={styles.tableActions}>
+              <button type="button" className={styles.secondaryActionButton} disabled>
+                Exportar selecionados
+              </button>
+              <button type="button" className={styles.secondaryActionButton} disabled={rows.length === 0} onClick={toggleCurrentPageSelection}>
+                {allVisibleSelected ? "Desmarcar página" : "Selecionar página"}
+              </button>
+              <button type="button" className={styles.secondaryActionButton} disabled={rows.length === 0} onClick={selectFiltered}>
+                Selecionar filtrados
+              </button>
+              <button type="button" className={styles.secondaryActionButton} disabled={totalSelected === 0} onClick={clearSelection}>
+                Limpar
+              </button>
+            </div>
           }
           className={styles.tableCard}
         >
-          <div className={styles.tableActions}>
-            <button type="button" className={styles.secondaryActionButton} disabled>
-              Exportar selecionados
-            </button>
-            <button type="button" className={styles.secondaryActionButton} disabled={rows.length === 0} onClick={toggleCurrentPageSelection}>
-              {allVisibleSelected ? "Desmarcar página" : "Selecionar página"}
-            </button>
-            <button type="button" className={styles.secondaryActionButton} disabled={rows.length === 0} onClick={selectFiltered}>
-              Selecionar filtrados
-            </button>
-            <button type="button" className={styles.secondaryActionButton} disabled={totalSelected === 0} onClick={clearSelection}>
-              Limpar
-            </button>
-          </div>
-
           <div className={styles.selectionRow}>
             <span>
               Modo: <strong>{selectionMode === "filtered" ? "Filtrados" : "Explícito"}</strong>
@@ -507,7 +503,7 @@ export function ProductsPortfolioPage() {
               Itens: <strong>{totalSelected}</strong>
             </span>
             <span>
-              Preço médio visível: <strong>{summary.averageVisiblePrice}</strong>
+              Fornecedores: <strong>0</strong>
             </span>
           </div>
 

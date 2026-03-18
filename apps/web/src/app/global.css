@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap");
+
 :root {
   color-scheme: light;
   --ms-wine-900: #5f1227;
@@ -12,8 +14,10 @@
   --ms-surface-50: #fdfafc;
   --ms-surface-100: #f8f2f5;
   font-family:
+    "Inter",
+    -apple-system,
+    system-ui,
     "Segoe UI",
-    "Helvetica Neue",
     sans-serif;
   line-height: 1.5;
   font-weight: 400;
@@ -48,4 +52,10 @@ button,
 input,
 select {
   font: inherit;
+}
+
+code,
+pre,
+kbd {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
