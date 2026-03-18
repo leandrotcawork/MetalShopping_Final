@@ -21,6 +21,7 @@
       "required": [
         "brands",
         "taxonomy_leaf0_names",
+        "taxonomy_leaf0_label",
         "status"
       ],
       "properties": {
@@ -35,6 +36,10 @@
           "items": {
             "type": "string"
           }
+        },
+        "taxonomy_leaf0_label": {
+          "type": "string",
+          "minLength": 1
         },
         "status": {
           "type": "array",

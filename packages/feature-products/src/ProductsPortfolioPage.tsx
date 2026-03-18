@@ -241,6 +241,7 @@ export function ProductsPortfolioPage() {
   const rows = useMemo(() => sortRows(result?.rows ?? [], sort), [result?.rows, sort]);
   const brands = result?.filters.brands ?? [];
   const taxonomyLeaf0Names = result?.filters.taxonomy_leaf0_names ?? [];
+  const taxonomyLeaf0Label = result?.filters.taxonomy_leaf0_label?.trim() || "Grupo";
   const statuses = result?.filters.status ?? [];
   const totalVisible = result?.paging.returned ?? 0;
   const totalMatching = result?.paging.total ?? 0;
@@ -258,7 +259,7 @@ export function ProductsPortfolioPage() {
     query.search.trim() !== "" ? { key: "search", label: `Busca: ${query.search.trim()}` } : null,
     query.brandName.trim() !== "" ? { key: "brandName", label: `Marca: ${query.brandName.trim()}` } : null,
     query.taxonomyLeaf0Name.trim() !== ""
-      ? { key: "taxonomyLeaf0Name", label: `Grupo: ${query.taxonomyLeaf0Name.trim()}` }
+      ? { key: "taxonomyLeaf0Name", label: `${taxonomyLeaf0Label}: ${query.taxonomyLeaf0Name.trim()}` }
       : null,
     query.status.trim() !== "" ? { key: "status", label: `Status: ${query.status.trim()}` } : null,
   ].filter((item): item is { key: string; label: string } => item !== null);
@@ -269,10 +270,10 @@ export function ProductsPortfolioPage() {
   );
   const taxonomyOptions = useMemo<SelectMenuOption[]>(
     () => [
-      { label: "Todos os grupos", value: "" },
+      { label: `Todos os ${taxonomyLeaf0Label.toLocaleLowerCase("pt-BR")}s`, value: "" },
       ...taxonomyLeaf0Names.map((name) => ({ label: name, value: name })),
     ],
-    [taxonomyLeaf0Names],
+    [taxonomyLeaf0Label, taxonomyLeaf0Names],
   );
   const statusOptions = useMemo<SelectMenuOption[]>(
     () => [{ label: "Todos os status", value: "" }, ...statuses.map((status) => ({ label: status, value: status }))],
@@ -413,7 +414,7 @@ export function ProductsPortfolioPage() {
             </div>
 
             <div className={styles.field}>
-              <span className={styles.label}>Grupo</span>
+              <span className={styles.label}>{taxonomyLeaf0Label}</span>
               <FilterDropdown
                 id="products-taxonomy-filter"
                 value={query.taxonomyLeaf0Name}
@@ -539,7 +540,7 @@ export function ProductsPortfolioPage() {
                   </th>
                   <th>
                     <button type="button" className={styles.sortButton} onClick={() => updateSort("taxonomy_leaf0_name")}>
-                      <span>Grupo</span>
+                      <span>{taxonomyLeaf0Label}</span>
                       <span aria-hidden="true">{sortIndicator(sort, "taxonomy_leaf0_name")}</span>
                     </button>
                   </th>

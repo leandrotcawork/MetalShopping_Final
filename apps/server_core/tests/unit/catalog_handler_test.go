@@ -132,6 +132,7 @@ func TestCatalogHandlerListsProductsPortfolio(t *testing.T) {
 			Filters: catalogreadmodel.ProductsPortfolioFilters{
 				Brands:             []string{"Acme"},
 				TaxonomyLeaf0Names: []string{"Roofing"},
+				TaxonomyLeaf0Label: "Departamento",
 				Status:             []string{"active"},
 			},
 			Paging: catalogreadmodel.ProductsPortfolioPaging{
@@ -175,6 +176,9 @@ func TestCatalogHandlerListsProductsPortfolio(t *testing.T) {
 	}
 	if !strings.Contains(rr.Body.String(), `"current_price_amount":125.5`) {
 		t.Fatalf("expected current price in response, got %s", rr.Body.String())
+	}
+	if !strings.Contains(rr.Body.String(), `"taxonomy_leaf0_label":"Departamento"`) {
+		t.Fatalf("expected taxonomy level label in response, got %s", rr.Body.String())
 	}
 }
 

@@ -301,6 +301,7 @@ export type ProductsPortfolioListV1 = {
   filters: {
     brands: Array<string>;
     taxonomy_leaf0_names: Array<string>;
+    taxonomy_leaf0_label: string;
     status: Array<string>;
   };
   paging: {

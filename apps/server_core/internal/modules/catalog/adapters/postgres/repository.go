@@ -580,9 +580,24 @@ ORDER BY txo.taxonomy_leaf0_name ASC
 		return catalogreadmodel.ProductsPortfolioFilters{}, fmt.Errorf("query products portfolio taxonomy filters: %w", err)
 	}
 
+	taxonomyLeaf0Label, err := queryOptionalString(ctx, tx, `
+SELECT label
+FROM catalog_taxonomy_level_defs
+WHERE tenant_id = current_tenant_id()
+  AND level = 0
+LIMIT 1
+`)
+	if err != nil {
+		return catalogreadmodel.ProductsPortfolioFilters{}, fmt.Errorf("query products portfolio taxonomy label: %w", err)
+	}
+	if strings.TrimSpace(taxonomyLeaf0Label) == "" {
+		taxonomyLeaf0Label = "Grupo"
+	}
+
 	return catalogreadmodel.ProductsPortfolioFilters{
 		Brands:             brands,
 		TaxonomyLeaf0Names: taxonomyLeaf0Names,
+		TaxonomyLeaf0Label: taxonomyLeaf0Label,
 		Status:             statuses,
 	}, nil
 }
@@ -606,6 +621,20 @@ func queryStringList(ctx context.Context, tx *sql.Tx, query string) ([]string, e
 		return nil, err
 	}
 	return values, nil
+}
+
+func queryOptionalString(ctx context.Context, tx *sql.Tx, query string) (string, error) {
+	var value sql.NullString
+	if err := tx.QueryRowContext(ctx, query).Scan(&value); err != nil {
+		if err == sql.ErrNoRows {
+			return "", nil
+		}
+		return "", err
+	}
+	if !value.Valid {
+		return "", nil
+	}
+	return value.String, nil
 }
 
 func scanProductsPortfolioItem(scanner interface{ Scan(dest ...any) error }) (catalogreadmodel.ProductsPortfolioItem, error) {

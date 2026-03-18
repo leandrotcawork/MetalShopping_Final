@@ -451,6 +451,7 @@ func mapProductsPortfolio(result catalogreadmodel.ProductsPortfolioResult) map[s
 		"filters": map[string]any{
 			"brands":               result.Filters.Brands,
 			"taxonomy_leaf0_names": result.Filters.TaxonomyLeaf0Names,
+			"taxonomy_leaf0_label": result.Filters.TaxonomyLeaf0Label,
 			"status":               result.Filters.Status,
 		},
 		"paging": map[string]any{

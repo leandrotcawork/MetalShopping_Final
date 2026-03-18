@@ -45,6 +45,7 @@ type ProductsPortfolioItem struct {
 type ProductsPortfolioFilters struct {
 	Brands             []string
 	TaxonomyLeaf0Names []string
+	TaxonomyLeaf0Label string
 	Status             []string
 }
 
