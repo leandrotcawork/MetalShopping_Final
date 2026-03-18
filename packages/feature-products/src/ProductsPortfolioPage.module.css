@@ -29,13 +29,6 @@
   font-size: 1.1rem;
 }
 
-.bannerRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: center;
-}
-
 .statusBanner {
   display: grid;
   gap: 4px;
@@ -45,6 +38,11 @@
   border-radius: 12px;
   background: rgba(194, 59, 84, 0.06);
   color: #6a2134;
+}
+
+.heroStatusBanner {
+  grid-column: 1 / -1;
+  min-height: 40px;
 }
 
 .statusBanner strong,
@@ -75,12 +73,6 @@
   color: #8d2020;
 }
 
-.quickActions {
-  display: inline-flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
 .actionButton,
 .secondaryActionButton,
 .clearButton,
@@ -101,6 +93,13 @@
 .paginationButton:hover:not(:disabled) {
   border-color: #c23b54;
   color: #8a1735;
+}
+
+.heroActions {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
 }
 
 .actionButtonPrimary,
@@ -192,6 +191,13 @@
   color: #73606a;
   font-size: 0.82rem;
   font-weight: 700;
+}
+
+.filterLogic {
+  color: #73606a;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-align: right;
 }
 
 .tableMeta {
@@ -444,10 +450,6 @@
 }
 
 @media (max-width: 820px) {
-  .bannerRow {
-    grid-template-columns: 1fr;
-  }
-
   .toolbar {
     grid-template-columns: 1fr;
   }
@@ -458,7 +460,7 @@
     grid-template-columns: 1fr 1fr;
   }
 
-  .quickActions,
+  .heroActions,
   .tableActions,
   .paginationActions {
     width: 100%;
@@ -468,5 +470,13 @@
   .secondaryActionButton,
   .paginationButton {
     flex: 1 1 auto;
+  }
+
+  .heroActions {
+    grid-template-columns: 1fr;
+  }
+
+  .filterLogic {
+    text-align: left;
   }
 }

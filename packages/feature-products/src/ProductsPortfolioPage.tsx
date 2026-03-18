@@ -245,7 +245,7 @@ export function ProductsPortfolioPage() {
   const totalVisible = result?.paging.returned ?? 0;
   const totalMatching = result?.paging.total ?? 0;
   const totalSelected = selectionMode === "filtered" ? totalMatching : selectedProductIds.length;
-  const totalPriced = result?.rows.filter((row) => row.current_price_amount !== null).length ?? 0;
+  const totalRuns = 0;
   const totalPages = totalMatching === 0 ? 1 : Math.max(1, Math.ceil(totalMatching / query.limit));
   const currentPage = Math.floor(query.offset / query.limit) + 1;
   const canGoPrevious = query.offset > 0;
@@ -326,7 +326,7 @@ export function ProductsPortfolioPage() {
     <AppFrame
       eyebrow="Products · Market Report"
       title="Relatório de preço de mercado por run"
-      subtitle="Mantenha a operação de produtos no mesmo contexto visual do MetalShopping legacy, agora servida por um read surface canônico que consolida Catalog, Pricing e Inventory."
+      subtitle="Selecione produtos por filtros e exporte um XLSX comparativo com preço interno versus concorrentes."
       aside={
         <div className={styles.heroAside}>
           <div className={styles.heroChip}>
@@ -342,23 +342,10 @@ export function ProductsPortfolioPage() {
             <strong>{summary.totalProducts}</strong>
           </div>
           <div className={styles.heroChip}>
-            <small>Com preço</small>
-            <strong>{totalPriced}</strong>
+            <small>Runs</small>
+            <strong>{totalRuns}</strong>
           </div>
-        </div>
-      }
-    >
-      <div className={styles.stack}>
-        <div className={styles.bannerRow}>
-          <div className={`${styles.statusBanner} ${error ? styles.statusBannerError : styles.statusBannerSuccess}`}>
-            <strong>{error ? "Falha na superfície" : "Superfície operacional ativa"}</strong>
-            <span>
-              {error
-                ? error
-                : `Catalog, Pricing e Inventory estão compondo ${summary.totalProducts} produtos canônicos para o tenant atual.`}
-            </span>
-          </div>
-          <div className={styles.quickActions}>
+          <div className={styles.heroActions}>
             <button type="button" className={styles.actionButton}>
               ⚙ Configurar relatório
             </button>
@@ -366,11 +353,20 @@ export function ProductsPortfolioPage() {
               📤 Exportar relatório
             </button>
           </div>
+          <div className={`${styles.heroStatusBanner} ${error ? styles.statusBannerError : styles.statusBannerSuccess}`}>
+            <span>
+              {error
+                ? error
+                : "Superfície operacional ativa para Catalog, Pricing e Inventory."}
+            </span>
+          </div>
         </div>
-
+      }
+    >
+      <div className={styles.stack}>
         <SurfaceCard
           title="Filtros de Produtos"
-          subtitle="Combinação lógica: AND entre filtros e OR dentro de cada seleção. A base visual continua a do legado, mas agora a leitura é backend-owned."
+          actions={<span className={styles.filterLogic}>Combinação lógica: AND entre filtros e OR dentro de cada multi-seleção.</span>}
           className={styles.filtersCard}
         >
           <div className={styles.toolbar}>
@@ -481,7 +477,6 @@ export function ProductsPortfolioPage() {
 
         <SurfaceCard
           title="Produtos Cadastrados"
-          subtitle="A mesma ideia operacional do legacy, agora com dados canônicos, custos alinhados ao novo Pricing e posição atual de estoque."
           actions={
             <span className={styles.tableMeta}>
               {loading ? "Atualizando..." : `Mostrando ${result?.paging.returned ?? 0} de ${result?.paging.total ?? 0}`}

@@ -1,47 +1,48 @@
 .frame {
   max-width: 1480px;
   margin: 0 auto;
-  padding: 28px 24px 40px;
+  padding: 16px 24px 32px;
 }
 
 .hero {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.9fr);
-  gap: 16px;
-  padding: 18px 20px;
+  gap: 14px;
+  padding: 14px 16px;
   border: 1px solid #eadfe4;
-  border-radius: 22px;
+  border-radius: 20px;
   background:
     radial-gradient(circle at 90% 8%, rgba(194, 59, 84, 0.14), transparent 36%),
     linear-gradient(180deg, #ffffff, #fdfafc);
-  box-shadow: 0 16px 38px rgba(74, 39, 50, 0.08);
+  box-shadow: 0 12px 30px rgba(74, 39, 50, 0.06);
 }
 
 .heroMain {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .eyebrow {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 900;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: #8a1735;
 }
 
 .title {
   margin: 0;
-  font-size: clamp(1.9rem, 2.3vw, 2.8rem);
-  line-height: 1.02;
-  letter-spacing: -0.025em;
+  font-size: clamp(1.65rem, 2vw, 2.35rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
   color: #251b22;
 }
 
 .subtitle {
   margin: 0;
-  max-width: 70ch;
-  font-size: 0.96rem;
+  max-width: 64ch;
+  font-size: 0.82rem;
+  line-height: 1.4;
   color: #73606a;
 }
 
@@ -51,7 +52,7 @@
 }
 
 .content {
-  margin-top: 18px;
+  margin-top: 14px;
 }
 
 @media (max-width: 960px) {
