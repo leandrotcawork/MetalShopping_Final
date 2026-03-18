@@ -66,9 +66,12 @@ Before starting the real issuer flow, ensure all auth session migrations are app
 - `0016_auth_web_sessions.sql`
 - `0017_auth_session_governance_defaults.sql`
 - `0018_auth_web_session_runtime_grants.sql`
+- `0019_auth_session_feature_flag_repair.sql`
 
 The grants migration is required when the tables were created by a superuser but
 `server_core` runs with the application role `metalshopping_app`.
+The repair migration is required because the initial auth session governance seed
+used the wrong feature-flag value column for the runtime resolver.
 
 ### 2. Start Keycloak
 

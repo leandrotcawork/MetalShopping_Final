@@ -2,7 +2,7 @@ INSERT INTO governance_feature_flag_values (
   flag_name,
   scope_type,
   scope_key,
-  flag_enabled,
+  flag_value,
   is_active,
   effective_from,
   updated_by,
