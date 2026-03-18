@@ -6,9 +6,11 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"metalshopping/server_core/internal/modules/catalog/application"
 	"metalshopping/server_core/internal/modules/catalog/domain"
+	catalogreadmodel "metalshopping/server_core/internal/modules/catalog/readmodel"
 	cataloghttp "metalshopping/server_core/internal/modules/catalog/transport/http"
 	iamdomain "metalshopping/server_core/internal/modules/iam/domain"
 	platformauth "metalshopping/server_core/internal/platform/auth"
@@ -27,7 +29,7 @@ func (f *fakePermissionChecker) HasPermission(context.Context, string, iamdomain
 func TestCatalogHandlerCreatesProduct(t *testing.T) {
 	repo := &fakeCatalogRepository{}
 	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true}, &fakeProductDescriptionGuard{})
-	handler := cataloghttp.NewHandler(service, &fakePermissionChecker{allowed: true})
+	handler := cataloghttp.NewHandler(service, nil, &fakePermissionChecker{allowed: true})
 
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
@@ -54,7 +56,7 @@ func TestCatalogHandlerCreatesProduct(t *testing.T) {
 func TestCatalogHandlerCreatesProductWithIdentifiers(t *testing.T) {
 	repo := &fakeCatalogRepository{}
 	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true}, &fakeProductDescriptionGuard{})
-	handler := cataloghttp.NewHandler(service, &fakePermissionChecker{allowed: true})
+	handler := cataloghttp.NewHandler(service, nil, &fakePermissionChecker{allowed: true})
 
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
@@ -92,7 +94,7 @@ func TestCatalogHandlerListsProducts(t *testing.T) {
 		},
 	}
 	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true}, &fakeProductDescriptionGuard{})
-	handler := cataloghttp.NewHandler(service, &fakePermissionChecker{allowed: true})
+	handler := cataloghttp.NewHandler(service, nil, &fakePermissionChecker{allowed: true})
 
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
@@ -115,6 +117,67 @@ func TestCatalogHandlerListsProducts(t *testing.T) {
 	}
 }
 
+func TestCatalogHandlerListsProductsPortfolio(t *testing.T) {
+	repo := &fakeCatalogRepository{
+		portfolio: catalogreadmodel.ProductsPortfolioResult{
+			Rows: []catalogreadmodel.ProductsPortfolioItem{
+				{
+					ProductID:     "prd_1",
+					SKU:           "SKU-001",
+					Name:          "Steel Sheet",
+					ProductStatus: "active",
+					UpdatedAt:     time.Date(2026, 3, 17, 12, 0, 0, 0, time.UTC),
+				},
+			},
+			Filters: catalogreadmodel.ProductsPortfolioFilters{
+				Brands:             []string{"Acme"},
+				TaxonomyLeaf0Names: []string{"Roofing"},
+				Status:             []string{"active"},
+			},
+			Paging: catalogreadmodel.ProductsPortfolioPaging{
+				Offset:   0,
+				Limit:    50,
+				Returned: 1,
+				Total:    1,
+			},
+		},
+	}
+	description := "Galvanized steel sheet"
+	brand := "Acme"
+	currentPrice := 125.5
+	replacementCost := 89.75
+	onHandQuantity := 37.0
+	repo.portfolio.Rows[0].Description = &description
+	repo.portfolio.Rows[0].BrandName = &brand
+	repo.portfolio.Rows[0].CurrentPriceAmount = &currentPrice
+	repo.portfolio.Rows[0].ReplacementCostAmount = &replacementCost
+	repo.portfolio.Rows[0].OnHandQuantity = &onHandQuantity
+
+	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true}, &fakeProductDescriptionGuard{})
+	portfolioService := catalogreadmodel.NewProductsPortfolioService(repo)
+	handler := cataloghttp.NewHandler(service, portfolioService, &fakePermissionChecker{allowed: true})
+
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/products/portfolio?search=SKU&limit=25", nil)
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{SubjectID: "viewer-local", TenantID: "tenant-1"}))
+	req = req.WithContext(tenancy_runtime.WithTenant(req.Context(), tenancy_runtime.Tenant{ID: "tenant-1"}))
+
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rr.Code)
+	}
+	if !strings.Contains(rr.Body.String(), `"rows"`) || !strings.Contains(rr.Body.String(), `"filters"`) {
+		t.Fatalf("expected products portfolio payload, got %s", rr.Body.String())
+	}
+	if !strings.Contains(rr.Body.String(), `"current_price_amount":125.5`) {
+		t.Fatalf("expected current price in response, got %s", rr.Body.String())
+	}
+}
+
 func TestCatalogHandlerListsTaxonomyLevels(t *testing.T) {
 	repo := &fakeCatalogRepository{
 		taxonomyDefs: []domain.TaxonomyLevelDef{
@@ -128,7 +191,7 @@ func TestCatalogHandlerListsTaxonomyLevels(t *testing.T) {
 		},
 	}
 	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true}, &fakeProductDescriptionGuard{})
-	handler := cataloghttp.NewHandler(service, &fakePermissionChecker{allowed: true})
+	handler := cataloghttp.NewHandler(service, nil, &fakePermissionChecker{allowed: true})
 
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
@@ -163,7 +226,7 @@ func TestCatalogHandlerListsProductIdentifiers(t *testing.T) {
 		},
 	}
 	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true}, &fakeProductDescriptionGuard{})
-	handler := cataloghttp.NewHandler(service, &fakePermissionChecker{allowed: true})
+	handler := cataloghttp.NewHandler(service, nil, &fakePermissionChecker{allowed: true})
 
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
@@ -196,7 +259,7 @@ func TestCatalogHandlerListsTaxonomyNodes(t *testing.T) {
 		},
 	}
 	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true}, &fakeProductDescriptionGuard{})
-	handler := cataloghttp.NewHandler(service, &fakePermissionChecker{allowed: true})
+	handler := cataloghttp.NewHandler(service, nil, &fakePermissionChecker{allowed: true})
 
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
@@ -219,7 +282,7 @@ func TestCatalogHandlerListsTaxonomyNodes(t *testing.T) {
 func TestCatalogHandlerRejectsForbiddenUser(t *testing.T) {
 	repo := &fakeCatalogRepository{}
 	service := application.NewService(repo, &fakeProductCreationGuard{enabled: true}, &fakeProductDescriptionGuard{})
-	handler := cataloghttp.NewHandler(service, &fakePermissionChecker{allowed: false})
+	handler := cataloghttp.NewHandler(service, nil, &fakePermissionChecker{allowed: false})
 
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
@@ -239,7 +302,7 @@ func TestCatalogHandlerRejectsForbiddenUser(t *testing.T) {
 func TestCatalogHandlerRejectsGovernanceDisabledCreate(t *testing.T) {
 	repo := &fakeCatalogRepository{}
 	service := application.NewService(repo, &fakeProductCreationGuard{enabled: false}, &fakeProductDescriptionGuard{})
-	handler := cataloghttp.NewHandler(service, &fakePermissionChecker{allowed: true})
+	handler := cataloghttp.NewHandler(service, nil, &fakePermissionChecker{allowed: true})
 
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)

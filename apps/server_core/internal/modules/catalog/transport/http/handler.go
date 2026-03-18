@@ -10,14 +10,16 @@ import (
 	"metalshopping/server_core/internal/modules/catalog/application"
 	"metalshopping/server_core/internal/modules/catalog/domain"
 	"metalshopping/server_core/internal/modules/catalog/ports"
+	catalogreadmodel "metalshopping/server_core/internal/modules/catalog/readmodel"
 	iamdomain "metalshopping/server_core/internal/modules/iam/domain"
 	platformauth "metalshopping/server_core/internal/platform/auth"
 	"metalshopping/server_core/internal/platform/tenancy_runtime"
 )
 
 type Handler struct {
-	service           *application.Service
-	permissionChecker ports.PermissionChecker
+	service                  *application.Service
+	productsPortfolioService *catalogreadmodel.ProductsPortfolioService
+	permissionChecker        ports.PermissionChecker
 }
 
 type CreateProductRequest struct {
@@ -38,10 +40,11 @@ type CreateProductIdentifierRequest struct {
 	IsPrimary       bool   `json:"is_primary,omitempty"`
 }
 
-func NewHandler(service *application.Service, permissionChecker ports.PermissionChecker) *Handler {
+func NewHandler(service *application.Service, productsPortfolioService *catalogreadmodel.ProductsPortfolioService, permissionChecker ports.PermissionChecker) *Handler {
 	return &Handler{
-		service:           service,
-		permissionChecker: permissionChecker,
+		service:                  service,
+		productsPortfolioService: productsPortfolioService,
+		permissionChecker:        permissionChecker,
 	}
 }
 
@@ -50,6 +53,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/catalog/products/", h.handleProductSubresources)
 	mux.HandleFunc("/api/v1/catalog/taxonomy/nodes", h.handleTaxonomyNodes)
 	mux.HandleFunc("/api/v1/catalog/taxonomy/levels", h.handleTaxonomyLevels)
+	mux.HandleFunc("/api/v1/products/portfolio", h.handleProductsPortfolio)
 }
 
 func (h *Handler) handleProducts(w http.ResponseWriter, r *http.Request) {
@@ -160,6 +164,45 @@ func (h *Handler) handleTaxonomyLevels(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"items": items})
 }
 
+func (h *Handler) handleProductsPortfolio(w http.ResponseWriter, r *http.Request) {
+	principal, tenant, ok := h.requirePrincipalAndTenant(w, r)
+	if !ok {
+		return
+	}
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	if h.productsPortfolioService == nil {
+		writeAPIError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Products portfolio read surface is not configured", requestTraceID(r))
+		return
+	}
+
+	allowed, err := h.hasAllPermissions(r, principal.SubjectID, iamdomain.PermCatalogRead, iamdomain.PermPricingRead, iamdomain.PermInventoryRead)
+	if err != nil {
+		writeAPIError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Authorization lookup failed", requestTraceID(r))
+		return
+	}
+	if !allowed {
+		writeAPIError(w, http.StatusForbidden, "AUTH_FORBIDDEN", "Insufficient permissions", requestTraceID(r))
+		return
+	}
+
+	filter, err := productsPortfolioFilterFromRequest(r)
+	if err != nil {
+		writeAPIError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error(), requestTraceID(r))
+		return
+	}
+
+	result, err := h.productsPortfolioService.ListProductsPortfolio(r.Context(), tenant.ID, filter)
+	if err != nil {
+		writeAPIError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to list products portfolio", requestTraceID(r))
+		return
+	}
+
+	writeJSON(w, http.StatusOK, mapProductsPortfolio(result))
+}
+
 func (h *Handler) handleCreateProduct(w http.ResponseWriter, r *http.Request, userID, tenantID string) {
 	allowed, err := h.permissionChecker.HasPermission(r.Context(), userID, iamdomain.PermCatalogWrite)
 	if err != nil {
@@ -266,6 +309,19 @@ func (h *Handler) requirePrincipalAndTenant(w http.ResponseWriter, r *http.Reque
 	return principal, tenant, true
 }
 
+func (h *Handler) hasAllPermissions(r *http.Request, subjectID string, permissions ...iamdomain.Permission) (bool, error) {
+	for _, permission := range permissions {
+		allowed, err := h.permissionChecker.HasPermission(r.Context(), subjectID, permission)
+		if err != nil {
+			return false, err
+		}
+		if !allowed {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
 func taxonomyNodeFilterFromRequest(r *http.Request) (ports.TaxonomyNodeFilter, error) {
 	filter := ports.TaxonomyNodeFilter{
 		ParentTaxonomyNodeID: strings.TrimSpace(r.URL.Query().Get("parent_taxonomy_node_id")),
@@ -280,6 +336,35 @@ func taxonomyNodeFilterFromRequest(r *http.Request) (ports.TaxonomyNodeFilter, e
 		return ports.TaxonomyNodeFilter{}, domain.ErrInvalidTaxonomyLevel
 	}
 	filter.Level = &level
+	return filter, nil
+}
+
+func productsPortfolioFilterFromRequest(r *http.Request) (catalogreadmodel.ProductsPortfolioFilter, error) {
+	filter := catalogreadmodel.ProductsPortfolioFilter{
+		Search:            r.URL.Query().Get("search"),
+		BrandName:         r.URL.Query().Get("brand_name"),
+		TaxonomyLeaf0Name: r.URL.Query().Get("taxonomy_leaf0_name"),
+		Status:            r.URL.Query().Get("status"),
+	}
+
+	limitRaw := strings.TrimSpace(r.URL.Query().Get("limit"))
+	if limitRaw != "" {
+		limit, err := strconv.Atoi(limitRaw)
+		if err != nil || limit < 1 {
+			return catalogreadmodel.ProductsPortfolioFilter{}, errors.New("products portfolio limit must be a positive integer")
+		}
+		filter.Limit = limit
+	}
+
+	offsetRaw := strings.TrimSpace(r.URL.Query().Get("offset"))
+	if offsetRaw != "" {
+		offset, err := strconv.Atoi(offsetRaw)
+		if err != nil || offset < 0 {
+			return catalogreadmodel.ProductsPortfolioFilter{}, errors.New("products portfolio offset must be zero or greater")
+		}
+		filter.Offset = offset
+	}
+
 	return filter, nil
 }
 
@@ -353,6 +438,66 @@ func mapTaxonomyLevelDef(def domain.TaxonomyLevelDef) map[string]any {
 		"short_label": def.ShortLabel,
 		"is_enabled":  def.IsEnabled,
 	}
+}
+
+func mapProductsPortfolio(result catalogreadmodel.ProductsPortfolioResult) map[string]any {
+	rows := make([]map[string]any, 0, len(result.Rows))
+	for _, item := range result.Rows {
+		rows = append(rows, mapProductsPortfolioItem(item))
+	}
+
+	return map[string]any{
+		"rows": rows,
+		"filters": map[string]any{
+			"brands":               result.Filters.Brands,
+			"taxonomy_leaf0_names": result.Filters.TaxonomyLeaf0Names,
+			"status":               result.Filters.Status,
+		},
+		"paging": map[string]any{
+			"offset":   result.Paging.Offset,
+			"limit":    result.Paging.Limit,
+			"returned": result.Paging.Returned,
+			"total":    result.Paging.Total,
+		},
+	}
+}
+
+func mapProductsPortfolioItem(item catalogreadmodel.ProductsPortfolioItem) map[string]any {
+	return map[string]any{
+		"product_id":                item.ProductID,
+		"sku":                       item.SKU,
+		"name":                      item.Name,
+		"description":               nullableStringValue(item.Description),
+		"brand_name":                nullableStringValue(item.BrandName),
+		"pn_interno":                nullableStringValue(item.PNInterno),
+		"reference":                 nullableStringValue(item.Reference),
+		"ean":                       nullableStringValue(item.EAN),
+		"taxonomy_leaf_name":        nullableStringValue(item.TaxonomyLeafName),
+		"taxonomy_leaf0_name":       nullableStringValue(item.TaxonomyLeaf0Name),
+		"stock_profile_code":        nullableStringValue(item.StockProfileCode),
+		"product_status":            item.ProductStatus,
+		"current_price_amount":      nullableFloat64Value(item.CurrentPriceAmount),
+		"replacement_cost_amount":   nullableFloat64Value(item.ReplacementCostAmount),
+		"average_cost_amount":       nullableFloat64Value(item.AverageCostAmount),
+		"currency_code":             nullableStringValue(item.CurrencyCode),
+		"on_hand_quantity":          nullableFloat64Value(item.OnHandQuantity),
+		"inventory_position_status": nullableStringValue(item.InventoryPositionStatus),
+		"updated_at":                item.UpdatedAt.UTC(),
+	}
+}
+
+func nullableStringValue(value *string) any {
+	if value == nil {
+		return nil
+	}
+	return *value
+}
+
+func nullableFloat64Value(value *float64) any {
+	if value == nil {
+		return nil
+	}
+	return *value
 }
 
 type apiErrorEnvelope struct {

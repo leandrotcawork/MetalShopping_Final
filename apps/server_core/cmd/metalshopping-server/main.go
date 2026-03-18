@@ -11,6 +11,7 @@ import (
 	cataloggov "metalshopping/server_core/internal/modules/catalog/adapters/governance"
 	catalogpg "metalshopping/server_core/internal/modules/catalog/adapters/postgres"
 	catalogapp "metalshopping/server_core/internal/modules/catalog/application"
+	catalogreadmodel "metalshopping/server_core/internal/modules/catalog/readmodel"
 	cataloghttp "metalshopping/server_core/internal/modules/catalog/transport/http"
 	iamgov "metalshopping/server_core/internal/modules/iam/adapters/governance"
 	iampg "metalshopping/server_core/internal/modules/iam/adapters/postgres"
@@ -84,7 +85,8 @@ func main() {
 	catalogProductCreationGuard := cataloggov.NewProductCreationGuard(featureFlagResolver, environment)
 	catalogDescriptionGuard := cataloggov.NewDescriptionGuard(thresholdResolver, environment)
 	catalogService := catalogapp.NewService(catalogRepo, catalogProductCreationGuard, catalogDescriptionGuard)
-	catalogHandler := cataloghttp.NewHandler(catalogService, iamAuthorization)
+	catalogProductsPortfolioService := catalogreadmodel.NewProductsPortfolioService(catalogRepo)
+	catalogHandler := cataloghttp.NewHandler(catalogService, catalogProductsPortfolioService, iamAuthorization)
 	inventoryService := inventoryapp.NewService(inventoryRepo)
 	inventoryHandler := inventoryhttp.NewHandler(inventoryService, iamAuthorization)
 	pricingManualOverrideGuard := pricinggov.NewManualOverrideGuard(policyResolver, environment)

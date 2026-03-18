@@ -8,6 +8,7 @@ import (
 	"metalshopping/server_core/internal/modules/catalog/application"
 	"metalshopping/server_core/internal/modules/catalog/domain"
 	"metalshopping/server_core/internal/modules/catalog/ports"
+	catalogreadmodel "metalshopping/server_core/internal/modules/catalog/readmodel"
 )
 
 type fakeCatalogRepository struct {
@@ -17,6 +18,7 @@ type fakeCatalogRepository struct {
 	identifiers   []domain.ProductIdentifier
 	taxonomyNodes []domain.TaxonomyNode
 	taxonomyDefs  []domain.TaxonomyLevelDef
+	portfolio     catalogreadmodel.ProductsPortfolioResult
 	err           error
 }
 
@@ -55,6 +57,13 @@ func (f *fakeCatalogRepository) ListTaxonomyLevelDefs(context.Context, string) (
 		return nil, f.err
 	}
 	return f.taxonomyDefs, nil
+}
+
+func (f *fakeCatalogRepository) ListProductsPortfolio(context.Context, string, catalogreadmodel.ProductsPortfolioFilter) (catalogreadmodel.ProductsPortfolioResult, error) {
+	if f.err != nil {
+		return catalogreadmodel.ProductsPortfolioResult{}, f.err
+	}
+	return f.portfolio, nil
 }
 
 type fakeProductCreationGuard struct {
