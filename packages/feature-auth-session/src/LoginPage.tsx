@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 import { Button } from "@metalshopping/ui";
 
@@ -9,6 +9,7 @@ type LoginPageProps = {
   apiBaseUrl: string;
   defaultReturnTo?: string;
   logoSrc: string;
+  autoRedirect?: boolean;
 };
 
 const loginHighlights = [
@@ -17,8 +18,23 @@ const loginHighlights = [
   { value: "IAM", label: "Permissoes no core" },
 ];
 
-export function LoginPage({ apiBaseUrl, defaultReturnTo = "/products", logoSrc }: LoginPageProps) {
+export function LoginPage({
+  apiBaseUrl,
+  defaultReturnTo = "/products",
+  logoSrc,
+  autoRedirect = false,
+}: LoginPageProps) {
   const { errorMessage, login, status } = useSession();
+  const redirectStartedRef = useRef(false);
+
+  useEffect(() => {
+    if (!autoRedirect || status !== "unauthenticated" || errorMessage.trim() !== "" || redirectStartedRef.current) {
+      return;
+    }
+
+    redirectStartedRef.current = true;
+    login(defaultReturnTo);
+  }, [autoRedirect, defaultReturnTo, errorMessage, login, status]);
 
   const helperCopy = useMemo(() => {
     switch (status) {
@@ -26,10 +42,15 @@ export function LoginPage({ apiBaseUrl, defaultReturnTo = "/products", logoSrc }
         return "Validando se ja existe uma sessao autenticada no navegador.";
       case "starting_login":
         return "Redirecionando para o provedor de identidade configurado.";
+      case "unauthenticated":
+        if (autoRedirect && errorMessage.trim() === "") {
+          return "Redirecionando automaticamente para o login seguro do MetalShopping.";
+        }
+        return "Entre com sua conta segura para acessar as superficies operacionais do MetalShopping.";
       default:
         return "Entre com sua conta segura para acessar as superficies operacionais do MetalShopping.";
     }
-  }, [status]);
+  }, [autoRedirect, errorMessage, status]);
 
   return (
     <section className={styles.page}>
@@ -85,13 +106,23 @@ export function LoginPage({ apiBaseUrl, defaultReturnTo = "/products", logoSrc }
 
             {errorMessage ? <p className={`${styles.alert} ${styles.alertError}`}>{errorMessage}</p> : null}
 
+            {autoRedirect && status !== "starting_login" && errorMessage.trim() === "" ? (
+              <p className={styles.redirectHint}>
+                Caso o redirecionamento nao aconteca automaticamente, continue manualmente.
+              </p>
+            ) : null}
+
             <Button
               variant="primary"
               className={styles.submitButton}
               onClick={() => login(defaultReturnTo)}
               disabled={status === "bootstrapping" || status === "starting_login"}
             >
-              {status === "starting_login" ? "Redirecionando..." : "Entrar com identidade segura"}
+              {status === "starting_login"
+                ? "Redirecionando..."
+                : autoRedirect
+                  ? "Abrir login manualmente"
+                  : "Entrar com identidade segura"}
             </Button>
           </div>
 

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html class="ms-html" lang="${(locale.currentLanguageTag!'pt-BR')?html}">
+<html class="ms-html" lang="pt-BR">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>${(realm.displayName!'MetalShopping')?html}</title>
+    <title>${realm.displayName!'MetalShopping'}</title>
     <link rel="icon" href="${url.resourcesPath}/img/logo_ico.jpg">
     <link rel="stylesheet" href="${url.resourcesPath}/css/login.css">
 </head>
@@ -65,7 +65,7 @@
 
                     <#if message?has_content>
                         <div class="ms-alert ms-alert-${message.type}">
-                            ${message.summary?html}
+                            ${message.summary}
                         </div>
                     </#if>
 
@@ -81,13 +81,13 @@
                                         class="ms-input"
                                         name="username"
                                         type="text"
-                                        value="${(login.username!'')?html}"
+                                        value="${login.username!''}"
                                         autocomplete="username"
                                         autofocus
                                     >
                                 </div>
                             <#else>
-                                <input type="hidden" id="username" name="username" value="${(login.username!'')?html}">
+                                <input type="hidden" id="username" name="username" value="${login.username!''}">
                             </#if>
 
                             <div class="ms-field">

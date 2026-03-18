@@ -156,7 +156,7 @@ export function AppShell(_props: PropsWithChildren) {
     setIsLoggingOut(true);
     try {
       await logout();
-      navigate("/login", { replace: true });
+      navigate("/login?manual=1", { replace: true });
     } finally {
       setIsLoggingOut(false);
     }

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useSearchParams } from "react-router-dom";
 
 import { LoginPage, SessionProvider, useSession } from "@metalshopping/feature-auth-session";
 import { ProductsPortfolioPage } from "@metalshopping/feature-products";
@@ -48,14 +48,23 @@ function AppBootstrapScreen() {
 }
 
 function LoginRoute() {
-  const { apiBaseUrl, httpClient } = useAppRuntime();
+  const { apiBaseUrl } = useAppRuntime();
   const { status } = useSession();
+  const [searchParams] = useSearchParams();
+  const manualMode = searchParams.get("manual") === "1";
 
   if (status === "authenticated") {
     return <Navigate replace to="/products" />;
   }
 
-  return <LoginPage apiBaseUrl={apiBaseUrl} defaultReturnTo="/products" logoSrc={logoMetalNobre} />;
+  return (
+    <LoginPage
+      apiBaseUrl={apiBaseUrl}
+      defaultReturnTo="/products"
+      logoSrc={logoMetalNobre}
+      autoRedirect={!manualMode}
+    />
+  );
 }
 
 function RequireAuthenticated() {
