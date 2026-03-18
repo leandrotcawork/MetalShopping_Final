@@ -3,20 +3,13 @@ import { startTransition, useDeferredValue, useEffect, useMemo, useState } from 
 import {
   AppFrame,
   FilterDropdown,
-  MetricCard,
-  StatusPill,
-  SurfaceCard,
   type SelectMenuOption,
+  SurfaceCard,
 } from "@metalshopping/ui";
 
-import { listProductsPortfolio, type ProductsPortfolioQuery, type ProductsPortfolioResult } from "./api";
+import { listProductsPortfolio, type ProductsPortfolioItem, type ProductsPortfolioQuery, type ProductsPortfolioResult } from "./api";
 import styles from "./ProductsPortfolioPage.module.css";
-import {
-  buildProductsPortfolioSummary,
-  formatCurrency,
-  formatQuantity,
-  rowHasLiveCommercialState,
-} from "./view-model";
+import { buildProductsPortfolioSummary, formatCurrency, formatQuantity } from "./view-model";
 
 const defaultQuery: ProductsPortfolioQuery = {
   search: "",
@@ -28,6 +21,21 @@ const defaultQuery: ProductsPortfolioQuery = {
 };
 
 const pageSizeOptions = [25, 50, 100];
+
+type SortKey =
+  | "pn_interno"
+  | "name"
+  | "brand_name"
+  | "taxonomy_leaf0_name"
+  | "product_status"
+  | "current_price_amount"
+  | "replacement_cost_amount"
+  | "on_hand_quantity";
+
+type SortState = {
+  key: SortKey;
+  direction: "asc" | "desc";
+};
 
 function readQueryFromUrl(): ProductsPortfolioQuery {
   if (typeof window === "undefined") {
@@ -66,12 +74,116 @@ function writeQueryToUrl(query: ProductsPortfolioQuery) {
   window.history.replaceState(null, "", nextUrl);
 }
 
+function normalizeText(value: string | null | undefined) {
+  return (value ?? "").trim();
+}
+
+function compareNullableStrings(left: string | null | undefined, right: string | null | undefined) {
+  return normalizeText(left).localeCompare(normalizeText(right), "pt-BR", {
+    sensitivity: "base",
+  });
+}
+
+function compareNullableNumbers(left: number | null | undefined, right: number | null | undefined) {
+  return (left ?? Number.NEGATIVE_INFINITY) - (right ?? Number.NEGATIVE_INFINITY);
+}
+
+function sortRows(rows: ProductsPortfolioItem[], sort: SortState) {
+  const next = [...rows];
+  next.sort((left, right) => {
+    let comparison = 0;
+
+    switch (sort.key) {
+      case "pn_interno":
+        comparison = compareNullableStrings(left.pn_interno, right.pn_interno);
+        break;
+      case "name":
+        comparison = compareNullableStrings(left.name, right.name);
+        break;
+      case "brand_name":
+        comparison = compareNullableStrings(left.brand_name, right.brand_name);
+        break;
+      case "taxonomy_leaf0_name":
+        comparison = compareNullableStrings(left.taxonomy_leaf0_name, right.taxonomy_leaf0_name);
+        break;
+      case "product_status":
+        comparison = compareNullableStrings(left.product_status, right.product_status);
+        break;
+      case "current_price_amount":
+        comparison = compareNullableNumbers(left.current_price_amount, right.current_price_amount);
+        break;
+      case "replacement_cost_amount":
+        comparison = compareNullableNumbers(left.replacement_cost_amount, right.replacement_cost_amount);
+        break;
+      case "on_hand_quantity":
+        comparison = compareNullableNumbers(left.on_hand_quantity, right.on_hand_quantity);
+        break;
+      default:
+        comparison = 0;
+        break;
+    }
+
+    if (comparison === 0) {
+      comparison = compareNullableStrings(left.name, right.name);
+    }
+
+    return sort.direction === "asc" ? comparison : -comparison;
+  });
+  return next;
+}
+
+function statusTone(value: string) {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "active" || normalized === "ativo") {
+    return "success";
+  }
+  if (normalized === "inactive" || normalized === "inativo") {
+    return "muted";
+  }
+  return "neutral";
+}
+
+function statusLabel(value: string) {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "active") {
+    return "Ativo";
+  }
+  if (normalized === "inactive") {
+    return "Inativo";
+  }
+  return value;
+}
+
+function sortIndicator(sort: SortState, key: SortKey) {
+  if (sort.key !== key) {
+    return "↕";
+  }
+  return sort.direction === "asc" ? "↑" : "↓";
+}
+
+function ProductSelectionCheckbox(props: {
+  checked: boolean;
+  disabled?: boolean;
+  onChange: () => void;
+  label: string;
+}) {
+  return (
+    <label className={styles.check} aria-label={props.label}>
+      <input checked={props.checked} disabled={props.disabled} type="checkbox" onChange={props.onChange} />
+      <span className={styles.checkUi} aria-hidden="true" />
+    </label>
+  );
+}
+
 export function ProductsPortfolioPage() {
   const [query, setQuery] = useState<ProductsPortfolioQuery>(() => readQueryFromUrl());
   const [searchDraft, setSearchDraft] = useState(() => readQueryFromUrl().search);
   const [result, setResult] = useState<ProductsPortfolioResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [selectionMode, setSelectionMode] = useState<"explicit" | "filtered">("explicit");
+  const [sort, setSort] = useState<SortState>({ key: "pn_interno", direction: "asc" });
   const deferredSearch = useDeferredValue(searchDraft);
 
   useEffect(() => {
@@ -108,7 +220,7 @@ export function ProductsPortfolioPage() {
         }
       } catch (loadError) {
         if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : "Failed to load products.");
+          setError(loadError instanceof Error ? loadError.message : "Falha ao carregar produtos.");
         }
       } finally {
         if (!cancelled) {
@@ -118,6 +230,7 @@ export function ProductsPortfolioPage() {
     }
 
     void load();
+
     return () => {
       cancelled = true;
     };
@@ -125,112 +238,154 @@ export function ProductsPortfolioPage() {
 
   const summary = useMemo(() => buildProductsPortfolioSummary(result), [result]);
 
+  const rows = useMemo(() => sortRows(result?.rows ?? [], sort), [result?.rows, sort]);
   const brands = result?.filters.brands ?? [];
   const taxonomyLeaf0Names = result?.filters.taxonomy_leaf0_names ?? [];
   const statuses = result?.filters.status ?? [];
   const totalVisible = result?.paging.returned ?? 0;
   const totalMatching = result?.paging.total ?? 0;
-  const liveRows = result?.rows.filter((row) => rowHasLiveCommercialState(row)).length ?? 0;
-  const inventoryLive = result?.rows.filter((row) => (row.on_hand_quantity ?? 0) > 0).length ?? 0;
-  const currentPage = Math.floor(query.offset / query.limit) + 1;
+  const totalSelected = selectionMode === "filtered" ? totalMatching : selectedProductIds.length;
+  const totalPriced = result?.rows.filter((row) => row.current_price_amount !== null).length ?? 0;
   const totalPages = totalMatching === 0 ? 1 : Math.max(1, Math.ceil(totalMatching / query.limit));
+  const currentPage = Math.floor(query.offset / query.limit) + 1;
   const canGoPrevious = query.offset > 0;
   const canGoNext = query.offset + query.limit < totalMatching;
+  const allVisibleSelected =
+    selectionMode === "filtered" ||
+    (rows.length > 0 && rows.every((row) => selectedProductIds.includes(row.product_id)));
 
   const activeFilters = [
     query.search.trim() !== "" ? { key: "search", label: `Busca: ${query.search.trim()}` } : null,
     query.brandName.trim() !== "" ? { key: "brandName", label: `Marca: ${query.brandName.trim()}` } : null,
     query.taxonomyLeaf0Name.trim() !== ""
-      ? { key: "taxonomyLeaf0Name", label: `Taxonomia: ${query.taxonomyLeaf0Name.trim()}` }
+      ? { key: "taxonomyLeaf0Name", label: `Grupo: ${query.taxonomyLeaf0Name.trim()}` }
       : null,
     query.status.trim() !== "" ? { key: "status", label: `Status: ${query.status.trim()}` } : null,
   ].filter((item): item is { key: string; label: string } => item !== null);
 
-  const hasActiveFilters = activeFilters.length > 0;
   const brandOptions = useMemo<SelectMenuOption[]>(
-    () => [{ label: "All brands", value: "" }, ...brands.map((brand) => ({ label: brand, value: brand }))],
+    () => [{ label: "Todas as marcas", value: "" }, ...brands.map((brand) => ({ label: brand, value: brand }))],
     [brands],
   );
   const taxonomyOptions = useMemo<SelectMenuOption[]>(
     () => [
-      { label: "All taxonomy roots", value: "" },
+      { label: "Todos os grupos", value: "" },
       ...taxonomyLeaf0Names.map((name) => ({ label: name, value: name })),
     ],
     [taxonomyLeaf0Names],
   );
   const statusOptions = useMemo<SelectMenuOption[]>(
-    () => [{ label: "All statuses", value: "" }, ...statuses.map((status) => ({ label: status, value: status }))],
+    () => [{ label: "Todos os status", value: "" }, ...statuses.map((status) => ({ label: status, value: status }))],
     [statuses],
   );
 
+  function clearSelection() {
+    setSelectionMode("explicit");
+    setSelectedProductIds([]);
+  }
+
+  function toggleRowSelection(productId: string) {
+    setSelectionMode("explicit");
+    setSelectedProductIds((current) =>
+      current.includes(productId) ? current.filter((item) => item !== productId) : [...current, productId],
+    );
+  }
+
+  function toggleCurrentPageSelection() {
+    setSelectionMode("explicit");
+    setSelectedProductIds((current) => {
+      const visibleIds = rows.map((row) => row.product_id);
+      const shouldSelect = visibleIds.some((id) => !current.includes(id));
+      if (shouldSelect) {
+        return Array.from(new Set([...current, ...visibleIds]));
+      }
+      return current.filter((id) => !visibleIds.includes(id));
+    });
+  }
+
+  function selectFiltered() {
+    setSelectionMode("filtered");
+    setSelectedProductIds([]);
+  }
+
+  function updateSort(key: SortKey) {
+    setSort((current) =>
+      current.key === key
+        ? {
+            key,
+            direction: current.direction === "asc" ? "desc" : "asc",
+          }
+        : {
+            key,
+            direction: "asc",
+          },
+    );
+  }
+
   return (
     <AppFrame
-      eyebrow="Operational Surface"
-      title="Products"
-      subtitle="Portfolio visibility rebuilt on top of the canonical backend. Identity comes from Catalog, price from Pricing, and stock from Inventory through a single backend-owned read surface."
+      eyebrow="Products · Market Report"
+      title="Relatório de preço de mercado por run"
+      subtitle="Mantenha a operação de produtos no mesmo contexto visual do MetalShopping legacy, agora servida por um read surface canônico que consolida Catalog, Pricing e Inventory."
       aside={
         <div className={styles.heroAside}>
-          <MetricCard
-            label="Visible now"
-            value={totalVisible}
-            hint={`${totalMatching} matching products in the current filter scope.`}
-          />
-          <MetricCard
-            label="Commercially live"
-            value={liveRows}
-            hint="Rows with current price or stock visibility."
-          />
-          <MetricCard
-            label="Inventory live"
-            value={inventoryLive}
-            hint="Rows currently exposing on-hand quantity above zero."
-          />
-          <MetricCard
-            label="Avg visible price"
-            value={summary.averageVisiblePrice}
-            hint="Average over products with a current effective price."
-          />
+          <div className={styles.heroChip}>
+            <small>Na grade</small>
+            <strong>{totalVisible}</strong>
+          </div>
+          <div className={styles.heroChip}>
+            <small>Selecionados</small>
+            <strong>{totalSelected}</strong>
+          </div>
+          <div className={styles.heroChip}>
+            <small>Total base</small>
+            <strong>{summary.totalProducts}</strong>
+          </div>
+          <div className={styles.heroChip}>
+            <small>Com preço</small>
+            <strong>{totalPriced}</strong>
+          </div>
         </div>
       }
     >
       <div className={styles.stack}>
         <div className={styles.bannerRow}>
           <div className={`${styles.statusBanner} ${error ? styles.statusBannerError : styles.statusBannerSuccess}`}>
-            <strong>{error ? "Surface degraded" : "Read surface online"}</strong>
+            <strong>{error ? "Falha na superfície" : "Superfície operacional ativa"}</strong>
             <span>
               {error
                 ? error
-                : `Catalog, Pricing, and Inventory are composing ${summary.totalProducts} canonical products for the current tenant.`}
+                : `Catalog, Pricing e Inventory estão compondo ${summary.totalProducts} produtos canônicos para o tenant atual.`}
             </span>
           </div>
           <div className={styles.quickActions}>
-            <button type="button" className={`${styles.actionButton} ${styles.actionButtonPrimary}`}>
-              Products live
+            <button type="button" className={styles.actionButton}>
+              ⚙ Configurar relatório
             </button>
-            <button type="button" className={styles.actionButton} disabled>
-              Shopping soon
+            <button type="button" className={`${styles.actionButton} ${styles.actionButtonPrimary}`} disabled>
+              📤 Exportar relatório
             </button>
           </div>
         </div>
 
         <SurfaceCard
-          title="Portfolio filters"
-          subtitle="Search and narrow the active portfolio the same way the legacy Products workspace did, but now through a backend-owned read surface."
+          title="Filtros de Produtos"
+          subtitle="Combinação lógica: AND entre filtros e OR dentro de cada seleção. A base visual continua a do legado, mas agora a leitura é backend-owned."
           className={styles.filtersCard}
         >
           <div className={styles.toolbar}>
             <label className={styles.field}>
-              <span className={styles.label}>Search</span>
+              <span className={styles.label}>Busca</span>
               <input
                 className={styles.input}
                 value={searchDraft}
-                placeholder="SKU, description, pn_interno, EAN or reference"
+                placeholder="PN, referência, EAN, descrição"
                 onChange={(event) => setSearchDraft(event.target.value)}
               />
             </label>
 
-            <label className={styles.field}>
-              <span className={styles.label}>Brand</span>
+            <div className={styles.field}>
+              <span className={styles.label}>Marca</span>
               <FilterDropdown
                 id="products-brand-filter"
                 value={query.brandName}
@@ -243,25 +398,9 @@ export function ProductsPortfolioPage() {
                   }))
                 }
               />
-            </label>
+            </div>
 
-            <label className={styles.field}>
-              <span className={styles.label}>Taxonomy</span>
-              <FilterDropdown
-                id="products-taxonomy-filter"
-                value={query.taxonomyLeaf0Name}
-                options={taxonomyOptions}
-                onSelect={(value) =>
-                  setQuery((current) => ({
-                    ...current,
-                    taxonomyLeaf0Name: value,
-                    offset: 0,
-                  }))
-                }
-              />
-            </label>
-
-            <label className={styles.field}>
+            <div className={styles.field}>
               <span className={styles.label}>Status</span>
               <FilterDropdown
                 id="products-status-filter"
@@ -275,12 +414,28 @@ export function ProductsPortfolioPage() {
                   }))
                 }
               />
-            </label>
+            </div>
+
+            <div className={styles.field}>
+              <span className={styles.label}>Grupo</span>
+              <FilterDropdown
+                id="products-taxonomy-filter"
+                value={query.taxonomyLeaf0Name}
+                options={taxonomyOptions}
+                onSelect={(value) =>
+                  setQuery((current) => ({
+                    ...current,
+                    taxonomyLeaf0Name: value,
+                    offset: 0,
+                  }))
+                }
+              />
+            </div>
           </div>
 
           <div className={styles.filterFooter}>
             <div className={styles.filterChips}>
-              {hasActiveFilters ? (
+              {activeFilters.length > 0 ? (
                 activeFilters.map((filter) => (
                   <button
                     key={filter.key}
@@ -299,18 +454,18 @@ export function ProductsPortfolioPage() {
                     }}
                   >
                     <span>{filter.label}</span>
-                    <span aria-hidden="true">x</span>
+                    <span aria-hidden="true">×</span>
                   </button>
                 ))
               ) : (
-                <span className={styles.filterHint}>No active filters. The full visible tenant portfolio is being shown.</span>
+                <span className={styles.filterHint}>Nenhum filtro ativo. Exibindo o portfólio completo visível no tenant.</span>
               )}
             </div>
 
             <button
               type="button"
               className={styles.clearButton}
-              disabled={!hasActiveFilters}
+              disabled={activeFilters.length === 0}
               onClick={() => {
                 setSearchDraft("");
                 setQuery({
@@ -319,99 +474,164 @@ export function ProductsPortfolioPage() {
                 });
               }}
             >
-              Clear filters
+              Limpar filtros
             </button>
           </div>
         </SurfaceCard>
 
         <SurfaceCard
-          title="Portfolio table"
-          subtitle="Current product identity, current pricing state, and current stock position in one operational workspace."
+          title="Produtos Cadastrados"
+          subtitle="A mesma ideia operacional do legacy, agora com dados canônicos, custos alinhados ao novo Pricing e posição atual de estoque."
           actions={
             <span className={styles.tableMeta}>
-              {loading
-                ? "Refreshing..."
-                : `Showing ${result?.paging.returned ?? 0} of ${result?.paging.total ?? 0}`}
+              {loading ? "Atualizando..." : `Mostrando ${result?.paging.returned ?? 0} de ${result?.paging.total ?? 0}`}
             </span>
           }
           className={styles.tableCard}
         >
-          <div className={styles.statusRow}>
-            <span>Current workspace status</span>
-            <span>{loading ? "Syncing visible rows..." : "Portfolio synchronized."}</span>
+          <div className={styles.tableActions}>
+            <button type="button" className={styles.secondaryActionButton} disabled>
+              Exportar selecionados
+            </button>
+            <button type="button" className={styles.secondaryActionButton} disabled={rows.length === 0} onClick={toggleCurrentPageSelection}>
+              {allVisibleSelected ? "Desmarcar página" : "Selecionar página"}
+            </button>
+            <button type="button" className={styles.secondaryActionButton} disabled={rows.length === 0} onClick={selectFiltered}>
+              Selecionar filtrados
+            </button>
+            <button type="button" className={styles.secondaryActionButton} disabled={totalSelected === 0} onClick={clearSelection}>
+              Limpar
+            </button>
+          </div>
+
+          <div className={styles.selectionRow}>
+            <span>
+              Modo: <strong>{selectionMode === "filtered" ? "Filtrados" : "Explícito"}</strong>
+            </span>
+            <span>
+              Itens: <strong>{totalSelected}</strong>
+            </span>
+            <span>
+              Preço médio visível: <strong>{summary.averageVisiblePrice}</strong>
+            </span>
           </div>
 
           <div className={styles.tableWrap}>
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Product</th>
-                  <th>Identifiers</th>
-                  <th>Classification</th>
-                  <th>Current Price</th>
-                  <th>Current Costs</th>
-                  <th>Stock</th>
-                  <th>Status</th>
+                  <th className={styles.checkboxColumn}>
+                    <ProductSelectionCheckbox
+                      checked={allVisibleSelected}
+                      disabled={rows.length === 0 || selectionMode === "filtered"}
+                      label="Selecionar produtos da página"
+                      onChange={toggleCurrentPageSelection}
+                    />
+                  </th>
+                  <th>
+                    <button type="button" className={styles.sortButton} onClick={() => updateSort("pn_interno")}>
+                      <span>PN</span>
+                      <span aria-hidden="true">{sortIndicator(sort, "pn_interno")}</span>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" className={styles.sortButton} onClick={() => updateSort("name")}>
+                      <span>Produto</span>
+                      <span aria-hidden="true">{sortIndicator(sort, "name")}</span>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" className={styles.sortButton} onClick={() => updateSort("brand_name")}>
+                      <span>Marca</span>
+                      <span aria-hidden="true">{sortIndicator(sort, "brand_name")}</span>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" className={styles.sortButton} onClick={() => updateSort("taxonomy_leaf0_name")}>
+                      <span>Grupo</span>
+                      <span aria-hidden="true">{sortIndicator(sort, "taxonomy_leaf0_name")}</span>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" className={styles.sortButton} onClick={() => updateSort("product_status")}>
+                      <span>Status</span>
+                      <span aria-hidden="true">{sortIndicator(sort, "product_status")}</span>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" className={styles.sortButton} onClick={() => updateSort("current_price_amount")}>
+                      <span>Nosso Preço</span>
+                      <span aria-hidden="true">{sortIndicator(sort, "current_price_amount")}</span>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" className={styles.sortButton} onClick={() => updateSort("replacement_cost_amount")}>
+                      <span>Custos</span>
+                      <span aria-hidden="true">{sortIndicator(sort, "replacement_cost_amount")}</span>
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" className={styles.sortButton} onClick={() => updateSort("on_hand_quantity")}>
+                      <span>Estoque</span>
+                      <span aria-hidden="true">{sortIndicator(sort, "on_hand_quantity")}</span>
+                    </button>
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {result?.rows.length ? (
-                  result.rows.map((row) => (
-                    <tr key={row.product_id}>
-                      <td>
-                        <div className={styles.identity}>
-                          <p className={styles.name}>{row.name}</p>
-                          <p className={styles.meta}>{row.sku}</p>
-                          <p className={styles.meta}>{row.description ?? "No description yet."}</p>
-                        </div>
-                      </td>
-                      <td>
-                        <div className={styles.secondary}>
-                          <span>PN: {row.pn_interno ?? "—"}</span>
-                          <span>Ref: {row.reference ?? "—"}</span>
-                          <span>EAN: {row.ean ?? "—"}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <div className={styles.secondary}>
-                          <span>Brand: {row.brand_name ?? "—"}</span>
-                          <span>Taxonomy: {row.taxonomy_leaf_name ?? "—"}</span>
-                          <span>Root: {row.taxonomy_leaf0_name ?? "—"}</span>
-                        </div>
-                      </td>
-                      <td className={styles.money}>{formatCurrency(row.current_price_amount)}</td>
-                      <td>
-                        <div className={styles.secondary}>
-                          <span>Replacement: {formatCurrency(row.replacement_cost_amount)}</span>
-                          <span>Average: {formatCurrency(row.average_cost_amount)}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <div className={styles.secondary}>
-                          <span>{formatQuantity(row.on_hand_quantity)}</span>
-                          <span>{row.inventory_position_status ?? "No position"}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <StatusPill
-                          label={row.product_status}
-                          tone={
-                            row.product_status === "active" && rowHasLiveCommercialState(row)
-                              ? "success"
-                              : row.product_status === "active"
-                                ? "neutral"
-                                : "muted"
-                          }
-                        />
-                      </td>
-                    </tr>
-                  ))
+                {rows.length > 0 ? (
+                  rows.map((row) => {
+                    const checked = selectionMode === "filtered" || selectedProductIds.includes(row.product_id);
+                    return (
+                      <tr key={row.product_id}>
+                        <td className={styles.checkboxColumn}>
+                          <ProductSelectionCheckbox
+                            checked={checked}
+                            disabled={selectionMode === "filtered"}
+                            label={`Selecionar produto ${row.name}`}
+                            onChange={() => toggleRowSelection(row.product_id)}
+                          />
+                        </td>
+                        <td>
+                          <span className={styles.cellStrong}>{row.pn_interno ?? "—"}</span>
+                          <span className={styles.cellMeta}>{row.sku}</span>
+                        </td>
+                        <td>
+                          <span className={styles.cellStrong}>{row.name}</span>
+                          <span className={styles.cellMeta}>{row.description ?? "Sem descrição cadastrada."}</span>
+                          <span className={styles.cellSmall}>
+                            Ref: {row.reference ?? "—"} · EAN: {row.ean ?? "—"}
+                          </span>
+                        </td>
+                        <td>{row.brand_name ?? "—"}</td>
+                        <td>
+                          <span className={styles.cellStrong}>{row.taxonomy_leaf0_name ?? "—"}</span>
+                          <span className={styles.cellMeta}>{row.taxonomy_leaf_name ?? "Sem folha definida."}</span>
+                        </td>
+                        <td>
+                          <span className={`${styles.statusChip} ${styles[`statusChip${statusTone(row.product_status)}`]}`}>
+                            {statusLabel(row.product_status)}
+                          </span>
+                        </td>
+                        <td className={styles.moneyCell}>
+                          <span className={styles.cellStrong}>{formatCurrency(row.current_price_amount)}</span>
+                          <span className={styles.cellMeta}>{row.currency_code ?? "BRL"}</span>
+                        </td>
+                        <td>
+                          <span className={styles.cellStrong}>Reposição: {formatCurrency(row.replacement_cost_amount)}</span>
+                          <span className={styles.cellMeta}>Médio: {formatCurrency(row.average_cost_amount)}</span>
+                        </td>
+                        <td>
+                          <span className={styles.cellStrong}>{formatQuantity(row.on_hand_quantity)}</span>
+                          <span className={styles.cellMeta}>{row.inventory_position_status ?? "Sem posição"}</span>
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
-                    <td className={styles.empty} colSpan={7}>
-                      {loading
-                        ? "Loading products..."
-                        : "No products matched the current portfolio filters."}
+                    <td className={styles.empty} colSpan={9}>
+                      {loading ? "Carregando produtos..." : "Nenhum produto encontrado para o filtro atual."}
                     </td>
                   </tr>
                 )}
@@ -421,13 +641,15 @@ export function ProductsPortfolioPage() {
 
           <div className={styles.paginationRow}>
             <div className={styles.paginationStatus}>
-              <span>Page {currentPage} of {totalPages}</span>
-              <span>{totalMatching} matching products</span>
+              <span>
+                Página {currentPage} de {totalPages}
+              </span>
+              <span>{totalMatching} produtos encontrados</span>
             </div>
 
             <div className={styles.paginationActions}>
               <label className={styles.pageSizeField}>
-                <span>Rows</span>
+                <span>Linhas</span>
                 <select
                   className={styles.pageSizeSelect}
                   value={query.limit}
@@ -458,7 +680,7 @@ export function ProductsPortfolioPage() {
                   }))
                 }
               >
-                Previous
+                Anterior
               </button>
               <button
                 type="button"
@@ -471,7 +693,7 @@ export function ProductsPortfolioPage() {
                   }))
                 }
               >
-                Next
+                Próxima
               </button>
             </div>
           </div>
