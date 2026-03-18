@@ -10,8 +10,9 @@ import (
 )
 
 type Handler struct {
-	service *Service
-	config  Config
+	service        *Service
+	config         Config
+	csrf           *csrfManager
 	allowedOrigins map[string]struct{}
 }
 
@@ -25,7 +26,12 @@ func NewHandler(service *Service, config Config, allowedOrigins []string) *Handl
 		originSet[trimmed] = struct{}{}
 	}
 
-	return &Handler{service: service, config: config, allowedOrigins: originSet}
+	return &Handler{
+		service:        service,
+		config:         config,
+		csrf:           newCSRFManager(config),
+		allowedOrigins: originSet,
+	}
 }
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
@@ -80,7 +86,10 @@ func (h *Handler) handleCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	SetSessionCookie(w, h.config, session.SessionID, session.IdleTimeoutExpiresAt)
-	SetCSRFCookie(w, h.config, randomCSRFToken(), session.IdleTimeoutExpiresAt)
+	if err := h.issueCSRFCookie(w, session.SessionID, session.TenantID); err != nil {
+		h.writeError(w, r, err)
+		return
+	}
 	ClearLoginStateCookie(w, h.config)
 	http.Redirect(w, r, returnTo, http.StatusFound)
 }
@@ -101,7 +110,10 @@ func (h *Handler) handleMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	SetCSRFCookie(w, h.config, randomCSRFToken(), state.IdleTimeoutExpiresAt)
+	if err := h.issueCSRFCookie(w, state.SessionID, state.TenantID); err != nil {
+		h.writeError(w, r, err)
+		return
+	}
 	writeJSON(w, http.StatusOK, mapSessionState(state))
 }
 
@@ -110,12 +122,16 @@ func (h *Handler) handleRefresh(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	if !h.validateCSRFCookieRequest(w, r) {
-		return
-	}
-
 	sessionID, ok := h.requireSessionCookie(w, r)
 	if !ok {
+		return
+	}
+	principal, ok := platformauth.PrincipalFromContext(r.Context())
+	if !ok {
+		writeAPIError(w, http.StatusUnauthorized, "AUTH_UNAUTHORIZED", "Authentication required", requestTraceID(r))
+		return
+	}
+	if !h.validateCSRFCookieRequest(w, r, sessionID, principal.TenantID) {
 		return
 	}
 	state, nextSession, err := h.service.RefreshSession(r.Context(), sessionID)
@@ -125,7 +141,10 @@ func (h *Handler) handleRefresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	SetSessionCookie(w, h.config, nextSession.SessionID, nextSession.IdleTimeoutExpiresAt)
-	SetCSRFCookie(w, h.config, randomCSRFToken(), nextSession.IdleTimeoutExpiresAt)
+	if err := h.issueCSRFCookie(w, nextSession.SessionID, nextSession.TenantID); err != nil {
+		h.writeError(w, r, err)
+		return
+	}
 	writeJSON(w, http.StatusOK, mapSessionState(state))
 }
 
@@ -134,12 +153,16 @@ func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	if !h.validateCSRFCookieRequest(w, r) {
-		return
-	}
-
 	sessionID, ok := h.requireSessionCookie(w, r)
 	if !ok {
+		return
+	}
+	principal, ok := platformauth.PrincipalFromContext(r.Context())
+	if !ok {
+		writeAPIError(w, http.StatusUnauthorized, "AUTH_UNAUTHORIZED", "Authentication required", requestTraceID(r))
+		return
+	}
+	if !h.validateCSRFCookieRequest(w, r, sessionID, principal.TenantID) {
 		return
 	}
 	if err := h.service.Logout(r.Context(), sessionID); err != nil {
@@ -154,7 +177,7 @@ func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *Handler) validateCSRFCookieRequest(w http.ResponseWriter, r *http.Request) bool {
+func (h *Handler) validateCSRFCookieRequest(w http.ResponseWriter, r *http.Request, sessionID string, tenantID string) bool {
 	origin := strings.TrimSpace(r.Header.Get("Origin"))
 	if origin != "" && len(h.allowedOrigins) > 0 {
 		if _, ok := h.allowedOrigins[origin]; !ok {
@@ -175,6 +198,10 @@ func (h *Handler) validateCSRFCookieRequest(w http.ResponseWriter, r *http.Reque
 		return false
 	}
 	if headerValue != strings.TrimSpace(csrfCookie.Value) {
+		writeAPIError(w, http.StatusForbidden, "CSRF_REJECTED", "Invalid CSRF token", requestTraceID(r))
+		return false
+	}
+	if err := h.csrf.Validate(headerValue, sessionID, tenantID); err != nil {
 		writeAPIError(w, http.StatusForbidden, "CSRF_REJECTED", "Invalid CSRF token", requestTraceID(r))
 		return false
 	}
@@ -262,10 +289,11 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 	_ = json.NewEncoder(w).Encode(payload)
 }
 
-func randomCSRFToken() string {
-	token, err := randomToken(24)
+func (h *Handler) issueCSRFCookie(w http.ResponseWriter, sessionID string, tenantID string) error {
+	token, expiresAt, err := h.csrf.Issue(sessionID, tenantID)
 	if err != nil {
-		return "csrf-token-unavailable"
+		return err
 	}
-	return token
+	SetCSRFCookie(w, h.config, token, expiresAt)
+	return nil
 }

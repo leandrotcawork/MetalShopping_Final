@@ -21,11 +21,13 @@ type Config struct {
 	StateCookieName       string
 	CSRFCookieName        string
 	CSRFHeaderName        string
+	CSRFHMACSecret        string
 	CookieDomain          string
 	CookiePath            string
 	CookieSecure          bool
 	CookieSameSite        http.SameSite
 	LoginStateTTL         time.Duration
+	CSRFTTL               time.Duration
 	HTTPTimeout           time.Duration
 }
 
@@ -42,10 +44,12 @@ func ConfigFromEnv(environment string) (Config, error) {
 		StateCookieName:       firstNonEmpty(strings.TrimSpace(os.Getenv("MS_AUTH_WEB_STATE_COOKIE_NAME")), "ms_web_login_state"),
 		CSRFCookieName:        firstNonEmpty(strings.TrimSpace(os.Getenv("MS_AUTH_WEB_CSRF_COOKIE_NAME")), "ms_web_csrf"),
 		CSRFHeaderName:        firstNonEmpty(strings.TrimSpace(os.Getenv("MS_AUTH_WEB_CSRF_HEADER_NAME")), "X-CSRF-Token"),
+		CSRFHMACSecret:        strings.TrimSpace(os.Getenv("MS_AUTH_WEB_CSRF_HMAC_SECRET")),
 		DefaultReturnTo:       firstNonEmpty(strings.TrimSpace(os.Getenv("MS_AUTH_WEB_DEFAULT_RETURN_TO")), "/products"),
 		CookieSecure:          strings.ToLower(strings.TrimSpace(environment)) != "local",
 		CookieSameSite:        parseSameSite(os.Getenv("MS_AUTH_WEB_COOKIE_SAMESITE")),
 		LoginStateTTL:         parseDurationMinutesEnv("MS_AUTH_WEB_LOGIN_STATE_TTL_MINUTES", 10),
+		CSRFTTL:               parseDurationMinutesEnv("MS_AUTH_WEB_CSRF_TTL_MINUTES", 30),
 		HTTPTimeout:           parseDurationSecondsEnv("MS_AUTH_OIDC_HTTP_TIMEOUT_SECONDS", 10),
 	}
 
@@ -81,11 +85,17 @@ func (c Config) Validate() error {
 	if strings.TrimSpace(c.CSRFHeaderName) == "" {
 		return fmt.Errorf("%w: csrf header name is required", ErrOIDCConfigIncomplete)
 	}
+	if strings.TrimSpace(c.CSRFHMACSecret) == "" {
+		return fmt.Errorf("%w: csrf hmac secret is required", ErrOIDCConfigIncomplete)
+	}
 	if len(c.Scopes) == 0 {
 		return fmt.Errorf("%w: scopes are required", ErrOIDCConfigIncomplete)
 	}
 	if c.LoginStateTTL <= 0 {
 		return fmt.Errorf("%w: login state ttl must be positive", ErrOIDCConfigIncomplete)
+	}
+	if c.CSRFTTL <= 0 {
+		return fmt.Errorf("%w: csrf ttl must be positive", ErrOIDCConfigIncomplete)
 	}
 	if c.HTTPTimeout <= 0 {
 		return fmt.Errorf("%w: oidc http timeout must be positive", ErrOIDCConfigIncomplete)
