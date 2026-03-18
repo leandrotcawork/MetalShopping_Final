@@ -79,16 +79,19 @@
 - dedicated frontend migration skill added to keep future UI work aligned with the charter
 - first `Products` thin-client surface hardened with generated frontend transport and backend-owned sorting
 - next auth/session boundary for `web` frozen on OIDC plus `HttpOnly` cookie sessions
+- backend-owned `auth/session` runtime implemented in `server_core` with cookie session storage, OIDC callback flow, governance-aware timeouts, and generated web transport support
+- login and identity architecture frozen with Keycloak as the initial IdP, tenant claim mapping, and a cross-channel identity model for future app surfaces
 
 ## Next
 
 - keep ADR set complete and stable
 - freeze and implement the backend-owned `auth/session` surface before login UI work
+- bootstrap Keycloak locally as the first real issuer
+- configure realm, client, redirect URI, and `tenant_id` mapper
+- connect `.env` to the Keycloak local issuer and validate `auth/session` end to end
 - validate migrations `0008`, `0009`, and `0010` end-to-end in the running server with smoke coverage
 - enforce contract validation and artifact generation in team workflow and CI
 - connect the JWT/OIDC auth path to a real issuer configuration
-- author and validate `auth/session` API and governance contracts
-- implement OIDC config, cookie session runtime, and session observability in `server_core`
 - bootstrap authenticated session state in `apps/web`
 - apply pricing migrations and database-backed governance defaults in runtime
 - validate pricing write/list/current and outbox publication through smoke tests

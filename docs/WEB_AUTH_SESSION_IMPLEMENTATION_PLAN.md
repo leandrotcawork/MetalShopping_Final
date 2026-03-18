@@ -138,8 +138,22 @@ Required controls:
 2. implement OIDC runtime config and cookie session platform packages
 3. implement `auth/session` endpoints in `server_core`
 4. wire generated SDK support for the new surface
-5. add `SessionProvider`, guards, and login/logout UI in `apps/web`
-6. run smoke tests against a real local issuer configuration
+5. stand up the first real local issuer with Keycloak
+6. configure realm, client, mapper, and test users with `tenant_id`
+7. add `SessionProvider`, guards, and login/logout UI in `apps/web`
+8. run smoke tests against the real local issuer configuration
+
+## Local issuer bootstrap
+
+The accepted first issuer bootstrap is:
+
+- Keycloak
+- realm `metalshopping`
+- client `metalshopping-web`
+- redirect URI `http://127.0.0.1:8080/api/v1/auth/session/callback`
+- token claim `tenant_id`
+
+This bootstrap must happen before the final login UI slice starts.
 
 ## Go / No-Go gate before UI login
 

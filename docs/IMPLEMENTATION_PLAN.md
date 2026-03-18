@@ -82,6 +82,7 @@ Current status:
 - Postgres, auth, tenancy, IAM, catalog, governance runtime foundation, and first event/outbox path are already implemented
 - remaining work in this phase is focused on operating the new hardening path end-to-end and keeping `pricing`, `inventory`, and upcoming `procurement` boundaries clean while supplier-side semantics are frozen before code
 - the next hardening step is freezing and implementing the backend-owned web auth/session boundary before the login screen
+- the next hardening step after the new session runtime is connecting a real local IdP and tenant claim model before the login screen
 
 ## Phase 3A: Foundation hardening
 
@@ -109,6 +110,7 @@ Current status:
 - contract validation and generation scripts are functional for the current repo contract set
 - catalog readiness for `pricing` is now explicitly reviewed and the next work is freezing the pricing contract and model boundary before implementation
 - the `Products` surface now proves the thin-client direction, so the next gate is freezing OIDC-backed cookie sessions before the login surface
+- the auth/session foundation is now implemented, so the next gate is real issuer bootstrap with Keycloak and tenant claim wiring before login UI work
 
 ## Phase 4: Domain expansion
 
@@ -144,3 +146,4 @@ Phase 4 gate:
 - thin-client operational surface recovery
 - frontend migration guardrails for legacy visual reuse with modern package ownership
 - backend-owned web auth/session foundation for thin clients
+- identity provider bootstrap and cross-channel login architecture
