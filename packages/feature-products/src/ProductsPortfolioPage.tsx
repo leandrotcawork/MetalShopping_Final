@@ -1,6 +1,13 @@
 import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
 
-import { AppFrame, MetricCard, StatusPill, SurfaceCard } from "@metalshopping/ui";
+import {
+  AppFrame,
+  FilterDropdown,
+  MetricCard,
+  StatusPill,
+  SurfaceCard,
+  type SelectMenuOption,
+} from "@metalshopping/ui";
 
 import { listProductsPortfolio, type ProductsPortfolioQuery, type ProductsPortfolioResult } from "./api";
 import styles from "./ProductsPortfolioPage.module.css";
@@ -140,6 +147,21 @@ export function ProductsPortfolioPage() {
   ].filter((item): item is { key: string; label: string } => item !== null);
 
   const hasActiveFilters = activeFilters.length > 0;
+  const brandOptions = useMemo<SelectMenuOption[]>(
+    () => [{ label: "All brands", value: "" }, ...brands.map((brand) => ({ label: brand, value: brand }))],
+    [brands],
+  );
+  const taxonomyOptions = useMemo<SelectMenuOption[]>(
+    () => [
+      { label: "All taxonomy roots", value: "" },
+      ...taxonomyLeaf0Names.map((name) => ({ label: name, value: name })),
+    ],
+    [taxonomyLeaf0Names],
+  );
+  const statusOptions = useMemo<SelectMenuOption[]>(
+    () => [{ label: "All statuses", value: "" }, ...statuses.map((status) => ({ label: status, value: status }))],
+    [statuses],
+  );
 
   return (
     <AppFrame
@@ -209,68 +231,50 @@ export function ProductsPortfolioPage() {
 
             <label className={styles.field}>
               <span className={styles.label}>Brand</span>
-              <select
-                className={styles.select}
+              <FilterDropdown
+                id="products-brand-filter"
                 value={query.brandName}
-                onChange={(event) =>
+                options={brandOptions}
+                onSelect={(value) =>
                   setQuery((current) => ({
                     ...current,
-                    brandName: event.target.value,
+                    brandName: value,
                     offset: 0,
                   }))
                 }
-              >
-                <option value="">All brands</option>
-                {brands.map((brand) => (
-                  <option key={brand} value={brand}>
-                    {brand}
-                  </option>
-                ))}
-              </select>
+              />
             </label>
 
             <label className={styles.field}>
               <span className={styles.label}>Taxonomy</span>
-              <select
-                className={styles.select}
+              <FilterDropdown
+                id="products-taxonomy-filter"
                 value={query.taxonomyLeaf0Name}
-                onChange={(event) =>
+                options={taxonomyOptions}
+                onSelect={(value) =>
                   setQuery((current) => ({
                     ...current,
-                    taxonomyLeaf0Name: event.target.value,
+                    taxonomyLeaf0Name: value,
                     offset: 0,
                   }))
                 }
-              >
-                <option value="">All taxonomy roots</option>
-                {taxonomyLeaf0Names.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </select>
+              />
             </label>
 
             <label className={styles.field}>
               <span className={styles.label}>Status</span>
-              <select
-                className={styles.select}
+              <FilterDropdown
+                id="products-status-filter"
                 value={query.status}
-                onChange={(event) =>
+                options={statusOptions}
+                onSelect={(value) =>
                   setQuery((current) => ({
                     ...current,
-                    status: event.target.value,
+                    status: value,
                     offset: 0,
                   }))
                 }
-              >
-                <option value="">All statuses</option>
-                {statuses.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </select>
+              />
             </label>
           </div>
 

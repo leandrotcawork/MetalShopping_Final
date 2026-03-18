@@ -34,11 +34,11 @@
 
 .brandBlock {
   position: relative;
-  display: grid;
-  justify-items: center;
-  gap: 8px;
-  min-height: 120px;
-  padding: 14px 8px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 128px;
+  padding: 8px 6px 14px;
 }
 
 .toggle {
@@ -55,40 +55,36 @@
   cursor: pointer;
 }
 
-.brandMark {
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  background: linear-gradient(180deg, #ffffff, #f5e9ee);
-  box-shadow: inset 0 0 0 1px rgba(145, 19, 42, 0.12);
-  font-weight: 900;
-  letter-spacing: -0.08em;
-}
-
-.brandMarkMetal {
-  color: #241b21;
-}
-
-.brandMarkShopping {
-  color: #91132a;
-  margin-left: -4px;
+.brandIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: block;
+  margin-top: 22px;
+  transition: opacity 220ms ease;
 }
 
 .brandCopy {
-  display: grid;
-  justify-items: center;
-  gap: 2px;
+  display: none;
   opacity: 0;
-  max-height: 0;
-  overflow: hidden;
-  transition: opacity 180ms ease, max-height 180ms ease;
+  transition: opacity 220ms ease;
 }
 
 .shellExpanded .brandCopy {
+  display: block;
   opacity: 1;
-  max-height: 80px;
+}
+
+.shellExpanded .brandIcon {
+  display: none;
+}
+
+.brandLogo {
+  width: 185px;
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin-top: 22px;
 }
 
 .brandName,
@@ -104,6 +100,7 @@
   font-size: 1.6rem;
   font-weight: 900;
   letter-spacing: -0.04em;
+  display: none;
 }
 
 .brandMetal {
@@ -118,6 +115,12 @@
   color: #76676e;
   font-size: 0.72rem;
   font-weight: 700;
+  display: none;
+}
+
+.shellExpanded .brandName,
+.shellExpanded .brandByline {
+  display: block;
 }
 
 .divider {
@@ -209,16 +212,13 @@
   width: 22px;
   min-width: 22px;
   height: 22px;
+  position: relative;
+  z-index: 1;
 }
 
-.iconSvg {
-  width: 18px;
-  height: 18px;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.linkEmoji {
+  font-size: 16px;
+  line-height: 1;
 }
 
 .linkLabel {

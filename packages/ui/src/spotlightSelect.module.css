@@ -1,0 +1,135 @@
+.wrap {
+  position: relative;
+  min-width: 168px;
+}
+
+.trigger {
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 34px 6px 10px;
+  background: #fff;
+  border: 1px solid rgba(145, 19, 42, 0.22);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #251b22;
+  text-align: left;
+}
+
+.trigger:hover {
+  border-color: rgba(139, 21, 56, 0.55);
+  box-shadow: 0 2px 8px rgba(139, 21, 56, 0.1);
+}
+
+.trigger:focus-visible {
+  outline: none;
+  border-color: rgba(139, 21, 56, 0.7);
+  box-shadow: 0 2px 8px rgba(139, 21, 56, 0.16);
+}
+
+.value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chevron {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  transform: translateY(-50%) rotate(0deg);
+  color: #8b1538;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+  transition: transform 0.18s ease;
+}
+
+.chevron svg {
+  width: 14px;
+  height: 14px;
+}
+
+.wrap[data-open="true"] .chevron {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.menu {
+  position: absolute;
+  left: 0;
+  right: auto;
+  min-width: 100%;
+  width: max-content;
+  max-width: min(420px, calc(100vw - 56px));
+  top: calc(100% + 6px);
+  z-index: 20;
+  border-radius: 10px;
+  border: 1px solid rgba(139, 21, 56, 0.18);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 10px 38px rgba(2, 6, 23, 0.08);
+  backdrop-filter: blur(20px) saturate(170%);
+  padding: 5px;
+  display: grid;
+  gap: 4px;
+  max-height: min(300px, 52vh);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.searchWrap {
+  padding: 2px 2px 6px;
+}
+
+.searchInput {
+  width: 100%;
+  border: 1px solid rgba(100, 116, 139, 0.26);
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: #251b22;
+  font-weight: 700;
+  outline: none;
+}
+
+.emptyState {
+  padding: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #73606a;
+}
+
+.option {
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #251b22;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  padding: 7px 8px;
+  cursor: pointer;
+  transition: all 0.16s ease;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.25;
+}
+
+.option:hover {
+  background: rgba(139, 21, 56, 0.08);
+  border-color: rgba(139, 21, 56, 0.18);
+}
+
+.optionActive {
+  background: rgba(139, 21, 56, 0.12);
+  border-color: rgba(139, 21, 56, 0.2);
+  color: #8b1538;
+}
