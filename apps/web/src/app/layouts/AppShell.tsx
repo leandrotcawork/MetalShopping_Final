@@ -68,12 +68,22 @@ function SettingsIcon() {
   );
 }
 
+function LogoutIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <path d="M14 7 19 12 14 17" />
+      <path d="M19 12H9" />
+      <path d="M11 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h5" />
+    </svg>
+  );
+}
+
 const sections: NavSection[] = [
   {
     label: "Main",
     items: [
-      { to: "/home", label: "Inicio", icon: <HomeIcon /> },
-      { to: "/shopping", label: "Shopping de Precos", icon: <ShoppingIcon /> },
+      { to: "/home", label: "Início", icon: <HomeIcon /> },
+      { to: "/shopping", label: "Shopping de Preços", icon: <ShoppingIcon /> },
       { to: "/products", label: "Produtos", icon: <ProductsIcon />, badge: "Live" },
     ],
   },
@@ -83,7 +93,7 @@ const sections: NavSection[] = [
   },
   {
     label: "System",
-    items: [{ to: "/settings", label: "Configuracoes", icon: <SettingsIcon /> }],
+    items: [{ to: "/settings", label: "Configurações", icon: <SettingsIcon /> }],
   },
 ];
 
@@ -91,7 +101,9 @@ function SidebarLink(item: NavItem) {
   return (
     <NavLink key={item.to} to={item.to} className={({ isActive }) => `${styles.link} ${isActive ? styles.linkActive : ""}`.trim()}>
       <span className={styles.linkMain}>
-        <span className={styles.linkIcon} aria-hidden>{item.icon}</span>
+        <span className={styles.linkIcon} aria-hidden>
+          {item.icon}
+        </span>
         <span className={styles.linkLabel}>{item.label}</span>
       </span>
       {item.badge ? <small className={styles.linkBadge}>{item.badge}</small> : null}
@@ -143,7 +155,9 @@ export function AppShell(_props: PropsWithChildren) {
             <p className={styles.userRole}>Operational Surface</p>
           </div>
           <button type="button" className={styles.logout} title="Sair">
-            <span className={styles.logoutIcon} aria-hidden>↩</span>
+            <span className={styles.logoutIcon} aria-hidden>
+              <LogoutIcon />
+            </span>
             <span className={styles.logoutLabel}>Sair</span>
           </button>
         </footer>

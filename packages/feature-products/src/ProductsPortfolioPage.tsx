@@ -1,11 +1,6 @@
 import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
 
-import type {
-  ProductsPortfolioApi,
-  ProductsPortfolioQuery,
-  ProductsPortfolioResult,
-  ProductsPortfolioSortKey,
-} from "./api";
+import type { ProductsPortfolioApi, ProductsPortfolioQuery, ProductsPortfolioResult, ProductsPortfolioSortKey } from "./api";
 import styles from "./ProductsPortfolioPage.module.css";
 import {
   defaultProductsPortfolioQuery,
@@ -67,7 +62,12 @@ export function ProductsPortfolioPage(props: { api: ProductsPortfolioApi }) {
         }
       } catch (loadError) {
         if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : "Falha ao carregar produtos.");
+          const message = loadError instanceof Error ? loadError.message : "Falha ao carregar produtos.";
+          setError(
+            message === "Failed to fetch"
+              ? "Falha ao carregar a superfície. Verifique se o backend está ativo."
+              : message,
+          );
         }
       } finally {
         if (!cancelled) {
@@ -103,9 +103,9 @@ export function ProductsPortfolioPage(props: { api: ProductsPortfolioApi }) {
 
   const activeFilters = [
     query.search.trim() !== "" ? { key: "search", label: `Busca: ${query.search.trim()}` } : null,
-    query.brandName.trim() !== "" ? { key: "brandName", label: `Marca: ${query.brandName.trim()}` } : null,
-    query.taxonomyLeaf0Name.trim() !== ""
-      ? { key: "taxonomyLeaf0Name", label: `${taxonomyLeaf0Label}: ${query.taxonomyLeaf0Name.trim()}` }
+    query.brand_name.trim() !== "" ? { key: "brand_name", label: `Marca: ${query.brand_name.trim()}` } : null,
+    query.taxonomy_leaf0_name.trim() !== ""
+      ? { key: "taxonomy_leaf0_name", label: `${taxonomyLeaf0Label}: ${query.taxonomy_leaf0_name.trim()}` }
       : null,
     query.status.trim() !== "" ? { key: "status", label: `Status: ${query.status.trim()}` } : null,
   ].filter((item): item is { key: string; label: string } => item !== null);
@@ -192,7 +192,6 @@ export function ProductsPortfolioPage(props: { api: ProductsPortfolioApi }) {
         rows={rows}
         loading={loading}
         taxonomyLeaf0Label={taxonomyLeaf0Label}
-        query={query}
         sortIndicator={(key) => sortIndicator(query, key)}
         onSort={updateSort}
         allVisibleSelected={allVisibleSelected}

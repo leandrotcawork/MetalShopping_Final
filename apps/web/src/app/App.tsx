@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
-import { createProductsPortfolioApi, ProductsPortfolioPage } from "@metalshopping/feature-products";
+import { ProductsPortfolioPage } from "@metalshopping/feature-products";
+import { createServerCoreSdk } from "@metalshopping/generated-sdk";
 import { AppFrame } from "@metalshopping/ui";
 
 import { AppShell } from "./layouts/AppShell";
@@ -9,19 +10,13 @@ import { AppRuntimeProvider, useAppRuntime } from "./providers/AppRuntimeProvide
 
 function ProductsRoute() {
   const { httpClient } = useAppRuntime();
-  const api = useMemo(() => createProductsPortfolioApi(httpClient), [httpClient]);
+  const sdk = useMemo(() => createServerCoreSdk(httpClient), [httpClient]);
 
-  return <ProductsPortfolioPage api={api} />;
+  return <ProductsPortfolioPage api={sdk.products} />;
 }
 
 function PlaceholderRoute(props: { title: string; subtitle: string }) {
-  return (
-    <AppFrame
-      eyebrow="MetalShopping"
-      title={props.title}
-      subtitle={props.subtitle}
-    />
-  );
+  return <AppFrame eyebrow="MetalShopping" title={props.title} subtitle={props.subtitle} />;
 }
 
 function RoutedApp() {
@@ -35,7 +30,7 @@ function RoutedApp() {
             element={
               <PlaceholderRoute
                 title="Home"
-                subtitle="Surface reservada. Abertura bloqueada atÃ© fecharmos o hardening de Products."
+                subtitle="Surface reservada. Abertura bloqueada até fecharmos o hardening de Products."
               />
             }
           />
@@ -44,8 +39,8 @@ function RoutedApp() {
             path="shopping"
             element={
               <PlaceholderRoute
-                title="Shopping de PreÃ§os"
-                subtitle="Surface reservada. Abertura bloqueada atÃ© fecharmos o hardening de Products."
+                title="Shopping de Preços"
+                subtitle="Surface reservada. Abertura bloqueada até fecharmos o hardening de Products."
               />
             }
           />
@@ -54,7 +49,7 @@ function RoutedApp() {
             element={
               <PlaceholderRoute
                 title="Analytics"
-                subtitle="Surface reservada. Abertura bloqueada atÃ© fecharmos o hardening de Products."
+                subtitle="Surface reservada. Abertura bloqueada até fecharmos o hardening de Products."
               />
             }
           />
@@ -62,8 +57,8 @@ function RoutedApp() {
             path="settings"
             element={
               <PlaceholderRoute
-                title="ConfiguraÃ§Ãµes"
-                subtitle="Surface reservada. Abertura bloqueada atÃ© fecharmos o hardening de Products."
+                title="Configurações"
+                subtitle="Surface reservada. Abertura bloqueada até fecharmos o hardening de Products."
               />
             }
           />

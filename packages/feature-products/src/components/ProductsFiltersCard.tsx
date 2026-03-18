@@ -1,4 +1,4 @@
-import { FilterDropdown, type SelectMenuOption, SurfaceCard, Button } from "@metalshopping/ui";
+import { Button, FilterDropdown, type SelectMenuOption, SurfaceCard } from "@metalshopping/ui";
 
 import type { ProductsPortfolioQuery } from "../api";
 import styles from "../ProductsPortfolioPage.module.css";
@@ -36,12 +36,12 @@ export function ProductsFiltersCard(props: {
           <span className={styles.label}>Marca</span>
           <FilterDropdown
             id="products-brand-filter"
-            value={props.query.brandName}
+            value={props.query.brand_name}
             options={props.brandOptions}
             onSelect={(value) =>
               props.onChangeQuery({
                 ...props.query,
-                brandName: value,
+                brand_name: value,
                 offset: 0,
               })
             }
@@ -68,12 +68,12 @@ export function ProductsFiltersCard(props: {
           <span className={styles.label}>{props.taxonomyLeaf0Label}</span>
           <FilterDropdown
             id="products-taxonomy-filter"
-            value={props.query.taxonomyLeaf0Name}
+            value={props.query.taxonomy_leaf0_name}
             options={props.taxonomyOptions}
             onSelect={(value) =>
               props.onChangeQuery({
                 ...props.query,
-                taxonomyLeaf0Name: value,
+                taxonomy_leaf0_name: value,
                 offset: 0,
               })
             }
@@ -110,7 +110,12 @@ export function ProductsFiltersCard(props: {
           )}
         </div>
 
-        <Button className={styles.clearButton} variant="quiet" disabled={props.activeFilters.length === 0} onClick={props.onClearAll}>
+        <Button
+          className={styles.clearButton}
+          variant="quiet"
+          disabled={props.activeFilters.length === 0}
+          onClick={props.onClearAll}
+        >
           Limpar filtros
         </Button>
       </div>

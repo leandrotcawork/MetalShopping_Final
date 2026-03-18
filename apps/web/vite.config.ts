@@ -17,6 +17,10 @@ export default defineConfig({
         __dirname,
         "../../packages/generated/types_ts/contracts.generated.ts",
       ),
+      "@metalshopping/generated-sdk": path.resolve(
+        __dirname,
+        "../../packages/generated/sdk_ts/openapi.generated.ts",
+      ),
     },
   },
   server: {

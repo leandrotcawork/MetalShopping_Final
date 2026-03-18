@@ -11,6 +11,7 @@ export function ProductsHero(props: {
 }) {
   return (
     <AppFrame
+      fullWidth
       eyebrow="Products · Market Report"
       title="Relatório de preço de mercado por run"
       subtitle="Selecione produtos por filtros e exporte um XLSX comparativo com preço interno versus concorrentes."
@@ -28,14 +29,11 @@ export function ProductsHero(props: {
               Exportar relatório
             </Button>
           </div>
-          <StatusBanner
-            className={styles.heroStatusBanner}
-            tone={props.error ? "error" : "success"}
-          >
-            {props.error
-              ? props.error
-              : "Superfície operacional ativa para Catalog, Pricing e Inventory."}
-          </StatusBanner>
+          {props.error ? (
+            <StatusBanner className={styles.heroStatusBanner} tone="error">
+              {props.error}
+            </StatusBanner>
+          ) : null}
         </div>
       }
     />

@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 
 import { SortHeaderButton, SurfaceCard } from "@metalshopping/ui";
 
-import type { ProductsPortfolioItem, ProductsPortfolioQuery, ProductsPortfolioSortKey } from "../api";
-import { formatCurrency, formatQuantity } from "../view-model";
+import type { ProductsPortfolioItem, ProductsPortfolioSortKey } from "../api";
+import { formatCurrency } from "../view-model";
 import styles from "../ProductsPortfolioPage.module.css";
 
 function statusTone(value: string) {
@@ -51,17 +51,16 @@ const sortColumns: SortColumn[] = [
   { key: "pn_interno", label: "PN" },
   { key: "name", label: "Produto" },
   { key: "brand_name", label: "Marca" },
+  { key: "taxonomy_leaf0_name", label: "Taxonomia" },
   { key: "product_status", label: "Status" },
   { key: "current_price_amount", label: "Nosso Preço" },
   { key: "replacement_cost_amount", label: "Custos" },
-  { key: "on_hand_quantity", label: "Estoque" },
 ];
 
 export function ProductsPortfolioTable(props: {
   rows: ProductsPortfolioItem[];
   loading: boolean;
   taxonomyLeaf0Label: string;
-  query: ProductsPortfolioQuery;
   sortIndicator: (key: ProductsPortfolioSortKey) => string;
   onSort: (key: ProductsPortfolioSortKey) => void;
   allVisibleSelected: boolean;
@@ -92,15 +91,10 @@ export function ProductsPortfolioTable(props: {
               {sortColumns.map((column) => (
                 <th key={column.key}>
                   <SortHeaderButton indicator={props.sortIndicator(column.key)} onClick={() => props.onSort(column.key)}>
-                    {column.label}
+                    {column.key === "taxonomy_leaf0_name" ? props.taxonomyLeaf0Label : column.label}
                   </SortHeaderButton>
                 </th>
               ))}
-              <th>
-                <SortHeaderButton indicator={props.sortIndicator("taxonomy_leaf0_name")} onClick={() => props.onSort("taxonomy_leaf0_name")}>
-                  {props.taxonomyLeaf0Label}
-                </SortHeaderButton>
-              </th>
             </tr>
           </thead>
           <tbody>
@@ -119,20 +113,26 @@ export function ProductsPortfolioTable(props: {
                     </td>
                     <td>
                       <span className={styles.cellStrong}>{row.pn_interno ?? "—"}</span>
-                      <span className={styles.cellMeta}>{row.sku}</span>
                     </td>
                     <td>
                       <span className={styles.cellStrong}>{row.name}</span>
-                      <span className={styles.cellMeta}>{row.description ?? "Sem descrição cadastrada."}</span>
                       <span className={styles.cellSmall}>Ref: {row.reference ?? "—"} · EAN: {row.ean ?? "—"}</span>
                     </td>
                     <td>{row.brand_name ?? "—"}</td>
                     <td>
-                      <span className={styles.cellStrong}>{row.product_status ? (
-                        <span className={`${styles.statusChip} ${styles[`statusChip${statusTone(row.product_status)}`]}`}>
-                          {statusLabel(row.product_status)}
-                        </span>
-                      ) : "—"}</span>
+                      <span className={styles.cellStrong}>{row.taxonomy_leaf0_name ?? "—"}</span>
+                      <span className={styles.cellMeta}>{row.taxonomy_leaf_name ?? "Sem folha definida."}</span>
+                    </td>
+                    <td>
+                      <span className={styles.cellStrong}>
+                        {row.product_status ? (
+                          <span className={`${styles.statusChip} ${styles[`statusChip${statusTone(row.product_status)}`]}`}>
+                            {statusLabel(row.product_status)}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </span>
                     </td>
                     <td className={styles.moneyCell}>
                       <span className={styles.cellStrong}>{formatCurrency(row.current_price_amount)}</span>
@@ -142,20 +142,12 @@ export function ProductsPortfolioTable(props: {
                       <span className={styles.cellStrong}>Reposição: {formatCurrency(row.replacement_cost_amount)}</span>
                       <span className={styles.cellMeta}>Médio: {formatCurrency(row.average_cost_amount)}</span>
                     </td>
-                    <td>
-                      <span className={styles.cellStrong}>{formatQuantity(row.on_hand_quantity)}</span>
-                      <span className={styles.cellMeta}>{row.inventory_position_status ?? "Sem posição"}</span>
-                    </td>
-                    <td>
-                      <span className={styles.cellStrong}>{row.taxonomy_leaf0_name ?? "—"}</span>
-                      <span className={styles.cellMeta}>{row.taxonomy_leaf_name ?? "Sem folha definida."}</span>
-                    </td>
                   </tr>
                 );
               })
             ) : (
               <tr>
-                <td className={styles.empty} colSpan={9}>
+                <td className={styles.empty} colSpan={7}>
                   {props.loading ? "Carregando produtos..." : "Nenhum produto encontrado para o filtro atual."}
                 </td>
               </tr>

@@ -4,6 +4,12 @@
   padding: 16px 24px 32px;
 }
 
+.frameFullWidth {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
 .hero {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.9fr);

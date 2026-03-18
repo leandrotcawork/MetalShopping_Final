@@ -7,11 +7,12 @@ type AppFrameProps = PropsWithChildren<{
   title: string;
   subtitle: ReactNode;
   aside?: ReactNode;
+  fullWidth?: boolean;
 }>;
 
-export function AppFrame({ eyebrow, title, subtitle, aside, children }: AppFrameProps) {
+export function AppFrame({ eyebrow, title, subtitle, aside, children, fullWidth = false }: AppFrameProps) {
   return (
-    <div className={styles.frame}>
+    <div className={`${styles.frame} ${fullWidth ? styles.frameFullWidth : ""}`.trim()}>
       <header className={styles.hero}>
         <div className={styles.heroMain}>
           <span className={styles.eyebrow}>{eyebrow}</span>
@@ -20,7 +21,7 @@ export function AppFrame({ eyebrow, title, subtitle, aside, children }: AppFrame
         </div>
         {aside ? <div className={styles.heroAside}>{aside}</div> : null}
       </header>
-      <main className={styles.content}>{children}</main>
+      {children ? <main className={styles.content}>{children}</main> : null}
     </div>
   );
 }

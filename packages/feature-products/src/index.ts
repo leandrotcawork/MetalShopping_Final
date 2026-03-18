@@ -1,6 +1,6 @@
-export { createProductsPortfolioApi } from "./api";
 export type {
   ProductsPortfolioApi,
+  ProductsPortfolioItem,
   ProductsPortfolioQuery,
   ProductsPortfolioResult,
   ProductsPortfolioSortDirection,

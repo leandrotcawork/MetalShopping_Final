@@ -15,6 +15,7 @@
       "@/*": ["src/*"],
       "@metalshopping/ui": ["../../packages/ui/src/index.ts"],
       "@metalshopping/feature-products": ["../../packages/feature-products/src/index.ts"],
+      "@metalshopping/generated-sdk": ["../../packages/generated/sdk_ts/openapi.generated.ts"],
       "@metalshopping/generated-types": ["../../packages/generated/types_ts/contracts.generated.ts"]
     }
   },
@@ -25,6 +26,7 @@
     "../../packages/ui/src/**/*.tsx",
     "../../packages/feature-products/src/**/*.ts",
     "../../packages/feature-products/src/**/*.tsx",
+    "../../packages/generated/sdk_ts/**/*.ts",
     "../../packages/generated/types_ts/**/*.ts"
   ]
 }

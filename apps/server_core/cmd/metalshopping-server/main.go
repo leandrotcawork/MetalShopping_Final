@@ -102,6 +102,7 @@ func main() {
 		"/health/ready",
 	})
 	requestLogging := observability.NewRequestLoggingMiddleware()
+	corsMiddleware := observability.NewCORSMiddleware(runtime_config.CORSAllowedOriginsFromEnv(environment))
 
 	mux := http.NewServeMux()
 	mux.Handle("/health/live", observability.NewLiveHandler())
@@ -113,7 +114,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:              addr,
-		Handler:           requestLogging(authMiddleware.Wrap(tenancyMiddleware.Wrap(mux))),
+		Handler:           corsMiddleware(requestLogging(authMiddleware.Wrap(tenancyMiddleware.Wrap(mux)))),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

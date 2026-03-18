@@ -1,13 +1,12 @@
 import type { PropsWithChildren } from "react";
 import { createContext, useContext, useMemo } from "react";
 
+import type { GeneratedHttpClient } from "@metalshopping/generated-sdk";
 import type { CommonErrorV1 } from "@metalshopping/generated-types";
 
 type QueryParamValue = string | number | boolean | null | undefined;
 
-export type AppHttpClient = {
-  getJson<T>(path: string, options?: { query?: Record<string, QueryParamValue> }): Promise<T>;
-};
+export type AppHttpClient = GeneratedHttpClient;
 
 type AppRuntime = {
   apiBaseUrl: string;
