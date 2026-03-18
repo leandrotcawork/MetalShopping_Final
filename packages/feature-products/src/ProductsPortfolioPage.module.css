@@ -81,6 +81,58 @@
   gap: 12px;
 }
 
+.filterFooter {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filterChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filterChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid rgba(145, 19, 42, 0.18);
+  border-radius: 999px;
+  background: rgba(194, 59, 84, 0.06);
+  color: #7a1d33;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.filterHint {
+  color: #73606a;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.clearButton,
+.paginationButton {
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 1px solid #d8c9cf;
+  border-radius: 10px;
+  background: #fff;
+  color: #4d3e47;
+  font-weight: 800;
+}
+
+.clearButton:disabled,
+.paginationButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .toolbar {
   display: grid;
   grid-template-columns: 1.6fr repeat(3, minmax(0, 1fr));
@@ -129,6 +181,57 @@
   color: #73606a;
   font-size: 0.8rem;
   font-weight: 800;
+}
+
+.paginationRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.paginationStatus {
+  display: inline-flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: #73606a;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.paginationActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pageSizeField {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #73606a;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.pageSizeSelect {
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid rgba(145, 19, 42, 0.22);
+  border-radius: 10px;
+  background: #fff;
+  color: #251b22;
+  font-weight: 700;
+}
+
+.paginationButtonPrimary {
+  border-color: rgba(194, 59, 84, 0.82);
+  background: linear-gradient(180deg, #d45a74, #a92a46);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(145, 19, 42, 0.18);
 }
 
 .tableWrap {
@@ -214,5 +317,9 @@
   .heroAside,
   .bannerRow {
     grid-template-columns: 1fr;
+  }
+
+  .paginationRow {
+    align-items: stretch;
   }
 }

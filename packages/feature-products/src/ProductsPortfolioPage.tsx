@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
 
 import { AppFrame, MetricCard, StatusPill, SurfaceCard } from "@metalshopping/ui";
 
@@ -20,11 +20,72 @@ const defaultQuery: ProductsPortfolioQuery = {
   offset: 0,
 };
 
+const pageSizeOptions = [25, 50, 100];
+
+function readQueryFromUrl(): ProductsPortfolioQuery {
+  if (typeof window === "undefined") {
+    return defaultQuery;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const limit = Number(params.get("limit") ?? defaultQuery.limit);
+  const offset = Number(params.get("offset") ?? defaultQuery.offset);
+
+  return {
+    search: params.get("search") ?? defaultQuery.search,
+    brandName: params.get("brand_name") ?? defaultQuery.brandName,
+    taxonomyLeaf0Name: params.get("taxonomy_leaf0_name") ?? defaultQuery.taxonomyLeaf0Name,
+    status: params.get("status") ?? defaultQuery.status,
+    limit: Number.isFinite(limit) && limit > 0 ? limit : defaultQuery.limit,
+    offset: Number.isFinite(offset) && offset >= 0 ? offset : defaultQuery.offset,
+  };
+}
+
+function writeQueryToUrl(query: ProductsPortfolioQuery) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const params = new URLSearchParams();
+  if (query.search.trim() !== "") params.set("search", query.search.trim());
+  if (query.brandName.trim() !== "") params.set("brand_name", query.brandName.trim());
+  if (query.taxonomyLeaf0Name.trim() !== "") params.set("taxonomy_leaf0_name", query.taxonomyLeaf0Name.trim());
+  if (query.status.trim() !== "") params.set("status", query.status.trim());
+  if (query.limit !== defaultQuery.limit) params.set("limit", String(query.limit));
+  if (query.offset !== defaultQuery.offset) params.set("offset", String(query.offset));
+
+  const nextSearch = params.toString();
+  const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}`;
+  window.history.replaceState(null, "", nextUrl);
+}
+
 export function ProductsPortfolioPage() {
-  const [query, setQuery] = useState<ProductsPortfolioQuery>(defaultQuery);
+  const [query, setQuery] = useState<ProductsPortfolioQuery>(() => readQueryFromUrl());
+  const [searchDraft, setSearchDraft] = useState(() => readQueryFromUrl().search);
   const [result, setResult] = useState<ProductsPortfolioResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const deferredSearch = useDeferredValue(searchDraft);
+
+  useEffect(() => {
+    startTransition(() => {
+      setQuery((current) => {
+        if (current.search === deferredSearch) {
+          return current;
+        }
+
+        return {
+          ...current,
+          search: deferredSearch,
+          offset: 0,
+        };
+      });
+    });
+  }, [deferredSearch]);
+
+  useEffect(() => {
+    writeQueryToUrl(query);
+  }, [query]);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,6 +125,21 @@ export function ProductsPortfolioPage() {
   const totalMatching = result?.paging.total ?? 0;
   const liveRows = result?.rows.filter((row) => rowHasLiveCommercialState(row)).length ?? 0;
   const inventoryLive = result?.rows.filter((row) => (row.on_hand_quantity ?? 0) > 0).length ?? 0;
+  const currentPage = Math.floor(query.offset / query.limit) + 1;
+  const totalPages = totalMatching === 0 ? 1 : Math.max(1, Math.ceil(totalMatching / query.limit));
+  const canGoPrevious = query.offset > 0;
+  const canGoNext = query.offset + query.limit < totalMatching;
+
+  const activeFilters = [
+    query.search.trim() !== "" ? { key: "search", label: `Busca: ${query.search.trim()}` } : null,
+    query.brandName.trim() !== "" ? { key: "brandName", label: `Marca: ${query.brandName.trim()}` } : null,
+    query.taxonomyLeaf0Name.trim() !== ""
+      ? { key: "taxonomyLeaf0Name", label: `Taxonomia: ${query.taxonomyLeaf0Name.trim()}` }
+      : null,
+    query.status.trim() !== "" ? { key: "status", label: `Status: ${query.status.trim()}` } : null,
+  ].filter((item): item is { key: string; label: string } => item !== null);
+
+  const hasActiveFilters = activeFilters.length > 0;
 
   return (
     <AppFrame
@@ -125,15 +201,9 @@ export function ProductsPortfolioPage() {
               <span className={styles.label}>Search</span>
               <input
                 className={styles.input}
-                value={query.search}
+                value={searchDraft}
                 placeholder="SKU, description, pn_interno, EAN or reference"
-                onChange={(event) =>
-                  setQuery((current) => ({
-                    ...current,
-                    search: event.target.value,
-                    offset: 0,
-                  }))
-                }
+                onChange={(event) => setSearchDraft(event.target.value)}
               />
             </label>
 
@@ -202,6 +272,51 @@ export function ProductsPortfolioPage() {
                 ))}
               </select>
             </label>
+          </div>
+
+          <div className={styles.filterFooter}>
+            <div className={styles.filterChips}>
+              {hasActiveFilters ? (
+                activeFilters.map((filter) => (
+                  <button
+                    key={filter.key}
+                    type="button"
+                    className={styles.filterChip}
+                    onClick={() => {
+                      if (filter.key === "search") {
+                        setSearchDraft("");
+                      }
+
+                      setQuery((current) => ({
+                        ...current,
+                        [filter.key]: "",
+                        offset: 0,
+                      }));
+                    }}
+                  >
+                    <span>{filter.label}</span>
+                    <span aria-hidden="true">x</span>
+                  </button>
+                ))
+              ) : (
+                <span className={styles.filterHint}>No active filters. The full visible tenant portfolio is being shown.</span>
+              )}
+            </div>
+
+            <button
+              type="button"
+              className={styles.clearButton}
+              disabled={!hasActiveFilters}
+              onClick={() => {
+                setSearchDraft("");
+                setQuery({
+                  ...defaultQuery,
+                  limit: query.limit,
+                });
+              }}
+            >
+              Clear filters
+            </button>
           </div>
         </SurfaceCard>
 
@@ -298,6 +413,63 @@ export function ProductsPortfolioPage() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          <div className={styles.paginationRow}>
+            <div className={styles.paginationStatus}>
+              <span>Page {currentPage} of {totalPages}</span>
+              <span>{totalMatching} matching products</span>
+            </div>
+
+            <div className={styles.paginationActions}>
+              <label className={styles.pageSizeField}>
+                <span>Rows</span>
+                <select
+                  className={styles.pageSizeSelect}
+                  value={query.limit}
+                  onChange={(event) =>
+                    setQuery((current) => ({
+                      ...current,
+                      limit: Number(event.target.value),
+                      offset: 0,
+                    }))
+                  }
+                >
+                  {pageSizeOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <button
+                type="button"
+                className={styles.paginationButton}
+                disabled={!canGoPrevious}
+                onClick={() =>
+                  setQuery((current) => ({
+                    ...current,
+                    offset: Math.max(0, current.offset - current.limit),
+                  }))
+                }
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                className={`${styles.paginationButton} ${styles.paginationButtonPrimary}`}
+                disabled={!canGoNext}
+                onClick={() =>
+                  setQuery((current) => ({
+                    ...current,
+                    offset: current.offset + current.limit,
+                  }))
+                }
+              >
+                Next
+              </button>
+            </div>
           </div>
         </SurfaceCard>
       </div>
