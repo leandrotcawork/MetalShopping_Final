@@ -13,4 +13,5 @@ services:
       - --hostname=http://127.0.0.1:18081
     volumes:
       - ./import:/opt/keycloak/data/import
+      - ./themes:/opt/keycloak/themes
     restart: unless-stopped

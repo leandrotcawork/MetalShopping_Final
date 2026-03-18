@@ -1,5 +1,7 @@
-import { type PropsWithChildren, type ReactNode, useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { type PropsWithChildren, type ReactNode, useMemo, useState } from "react";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+
+import { useSession } from "@metalshopping/feature-auth-session";
 
 import logoIco from "../../assets/logo_ico.jpg";
 import logoMetalNobre from "../../assets/logo_metal_nobre.svg";
@@ -82,8 +84,8 @@ const sections: NavSection[] = [
   {
     label: "Main",
     items: [
-      { to: "/home", label: "Início", icon: <HomeIcon /> },
-      { to: "/shopping", label: "Shopping de Preços", icon: <ShoppingIcon /> },
+      { to: "/home", label: "Inicio", icon: <HomeIcon /> },
+      { to: "/shopping", label: "Shopping de Precos", icon: <ShoppingIcon /> },
       { to: "/products", label: "Produtos", icon: <ProductsIcon />, badge: "Live" },
     ],
   },
@@ -93,7 +95,7 @@ const sections: NavSection[] = [
   },
   {
     label: "System",
-    items: [{ to: "/settings", label: "Configurações", icon: <SettingsIcon /> }],
+    items: [{ to: "/settings", label: "Configuracoes", icon: <SettingsIcon /> }],
   },
 ];
 
@@ -113,6 +115,52 @@ function SidebarLink(item: NavItem) {
 
 export function AppShell(_props: PropsWithChildren) {
   const [expanded, setExpanded] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const navigate = useNavigate();
+  const { logout, session } = useSession();
+
+  const displayName = useMemo(() => {
+    if (!session?.display_name) {
+      return "MetalShopping";
+    }
+    return session.display_name;
+  }, [session?.display_name]);
+
+  const roleLabel = useMemo(() => {
+    const role = session?.roles?.[0];
+    if (!role) {
+      return "Operational Surface";
+    }
+
+    return role
+      .split("_")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+  }, [session?.roles]);
+
+  const avatarLabel = useMemo(() => {
+    const source = displayName.trim();
+    if (source === "") {
+      return "MS";
+    }
+
+    const parts = source.split(/\s+/).filter(Boolean);
+    const initials = parts
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? "")
+      .join("");
+    return initials || "MS";
+  }, [displayName]);
+
+  async function handleLogout() {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      navigate("/login", { replace: true });
+    } finally {
+      setIsLoggingOut(false);
+    }
+  }
 
   return (
     <div className={`${styles.shell} ${expanded ? styles.shellExpanded : ""}`.trim()}>
@@ -149,16 +197,24 @@ export function AppShell(_props: PropsWithChildren) {
         </nav>
 
         <footer className={styles.footer}>
-          <div className={styles.userAvatar}>MS</div>
+          <div className={styles.userAvatar}>{avatarLabel}</div>
           <div className={styles.userMeta}>
-            <p className={styles.userName}>MetalShopping</p>
-            <p className={styles.userRole}>Operational Surface</p>
+            <p className={styles.userName}>{displayName}</p>
+            <p className={styles.userRole}>{roleLabel}</p>
           </div>
-          <button type="button" className={styles.logout} title="Sair">
+          <button
+            type="button"
+            className={styles.logout}
+            title="Sair"
+            disabled={isLoggingOut}
+            onClick={() => {
+              void handleLogout();
+            }}
+          >
             <span className={styles.logoutIcon} aria-hidden>
               <LogoutIcon />
             </span>
-            <span className={styles.logoutLabel}>Sair</span>
+            <span className={styles.logoutLabel}>{isLoggingOut ? "Saindo" : "Sair"}</span>
           </button>
         </footer>
       </aside>

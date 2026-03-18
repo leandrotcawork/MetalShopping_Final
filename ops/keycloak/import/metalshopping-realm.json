@@ -2,6 +2,7 @@
   "realm": "metalshopping",
   "enabled": true,
   "displayName": "MetalShopping",
+  "loginTheme": "metalshopping",
   "registrationAllowed": false,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
@@ -27,7 +28,8 @@
         "http://127.0.0.1:8080/api/v1/auth/session/callback"
       ],
       "webOrigins": [
-        "http://127.0.0.1:5173"
+        "http://127.0.0.1:5173",
+        "http://localhost:5173"
       ],
       "attributes": {
         "pkce.code.challenge.method": "S256",

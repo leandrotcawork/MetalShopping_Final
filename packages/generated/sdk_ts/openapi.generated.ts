@@ -31,9 +31,29 @@ export type OperationId = typeof operationIds[number];
 
 export type QueryParamValue = string | number | boolean | null | undefined;
 
+function buildQueryString(query?: Record<string, QueryParamValue>) {
+  const params = new URLSearchParams();
+  if (query === undefined) {
+    return "";
+  }
+
+  for (const [key, rawValue] of Object.entries(query)) {
+    if (rawValue === undefined || rawValue === null || rawValue === "") {
+      continue;
+    }
+    params.set(key, String(rawValue));
+  }
+
+  return params.toString();
+}
+
 export type GeneratedHttpClient = {
   getJson<T>(path: string, options?: { query?: Record<string, QueryParamValue> }): Promise<T>;
   postJson<T>(path: string, options?: { body?: unknown; query?: Record<string, QueryParamValue> }): Promise<T>;
+};
+
+export type StartAuthSessionLoginQueryParams = {
+  return_to?: string;
 };
 
 export type ProductsPortfolioSortKey =
@@ -61,6 +81,7 @@ export type ListProductsPortfolioQueryParams = {
 
 export type ServerCoreSdk = {
   authSession: {
+    buildStartLoginUrl(baseUrl: string, query?: StartAuthSessionLoginQueryParams): string;
     getSessionState(): Promise<AuthSessionStateV1>;
     refreshSession(): Promise<AuthSessionStateV1>;
     logoutSession(): Promise<AuthSessionLogoutResponseV1>;
@@ -73,6 +94,10 @@ export type ServerCoreSdk = {
 export function createServerCoreSdk(client: GeneratedHttpClient): ServerCoreSdk {
   return {
     authSession: {
+      buildStartLoginUrl(baseUrl, query) {
+        const queryString = buildQueryString(query);
+        return `${baseUrl.replace(/\/$/, "")}/api/v1/auth/session/login${queryString ? `?${queryString}` : ""}`;
+      },
       getSessionState() {
         return client.getJson<AuthSessionStateV1>("/api/v1/auth/session/me");
       },

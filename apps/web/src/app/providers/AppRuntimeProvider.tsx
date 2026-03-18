@@ -8,6 +8,12 @@ type QueryParamValue = string | number | boolean | null | undefined;
 
 export type AppHttpClient = GeneratedHttpClient;
 
+type HttpClientError = Error & {
+  status?: number;
+  code?: string;
+  traceId?: string;
+};
+
 type AppRuntime = {
   apiBaseUrl: string;
   bearerToken: string;
@@ -15,7 +21,7 @@ type AppRuntime = {
 };
 
 const defaultApiBaseUrl = "http://127.0.0.1:8080";
-const defaultBearerToken = "local-dev-token";
+const defaultBearerToken = "";
 
 const AppRuntimeContext = createContext<AppRuntime | null>(null);
 
@@ -63,7 +69,11 @@ export function AppRuntimeProvider({ children }: PropsWithChildren) {
           const message =
             errorPayload?.error?.message ??
             `Request failed with status ${response.status}`;
-          throw new Error(message);
+          const error = new Error(message) as HttpClientError;
+          error.status = response.status;
+          error.code = errorPayload?.error?.code;
+          error.traceId = errorPayload?.error?.trace_id;
+          throw error;
         }
 
         return (await response.json()) as T;
@@ -84,7 +94,11 @@ export function AppRuntimeProvider({ children }: PropsWithChildren) {
           const message =
             errorPayload?.error?.message ??
             `Request failed with status ${response.status}`;
-          throw new Error(message);
+          const error = new Error(message) as HttpClientError;
+          error.status = response.status;
+          error.code = errorPayload?.error?.code;
+          error.traceId = errorPayload?.error?.trace_id;
+          throw error;
         }
 
         return (await response.json()) as T;

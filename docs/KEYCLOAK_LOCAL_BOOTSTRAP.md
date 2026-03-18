@@ -53,8 +53,10 @@ without querying Keycloak dynamically after each container reset.
 
 - compose: `ops/keycloak/docker-compose.yml`
 - realm import: `ops/keycloak/import/metalshopping-realm.json`
+- login theme: `ops/keycloak/themes/metalshopping/login`
 - start script: `scripts/start_keycloak_local.ps1`
 - stop script: `scripts/stop_keycloak_local.ps1`
+- theme apply script: `scripts/apply_keycloak_theme_local.ps1`
 - IAM bootstrap script: `scripts/bootstrap_keycloak_local_iam.ps1`
 
 ## Bootstrap order
@@ -95,6 +97,23 @@ Admin credentials:
 Open the admin console and confirm that the realm `metalshopping` exists.
 
 The realm import is startup-based. If the realm already exists, Keycloak skips import.
+
+The imported realm is configured to use the `metalshopping` login theme. The
+theme files are mounted from the repository into the Keycloak container.
+
+If the realm already existed before the theme was added or changed, run:
+
+```powershell
+.\scripts\apply_keycloak_theme_local.ps1
+```
+
+If the container was already running before the theme volume changed, restart
+Keycloak first:
+
+```powershell
+.\scripts\stop_keycloak_local.ps1
+.\scripts\start_keycloak_local.ps1
+```
 
 ## 4. Bootstrap IAM role assignments while `server_core` is still in static mode
 

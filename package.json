@@ -4,7 +4,8 @@
   "workspaces": [
     "apps/web",
     "packages/ui",
-    "packages/feature-products"
+    "packages/feature-products",
+    "packages/feature-auth-session"
   ],
   "dependencies": {
     "react": "^18.3.1",

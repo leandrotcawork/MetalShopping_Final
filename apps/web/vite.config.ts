@@ -9,6 +9,10 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
       "@metalshopping/ui": path.resolve(__dirname, "../../packages/ui/src"),
+      "@metalshopping/feature-auth-session": path.resolve(
+        __dirname,
+        "../../packages/feature-auth-session/src",
+      ),
       "@metalshopping/feature-products": path.resolve(
         __dirname,
         "../../packages/feature-products/src",
@@ -25,12 +29,14 @@ export default defineConfig({
   },
   server: {
     host: "127.0.0.1",
-    port: 4173,
+    port: 5173,
   },
   test: {
     include: [
       "src/**/*.test.ts",
       "src/**/*.test.tsx",
+      "../../packages/feature-auth-session/src/**/*.test.ts",
+      "../../packages/feature-auth-session/src/**/*.test.tsx",
       "../../packages/feature-products/src/**/*.test.ts",
       "../../packages/feature-products/src/**/*.test.tsx",
     ],

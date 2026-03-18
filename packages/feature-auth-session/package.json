@@ -1,0 +1,11 @@
+{
+  "name": "@metalshopping/feature-auth-session",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Auth session feature package for MetalShopping web",
+  "peerDependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.1"
+  }
+}
