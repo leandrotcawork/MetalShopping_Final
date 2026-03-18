@@ -241,7 +241,7 @@ export function ProductsPortfolioPage() {
   const rows = useMemo(() => sortRows(result?.rows ?? [], sort), [result?.rows, sort]);
   const brands = result?.filters.brands ?? [];
   const taxonomyLeaf0Names = result?.filters.taxonomy_leaf0_names ?? [];
-  const taxonomyLeaf0Label = result?.filters.taxonomy_leaf0_label?.trim() || "Grupo";
+  const taxonomyLeaf0Label = result?.filters.taxonomy_leaf0_label?.trim() || "Taxonomia";
   const statuses = result?.filters.status ?? [];
   const totalVisible = result?.paging.returned ?? 0;
   const totalMatching = result?.paging.total ?? 0;

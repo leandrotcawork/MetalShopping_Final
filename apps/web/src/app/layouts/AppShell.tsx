@@ -58,17 +58,13 @@ export function AppShell({ activeItemKey, children }: AppShellProps) {
           >
             {expanded ? "<" : ">"}
           </button>
-
           <img src={logoIco} alt="MetalShopping" className={styles.brandIcon} />
-
-          <div className={styles.brandCopy}>
-            <img src={logoMetalNobre} alt="Metal Nobre Acabamentos" className={styles.brandLogo} />
-            <p className={styles.brandName}>
-              <span className={styles.brandMetal}>Metal</span>
-              <span className={styles.brandShopping}>Shopping</span>
-            </p>
-            <p className={styles.brandByline}>by Metal Nobre Acabamentos</p>
-          </div>
+          <img src={logoMetalNobre} alt="Metal Nobre Acabamentos" className={styles.brandLogo} />
+          <p className={styles.brandName}>
+            <span className={styles.brandMetal}>Metal</span>
+            <span className={styles.brandShopping}>Shopping</span>
+          </p>
+          <p className={styles.brandByline}>by Metal Nobre Acabamentos</p>
         </div>
 
         <div className={styles.divider} />
