@@ -9,6 +9,10 @@ This charter exists to make one rule explicit:
 - preserve the legacy visual language
 - do not preserve the legacy architectural shortcuts
 
+And one execution rule explicit:
+
+- do not migrate a legacy page before extracting the shell, typography, and widget system that page depends on
+
 ## Frozen decision
 
 The legacy frontend is the visual reference for the target product.
@@ -146,18 +150,25 @@ Owns:
 
 Each legacy frontend surface must be migrated through this sequence:
 
-1. inspect the legacy page or widget
-2. classify each part as:
+1. inspect the legacy page, shell, and supporting widgets
+2. extract the reusable visual baseline first:
+   - shell behavior
+   - typography hierarchy
+   - repeated widgets
+   - spacing and table density
+3. classify each part as:
    - preserve visually
    - refactor structurally
    - reject
-3. map the target ownership:
+4. map the target ownership:
    - `apps/web`
    - `packages/generated`
    - `packages/ui`
    - `packages/feature-*`
-4. implement the target using generated contracts and thin-client rules
-5. verify that the result still feels like MetalShopping visually
+5. implement the target using generated contracts and thin-client rules
+6. verify that the result still feels like MetalShopping visually
+
+Do not skip the extraction step and jump directly into a page port.
 
 ## Explicit prohibitions
 
@@ -188,4 +199,5 @@ This charter complements, and does not replace:
 - `docs/PRODUCTS_SURFACE_IMPLEMENTATION_PLAN.md`
 - `docs/PRODUCTS_READMODEL_OWNERSHIP.md`
 - `docs/FRONTEND_QUALITY_GATES.md`
+- `docs/FRONTEND_MIGRATION_PLAYBOOK.md`
 - `docs/adrs/ADR-0005-thin-clients-and-generated-sdks.md`

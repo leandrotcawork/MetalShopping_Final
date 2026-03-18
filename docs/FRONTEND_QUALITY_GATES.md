@@ -40,6 +40,13 @@ Define the minimum quality bar for `apps/web` and feature packages before the fi
 - global CSS is limited to app shell and resets
 - feature and page styling uses CSS Modules
 - repeated UI patterns graduate to `packages/ui`
+- shell, typography, and repeated widget baselines must be frozen before large surface proliferation
+
+### 7. Legacy study gate
+
+- each migrated surface must cite the legacy files inspected
+- each migration must classify legacy artifacts as preserve visually, refactor structurally, or reject
+- if a migration reveals repeated widget debt, the widget must be extracted or explicitly queued before the next surface starts
 
 ## Initial enforcement workflow
 
@@ -49,6 +56,7 @@ The first frontend slice should be considered ready only when all of the followi
 2. `powershell -ExecutionPolicy Bypass -File .\\scripts\\generate_contract_artifacts.ps1 -Target all -Check`
 3. frontend typecheck script
 4. frontend build script
+5. legacy study and ownership mapping documented for the surface
 
 ## Future enforcement
 

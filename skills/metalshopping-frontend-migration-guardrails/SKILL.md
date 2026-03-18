@@ -20,23 +20,30 @@ This skill is for preserving what the legacy frontend got right visually while r
    `docs/PRODUCTS_READMODEL_OWNERSHIP.md`
    `docs/FRONTEND_QUALITY_GATES.md`
    `docs/FRONTEND_MIGRATION_CHARTER.md`
+   `docs/FRONTEND_MIGRATION_PLAYBOOK.md`
    `docs/adrs/ADR-0005-thin-clients-and-generated-sdks.md`
-2. If a legacy surface is involved, inspect only the specific legacy files needed for that surface.
-3. Classify each reused legacy artifact as one of:
+2. If a legacy surface is involved, inspect the shell, typography, widget, and page files needed to understand the surface end-to-end before porting it.
+3. Extract the reusable baseline first:
+   - shell behavior
+   - typography hierarchy
+   - repeated widgets
+   - spacing and table density
+4. Classify each reused legacy artifact as one of:
    - preserve visually
    - refactor structurally
    - reject
-4. Map the target ownership explicitly:
+5. Map the target ownership explicitly:
    - `apps/web`
    - `packages/generated`
    - `packages/ui`
    - `packages/feature-*`
-5. Reject any change that reintroduces manual DTOs, page-local transport parsing, direct `fetch` in pages, or ambiguous shared folders.
-6. End with concrete findings or a concrete implementation move, not general advice.
+6. Reject any change that reintroduces manual DTOs, page-local transport parsing, direct `fetch` in pages, or ambiguous shared folders.
+7. End with concrete findings or a concrete implementation move, not general advice.
 
 ## Guardrails
 
 - preserve the legacy visual language where it is already strong
+- do not start a big surface port before freezing the shell and shared widget baseline it depends on
 - do not copy legacy contracts as the new source of truth
 - do not let page files become API adapters
 - do not let `apps/web` become the home of reusable widgets
@@ -49,6 +56,7 @@ This skill is for preserving what the legacy frontend got right visually while r
 When using this skill:
 
 - state what from the legacy surface is being preserved visually
+- state what shell and widget baseline was extracted before the port
 - state what is being rejected structurally
 - cite the target package ownership being enforced
 - call out when a proposed reuse would create long-term drift

@@ -5,6 +5,7 @@
 Implement the first real MetalShopping frontend surface by rebuilding the legacy `Products` experience on top of the new canonical backend.
 
 This implementation must follow `docs/FRONTEND_MIGRATION_CHARTER.md`.
+It must also follow `docs/FRONTEND_MIGRATION_PLAYBOOK.md`.
 
 ## Why `Products` first
 
@@ -113,9 +114,22 @@ Do not include in the first `Products` slice:
 
 ## Sequence
 
-1. scaffold `apps/web`
-2. define `Products` read surface contract
-3. scaffold `packages/ui`
-4. scaffold `packages/feature-products`
-5. implement first `Products` page with legacy visual context
-6. validate route, auth/session, and data loading end-to-end
+1. inspect the full legacy `Products` surface and the app shell it depends on
+2. extract shell, typography, spacing, and repeated widget candidates
+3. define `Products` read surface contract
+4. scaffold `apps/web`
+5. scaffold `packages/ui`
+6. scaffold `packages/feature-products`
+7. implement first `Products` page with legacy visual context and target package ownership
+8. validate route, auth/session, and data loading end-to-end
+
+## Lessons from the first migration pass
+
+The first `Products` migration confirmed that the shell and shared widget language must be frozen before the page is considered stable.
+
+That means future surface work should treat these as preconditions:
+
+- sidebar and shell behavior are frozen first
+- typography hierarchy is frozen first
+- repeated table and filter patterns become `packages/ui` candidates early
+- no page should be accepted after “visual catch-up” iterations if those iterations reveal a missing reusable primitive

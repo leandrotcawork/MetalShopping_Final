@@ -128,6 +128,7 @@ The most important remaining gaps are:
 - explicit operational surface recovery plan before frontend implementation accelerates
 - explicit frontend quality gates and products read-surface ownership before frontend implementation spreads
 - explicit frontend migration charter freezing legacy visual reuse with modern package and API boundaries
+- explicit frontend migration playbook freezing legacy-study-first execution before surface ports continue
 - explicit decision record for the next implementation area
 
 ## Key planning docs
@@ -161,6 +162,7 @@ The most important remaining gaps are:
 - `docs/PRODUCTS_READMODEL_OWNERSHIP.md`
 - `docs/FRONTEND_QUALITY_GATES.md`
 - `docs/FRONTEND_MIGRATION_CHARTER.md`
+- `docs/FRONTEND_MIGRATION_PLAYBOOK.md`
 - `docs/NEXT_EXECUTION_DECISION.md`
 - `docs/IMPLEMENTATION_PLAN.md`
 - `docs/PROGRESS.md`
