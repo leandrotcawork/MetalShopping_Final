@@ -2,8 +2,10 @@
 import type { ProductsPortfolioListV1 } from "../types_ts/contracts.generated";
 
 export const operationIds = [
+  "completeAuthSessionLogin",
   "createCatalogProduct",
   "get",
+  "getAuthSessionState",
   "getCurrentInventoryProductPosition",
   "getCurrentPricingProductPrice",
   "listCatalogProductIdentifiers",
@@ -13,8 +15,11 @@ export const operationIds = [
   "listInventoryProductPositions",
   "listPricingProductPrices",
   "listProductsPortfolio",
+  "logoutAuthSession",
+  "refreshAuthSession",
   "setInventoryProductPosition",
   "setPricingProductPrice",
+  "startAuthSessionLogin",
   "upsertIamUserRoleAssignment"
 ] as const;
 

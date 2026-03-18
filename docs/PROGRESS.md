@@ -77,13 +77,19 @@
 - `Products` read-surface ownership and frontend quality gates frozen before web code expansion
 - frontend migration charter frozen so legacy MetalShopping visuals are preserved without reusing weak DTO, API, CSS, and package patterns
 - dedicated frontend migration skill added to keep future UI work aligned with the charter
+- first `Products` thin-client surface hardened with generated frontend transport and backend-owned sorting
+- next auth/session boundary for `web` frozen on OIDC plus `HttpOnly` cookie sessions
 
 ## Next
 
 - keep ADR set complete and stable
+- freeze and implement the backend-owned `auth/session` surface before login UI work
 - validate migrations `0008`, `0009`, and `0010` end-to-end in the running server with smoke coverage
 - enforce contract validation and artifact generation in team workflow and CI
 - connect the JWT/OIDC auth path to a real issuer configuration
+- author and validate `auth/session` API and governance contracts
+- implement OIDC config, cookie session runtime, and session observability in `server_core`
+- bootstrap authenticated session state in `apps/web`
 - apply pricing migrations and database-backed governance defaults in runtime
 - validate pricing write/list/current and outbox publication through smoke tests
 - revise pricing semantics to align with the accepted canonical SKU data ownership model

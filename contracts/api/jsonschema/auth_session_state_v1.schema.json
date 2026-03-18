@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://metalshopping/contracts/api/jsonschema/auth_session_state_v1.schema.json",
+  "title": "AuthSessionStateV1",
+  "description": "Authenticated web session state returned by the backend-owned auth/session surface.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "user_id",
+    "tenant_id",
+    "display_name",
+    "email",
+    "roles",
+    "capabilities",
+    "issued_at",
+    "expires_at",
+    "idle_timeout_expires_at",
+    "absolute_timeout_expires_at"
+  ],
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tenant_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "email": {
+      "type": "string",
+      "format": "email"
+    },
+    "roles": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "idle_timeout_expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "absolute_timeout_expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "session_id": {
+      "type": "string"
+    }
+  }
+}

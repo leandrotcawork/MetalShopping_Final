@@ -1,0 +1,149 @@
+openapi: 3.1.0
+info:
+  title: "Auth Session API"
+  version: "v1"
+  summary: "Public HTTP contract for MetalShopping web session handling"
+  description: >
+    Draft OpenAPI contract for the backend-owned web authentication session
+    boundary. This surface exists so thin clients can bootstrap and operate a
+    secure browser session without owning token parsing, issuer validation, or
+    authorization semantics.
+  x-metalshopping:
+    contract_name: "auth_session_v1"
+    contract_status: "draft"
+    bounded_context: "auth"
+    owner_team: "platform"
+servers:
+  - url: https://api.metalshopping.local
+paths:
+  /api/v1/auth/session/login:
+    get:
+      operationId: startAuthSessionLogin
+      summary: "Start OIDC login for the current browser session"
+      parameters:
+        - in: query
+          name: return_to
+          schema:
+            type: string
+      responses:
+        "302":
+          description: "Browser redirect to the configured identity provider"
+        "401":
+          description: "Authentication could not be initiated"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+  /api/v1/auth/session/callback:
+    get:
+      operationId: completeAuthSessionLogin
+      summary: "Handle the OIDC callback and establish a browser session"
+      parameters:
+        - in: query
+          name: code
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: state
+          required: true
+          schema:
+            type: string
+      responses:
+        "302":
+          description: "Browser redirect back to the requested web surface"
+        "400":
+          description: "Invalid or expired callback state"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "401":
+          description: "Identity validation failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+  /api/v1/auth/session/me:
+    get:
+      operationId: getAuthSessionState
+      summary: "Return the effective authenticated web session state"
+      responses:
+        "200":
+          description: "Current authenticated session state"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/auth_session_state_v1.schema.json"
+        "401":
+          description: "No active authenticated session"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+  /api/v1/auth/session/refresh:
+    post:
+      operationId: refreshAuthSession
+      summary: "Rotate or extend the current authenticated web session"
+      responses:
+        "200":
+          description: "Session refreshed"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/auth_session_state_v1.schema.json"
+        "401":
+          description: "No active refreshable session"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+  /api/v1/auth/session/logout:
+    post:
+      operationId: logoutAuthSession
+      summary: "Terminate the current authenticated browser session"
+      responses:
+        "200":
+          description: "Session terminated"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/auth_session_logout_response_v1.schema.json"
+        "401":
+          description: "No active authenticated session"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+components:
+  schemas: {}

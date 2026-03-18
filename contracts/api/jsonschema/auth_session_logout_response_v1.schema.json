@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://metalshopping/contracts/api/jsonschema/auth_session_logout_response_v1.schema.json",
+  "title": "AuthSessionLogoutResponseV1",
+  "description": "Response returned after a successful backend-owned web session logout.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "logged_out"
+  ],
+  "properties": {
+    "logged_out": {
+      "type": "boolean"
+    }
+  }
+}

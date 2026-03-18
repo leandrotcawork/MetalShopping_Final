@@ -1,0 +1,15 @@
+{
+  "threshold_name": "auth.session_idle_timeout_minutes",
+  "version": "v1",
+  "status": "draft",
+  "bounded_context": "auth",
+  "scope": [
+    "global",
+    "environment",
+    "tenant",
+    "module",
+    "entity/profile"
+  ],
+  "description": "Defines the idle timeout in minutes for backend-owned authenticated web sessions.",
+  "schema_ref": "../../api/jsonschema/governance_threshold_v1.schema.json"
+}

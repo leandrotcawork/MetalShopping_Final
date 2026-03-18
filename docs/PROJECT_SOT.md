@@ -100,12 +100,14 @@ The repository now includes:
 - explicit canonical SKU data ownership model aligned to legacy `products` and `product_erp`
 - first tenant-aware `pricing` module slice implemented and semantically realigned against legacy replacement-cost and average-cost language
 - first tenant-aware `inventory` module slice implemented with canonical stock-position ownership
+- first thin-client `Products` surface implemented with generated frontend transport and backend-owned sorting
 
 ## Current structural gaps
 
 The most important remaining gaps are:
 
 - production identity integration is not yet connected to a real issuer or JWKS source
+- backend-owned web session flow for `apps/web` is not yet implemented on top of the production identity path
 - outbox exists and catalog emits real events, but broker delivery and worker consumption are still not in place
 - governance is operational in runtime, but broader operational surfaces still need administrative mutation paths
 - catalog is now a strong canonical foundation, pricing semantics have been realigned against the accepted SKU ownership model, inventory owns live stock position, and the next gate is freezing procurement so supplier-side replenishment semantics do not leak into existing modules
@@ -130,6 +132,7 @@ The most important remaining gaps are:
 - explicit frontend migration charter freezing legacy visual reuse with modern package and API boundaries
 - explicit frontend migration playbook freezing legacy-study-first execution before surface ports continue
 - explicit decision record for the next implementation area
+- explicit web auth session model before login UI implementation
 
 ## Key planning docs
 
@@ -164,5 +167,6 @@ The most important remaining gaps are:
 - `docs/FRONTEND_MIGRATION_CHARTER.md`
 - `docs/FRONTEND_MIGRATION_PLAYBOOK.md`
 - `docs/NEXT_EXECUTION_DECISION.md`
+- `docs/WEB_AUTH_SESSION_IMPLEMENTATION_PLAN.md`
 - `docs/IMPLEMENTATION_PLAN.md`
 - `docs/PROGRESS.md`

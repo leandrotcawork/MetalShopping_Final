@@ -1,0 +1,14 @@
+{
+  "flag_name": "auth.web_session_enabled",
+  "version": "v1",
+  "status": "draft",
+  "bounded_context": "auth",
+  "scope": [
+    "global",
+    "environment",
+    "tenant",
+    "feature-target"
+  ],
+  "description": "Defines whether the backend-owned web session flow is enabled for the resolved runtime scope.",
+  "schema_ref": "../../api/jsonschema/governance_feature_flag_v1.schema.json"
+}

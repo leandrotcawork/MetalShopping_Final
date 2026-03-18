@@ -81,6 +81,7 @@ Current status:
 - substantially in progress
 - Postgres, auth, tenancy, IAM, catalog, governance runtime foundation, and first event/outbox path are already implemented
 - remaining work in this phase is focused on operating the new hardening path end-to-end and keeping `pricing`, `inventory`, and upcoming `procurement` boundaries clean while supplier-side semantics are frozen before code
+- the next hardening step is freezing and implementing the backend-owned web auth/session boundary before the login screen
 
 ## Phase 3A: Foundation hardening
 
@@ -97,6 +98,7 @@ Exit criteria:
 - at least one runtime path is governed by governance resolution
 - at least one module publishes a real versioned event through a core-owned outbox path
 - bootstrap auth has a clear upgrade path to non-static identity
+- the web auth/session boundary is explicit before login UX starts
 
 Current status:
 
@@ -106,6 +108,7 @@ Current status:
 - `catalog` create writes a real versioned event through platform outbox infrastructure
 - contract validation and generation scripts are functional for the current repo contract set
 - catalog readiness for `pricing` is now explicitly reviewed and the next work is freezing the pricing contract and model boundary before implementation
+- the `Products` surface now proves the thin-client direction, so the next gate is freezing OIDC-backed cookie sessions before the login surface
 
 ## Phase 4: Domain expansion
 
@@ -140,3 +143,4 @@ Phase 4 gate:
 - migration planning from legacy
 - thin-client operational surface recovery
 - frontend migration guardrails for legacy visual reuse with modern package ownership
+- backend-owned web auth/session foundation for thin clients

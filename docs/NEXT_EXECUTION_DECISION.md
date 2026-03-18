@@ -2,30 +2,31 @@
 
 ## Decision
 
-The next implementation area should be the first operational product surface: `Products`.
+The next implementation area should be the backend-owned web auth/session foundation before the login surface.
 
 ## Why
 
-- `catalog`, `pricing`, and `inventory` now exist as real bounded modules
-- the product still lacks the first thin-client surface that makes those modules operable
-- the legacy application already proved the importance of `Home`, `Products`, and `Shopping` as the first operational surfaces
-- `Products` is the closest surface to the backend we already have, while `Shopping` and `Home` depend on more readmodel and integration work
+- `Products` now exists as the first real thin-client operational surface
+- the next structural gap is authenticated browser session handling, not another unauthenticated screen
+- the web must not grow route-by-route on static bearer bootstrap behavior
+- login must be implemented on top of a frozen session model, not as a page-local form flow
 
 ## Constraints
 
 This decision is valid only if planning and implementation follow:
 
-- `docs/OPERATIONAL_SURFACES_PLAN.md`
-- the existing SKU ownership rules in `docs/adrs/ADR-0007-canonical-sku-data-ownership.md`
-- the thin-client rule already frozen in `docs/adrs/ADR-0005-thin-clients-and-generated-sdks.md`
+- `docs/WEB_AUTH_SESSION_IMPLEMENTATION_PLAN.md`
+- `docs/adrs/ADR-0005-thin-clients-and-generated-sdks.md`
+- `docs/adrs/ADR-0009-web-session-boundary-on-oidc-and-http-only-cookies.md`
+- `docs/OBSERVABILITY_AND_SECURITY_BASELINE.md`
 
 ## Explicit rejection
 
 Do not jump next to:
 
-- rebuilding `Shopping` UI before its runtime foundation is clarified
-- rebuilding `Home` as a static shell before trusted read models exist
-- copying legacy frontend DTOs or API wrappers as a second source of truth
-- putting business logic directly inside page components
+- implementing the login screen before the `auth/session` contract is frozen
+- storing browser tokens in `localStorage` as the long-term session model
+- pushing issuer, callback, or claim logic into React pages
+- opening the next operational surface before authenticated shell behavior is ready
 
-until the first operational frontend slice is frozen as a thin-client feature.
+until the backend-owned web session boundary is frozen.
