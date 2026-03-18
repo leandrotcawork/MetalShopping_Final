@@ -103,14 +103,14 @@ The repository now includes:
 - first thin-client `Products` surface implemented with generated frontend transport and backend-owned sorting
 - backend-owned `auth/session` foundation implemented with OIDC cookie-session runtime and generated transport support
 - login hardening now includes browser-safe CSRF defense for cookie-backed mutations, centralized generated browser HTTP runtime, and a thinner auth composition in `apps/web`
+- `sdk_ts` hardening now targets OpenAPI Generator via Docker-backed orchestration instead of handwritten TypeScript emission
 
 ## Current structural gaps
 
 The most important remaining gaps are:
 
 - production identity integration is not yet connected to a real issuer or JWKS source
-- backend-owned web session flow for `apps/web` is not yet implemented on top of the production identity path
-- a real local issuer and tenant claim mapping are not yet connected to the new auth/session foundation
+- full migration of generated SDK/runtime from bootstrap-era handwritten emission to the official generator path is not yet completed across all consumers
 - outbox exists and catalog emits real events, but broker delivery and worker consumption are still not in place
 - governance is operational in runtime, but broader operational surfaces still need administrative mutation paths
 - catalog is now a strong canonical foundation, pricing semantics have been realigned against the accepted SKU ownership model, inventory owns live stock position, and the next gate is freezing procurement so supplier-side replenishment semantics do not leak into existing modules

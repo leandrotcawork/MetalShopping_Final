@@ -83,6 +83,7 @@
 - login and identity architecture frozen with Keycloak as the initial IdP, tenant claim mapping, and a cross-channel identity model for future app surfaces
 - reproducible local Keycloak bootstrap assets added for realm import, tenant claim mapping, local test users, and repeatable IAM role seeding
 - login hardening completed with backend-owned CSRF protection for cookie-backed mutations, centralized generated browser HTTP runtime, thinner auth routing composition, and a frozen login visual baseline shared with the Keycloak theme
+- official `sdk_ts` migration target frozen on OpenAPI Generator `typescript-fetch` with Docker-backed orchestration and a repo-specific integration skill
 
 ## Next
 
@@ -98,6 +99,8 @@
 - connect the JWT/OIDC auth path to a real issuer configuration
 - bootstrap authenticated session state in `apps/web`
 - validate the hardened login flow end-to-end against the running Keycloak issuer after every local restart
+- replace the remaining handwritten `sdk_ts` emission path with the official generator-backed flow
+- create and adopt the repo skill that freezes front+back integration rules around contracts, generation, runtime, and docs sync
 - apply pricing migrations and database-backed governance defaults in runtime
 - validate pricing write/list/current and outbox publication through smoke tests
 - revise pricing semantics to align with the accepted canonical SKU data ownership model

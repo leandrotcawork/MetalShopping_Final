@@ -11,6 +11,7 @@ Define how generated SDKs and generated types will be produced from `contracts/`
 - no manual parallel type systems
 - reproducible generation workflow
 - clear ownership for outputs
+- official generator tooling for SDK transport instead of handwritten client emission
 
 ## Output targets
 
@@ -27,6 +28,8 @@ Expected contents:
 - API client bindings
 - event contract helpers if needed
 - typed request and response models
+- generated `typescript-fetch` client output produced by OpenAPI Generator
+- thin generated facade for stable repo consumption when raw generator output needs normalization
 
 ### `packages/generated/types_ts`
 
@@ -62,6 +65,9 @@ Expected contents:
 - generated outputs should be reproducible from scripts
 - generation scripts belong in `scripts/`
 - generation should be all-or-nothing per target to avoid drift
+- `sdk_ts` generation uses the official OpenAPI Generator `typescript-fetch` generator
+- `sdk_ts` generation runs through the Docker image `openapitools/openapi-generator-cli`
+- repo scripts may orchestrate generation, but must not handwrite SDK transport code
 
 ## Initial generation split
 
@@ -91,6 +97,7 @@ Generate:
 - frontend code uses generated TS SDKs and types
 - workers use generated Python models or SDKs where contract interaction exists
 - app code must not handcraft alternative contract definitions
+- feature packages must not create their own API clients or HTTP adapters
 
 ## Versioning strategy
 
@@ -111,4 +118,3 @@ Generate:
 - publishing external packages
 - multi-language SDK matrix beyond TS and Python
 - runtime codegen inside applications
-
