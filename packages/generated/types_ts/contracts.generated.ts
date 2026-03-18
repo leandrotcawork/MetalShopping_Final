@@ -18,6 +18,10 @@ export const schemaIds = {
   "iam_role_assigned_payload_v1.schema": "https://contracts.metalshopping.local/schema/iam/role_assigned_payload/v1",
   "iam_role_assignment_v1.schema": "https://contracts.metalshopping.local/schema/iam/role_assignment/v1",
   "iam_upsert_role_assignment_request_v1.schema": "https://contracts.metalshopping.local/schema/iam/upsert_role_assignment_request/v1",
+  "inventory_position_updated_payload_v1.schema": "https://metalshopping.local/contracts/api/jsonschema/inventory_position_updated_payload_v1.schema.json",
+  "inventory_product_position_list_v1.schema": "https://metalshopping.local/contracts/api/jsonschema/inventory_product_position_list_v1.schema.json",
+  "inventory_product_position_v1.schema": "https://metalshopping.local/contracts/api/jsonschema/inventory_product_position_v1.schema.json",
+  "inventory_set_product_position_request_v1.schema": "https://metalshopping.local/contracts/api/jsonschema/inventory_set_product_position_request_v1.schema.json",
   "pricing_price_set_payload_v1.schema": "https://contracts.metalshopping.local/schema/pricing/price_set_payload/v1",
   "pricing_product_price_list_v1.schema": "https://contracts.metalshopping.local/schema/pricing/product_price_list/v1",
   "pricing_product_price_v1.schema": "https://contracts.metalshopping.local/schema/pricing/product_price/v1",
@@ -27,6 +31,7 @@ export const schemaIds = {
 export const eventNames = [
   "catalog.product_created",
   "iam.role_assigned",
+  "inventory.position_updated",
   "pricing.price_set"
 ] as const;
 

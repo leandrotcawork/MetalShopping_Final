@@ -16,6 +16,9 @@ func TestStaticAuthorizerHonorsExpectedPermissions(t *testing.T) {
 	if authorizer.Can(domain.RoleViewer, domain.PermPricingWrite) {
 		t.Fatal("expected viewer not to write pricing")
 	}
+	if !authorizer.Can(domain.RoleInventoryManager, domain.PermInventoryWrite) {
+		t.Fatal("expected inventory manager to write inventory")
+	}
 	if !authorizer.Can(domain.RoleAnalyst, domain.PermAnalyticsServingRead) {
 		t.Fatal("expected analyst to read analytics serving")
 	}

@@ -10,14 +10,15 @@ import (
 type Role string
 
 const (
-	RoleAdmin           Role = "admin"
-	RoleTenantAdmin     Role = "tenant_admin"
-	RoleCatalogManager  Role = "catalog_manager"
-	RolePricingManager  Role = "pricing_manager"
-	RoleSalesManager    Role = "sales_manager"
-	RoleAnalyst         Role = "analyst"
-	RoleAutomationOwner Role = "automation_owner"
-	RoleViewer          Role = "viewer"
+	RoleAdmin            Role = "admin"
+	RoleTenantAdmin      Role = "tenant_admin"
+	RoleCatalogManager   Role = "catalog_manager"
+	RoleInventoryManager Role = "inventory_manager"
+	RolePricingManager   Role = "pricing_manager"
+	RoleSalesManager     Role = "sales_manager"
+	RoleAnalyst          Role = "analyst"
+	RoleAutomationOwner  Role = "automation_owner"
+	RoleViewer           Role = "viewer"
 )
 
 type Permission string
@@ -27,6 +28,8 @@ const (
 	PermIAMReadRoles           Permission = "iam:read_roles"
 	PermCatalogRead            Permission = "catalog:read"
 	PermCatalogWrite           Permission = "catalog:write"
+	PermInventoryRead          Permission = "inventory:read"
+	PermInventoryWrite         Permission = "inventory:write"
 	PermPricingRead            Permission = "pricing:read"
 	PermPricingWrite           Permission = "pricing:write"
 	PermSalesRead              Permission = "sales:read"
@@ -54,6 +57,7 @@ var allowedRoles = []Role{
 	RoleAdmin,
 	RoleTenantAdmin,
 	RoleCatalogManager,
+	RoleInventoryManager,
 	RolePricingManager,
 	RoleSalesManager,
 	RoleAnalyst,

@@ -147,6 +147,7 @@ The most important remaining gaps are:
 - `docs/PRICING_CANONICAL_MODEL.md`
 - `docs/PRICING_LEGACY_SIGNAL_BOUNDARIES.md`
 - `docs/PRICING_IMPLEMENTATION_PLAN.md`
+- `docs/INVENTORY_CANONICAL_MODEL.md`
 - `docs/NEXT_EXECUTION_DECISION.md`
 - `docs/IMPLEMENTATION_PLAN.md`
 - `docs/PROGRESS.md`

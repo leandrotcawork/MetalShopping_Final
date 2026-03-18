@@ -69,6 +69,8 @@
 - pricing revision started to replace generic cost-basis and margin-floor persistence with legacy-aligned cost semantics
 - pricing write path now deduplicates no-op reruns so history is change-based instead of execution-based
 - legacy `product_erp` signal boundaries are now frozen so price, stock, procurement, tax, and advisory semantics do not collapse back into a single module
+- first tenant-aware `inventory` module slice implemented with canonical stock position ownership, contracts, outbox event, and HTTP transport
+- canonical inventory model frozen with `on_hand_quantity`, `last_purchase_at`, and `last_sale_at` as first owned semantics
 
 ## Next
 
@@ -82,6 +84,7 @@
 - validate the revised pricing slice and migration path end-to-end after semantic alignment
 - continue domain expansion from the proven tenant-aware foundation
 - keep pricing semantically narrow while preparing `inventory` and procurement follow-on ownership
+- apply inventory migration and validate the new write/list/current path in runtime
 - prepare phase transition checklist from foundation hardening to domain expansion
 - use the MetalDocs reuse matrix to decide the first extracted patterns without copying unsafe defaults
 

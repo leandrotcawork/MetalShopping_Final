@@ -2,12 +2,15 @@
 export const operationIds = [
   "createCatalogProduct",
   "get",
+  "getCurrentInventoryProductPosition",
   "getCurrentPricingProductPrice",
   "listCatalogProductIdentifiers",
   "listCatalogProducts",
   "listCatalogTaxonomyLevels",
   "listCatalogTaxonomyNodes",
+  "listInventoryProductPositions",
   "listPricingProductPrices",
+  "setInventoryProductPosition",
   "setPricingProductPrice",
   "upsertIamUserRoleAssignment"
 ] as const;

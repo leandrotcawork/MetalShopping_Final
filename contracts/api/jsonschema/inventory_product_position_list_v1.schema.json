@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://metalshopping.local/contracts/api/jsonschema/inventory_product_position_list_v1.schema.json",
+  "title": "Inventory Product Position List",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["items"],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "./inventory_product_position_v1.schema.json"
+      }
+    }
+  }
+}

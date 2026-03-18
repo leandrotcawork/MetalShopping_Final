@@ -1,0 +1,151 @@
+openapi: 3.1.0
+info:
+  title: "Inventory API"
+  version: "v1"
+  summary: "Public HTTP contract for MetalShopping inventory position management"
+  description: >
+    Draft OpenAPI contract for tenant-aware canonical inventory position writes and reads.
+  x-metalshopping:
+    contract_name: "inventory_v1"
+    contract_status: "draft"
+    bounded_context: "inventory"
+    owner_team: "product_core"
+servers:
+  - url: https://api.metalshopping.local
+paths:
+  /api/v1/inventory/products/{product_id}/positions:
+    get:
+      operationId: listInventoryProductPositions
+      summary: "List inventory position records for one product in the authenticated tenant"
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Inventory positions returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/inventory_product_position_list_v1.schema.json"
+        "400":
+          description: "Validation failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Forbidden"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+    post:
+      operationId: setInventoryProductPosition
+      summary: "Set an inventory position record for one product in the authenticated tenant"
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "../jsonschema/inventory_set_product_position_request_v1.schema.json"
+      responses:
+        "200":
+          description: "No material inventory change was detected; current position record returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/inventory_product_position_v1.schema.json"
+        "201":
+          description: "Inventory position accepted"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/inventory_product_position_v1.schema.json"
+        "400":
+          description: "Validation failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Forbidden"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+  /api/v1/inventory/products/{product_id}/positions/current:
+    get:
+      operationId: getCurrentInventoryProductPosition
+      summary: "Get the current effective inventory position for one product in the authenticated tenant"
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Current effective inventory position returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/inventory_product_position_v1.schema.json"
+        "404":
+          description: "No current effective inventory position exists"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Forbidden"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+components:
+  schemas: {}

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://metalshopping.local/contracts/api/jsonschema/inventory_product_position_v1.schema.json",
+  "title": "Inventory Product Position",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "position_id",
+    "tenant_id",
+    "product_id",
+    "on_hand_quantity",
+    "position_status",
+    "effective_from",
+    "origin_type",
+    "reason_code",
+    "updated_by"
+  ],
+  "properties": {
+    "position_id": { "type": "string" },
+    "tenant_id": { "type": "string" },
+    "product_id": { "type": "string" },
+    "on_hand_quantity": { "type": "number", "minimum": 0 },
+    "last_purchase_at": { "type": "string", "format": "date-time" },
+    "last_sale_at": { "type": "string", "format": "date-time" },
+    "position_status": {
+      "type": "string",
+      "enum": ["active", "inactive"]
+    },
+    "effective_from": { "type": "string", "format": "date-time" },
+    "effective_to": { "type": "string", "format": "date-time" },
+    "origin_type": {
+      "type": "string",
+      "enum": ["manual", "import", "reconciliation"]
+    },
+    "origin_ref": { "type": "string" },
+    "reason_code": { "type": "string" },
+    "updated_by": { "type": "string" }
+  }
+}

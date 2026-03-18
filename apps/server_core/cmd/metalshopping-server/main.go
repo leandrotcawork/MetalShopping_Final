@@ -16,6 +16,9 @@ import (
 	iampg "metalshopping/server_core/internal/modules/iam/adapters/postgres"
 	iamapp "metalshopping/server_core/internal/modules/iam/application"
 	iamhttp "metalshopping/server_core/internal/modules/iam/transport/http"
+	inventorypg "metalshopping/server_core/internal/modules/inventory/adapters/postgres"
+	inventoryapp "metalshopping/server_core/internal/modules/inventory/application"
+	inventoryhttp "metalshopping/server_core/internal/modules/inventory/transport/http"
 	pricinggov "metalshopping/server_core/internal/modules/pricing/adapters/governance"
 	pricingpg "metalshopping/server_core/internal/modules/pricing/adapters/postgres"
 	pricingapp "metalshopping/server_core/internal/modules/pricing/application"
@@ -72,6 +75,7 @@ func main() {
 
 	iamRepo := iampg.NewRepository(db)
 	catalogRepo := catalogpg.NewRepository(db, outboxStore)
+	inventoryRepo := inventorypg.NewRepository(db, outboxStore)
 	pricingRepo := pricingpg.NewRepository(db, outboxStore)
 	iamAuthorizer := iamapp.NewStaticAuthorizer()
 	iamAuthorization := iamapp.NewAuthorizationService(iamRepo, iamAuthorizer)
@@ -81,6 +85,8 @@ func main() {
 	catalogDescriptionGuard := cataloggov.NewDescriptionGuard(thresholdResolver, environment)
 	catalogService := catalogapp.NewService(catalogRepo, catalogProductCreationGuard, catalogDescriptionGuard)
 	catalogHandler := cataloghttp.NewHandler(catalogService, iamAuthorization)
+	inventoryService := inventoryapp.NewService(inventoryRepo)
+	inventoryHandler := inventoryhttp.NewHandler(inventoryService, iamAuthorization)
 	pricingManualOverrideGuard := pricinggov.NewManualOverrideGuard(policyResolver, environment)
 	pricingService := pricingapp.NewService(pricingRepo, pricingManualOverrideGuard)
 	pricingHandler := pricinghttp.NewHandler(pricingService, iamAuthorization)
@@ -100,6 +106,7 @@ func main() {
 	mux.Handle("/health/ready", observability.NewReadyHandler(postgresReadiness(db)))
 	iamAdminHandler.RegisterRoutes(mux)
 	catalogHandler.RegisterRoutes(mux)
+	inventoryHandler.RegisterRoutes(mux)
 	pricingHandler.RegisterRoutes(mux)
 
 	server := &http.Server{
