@@ -65,6 +65,24 @@ var allowedRoles = []Role{
 	RoleViewer,
 }
 
+var allowedPermissions = []Permission{
+	PermIAMManageRoles,
+	PermIAMReadRoles,
+	PermCatalogRead,
+	PermCatalogWrite,
+	PermInventoryRead,
+	PermInventoryWrite,
+	PermPricingRead,
+	PermPricingWrite,
+	PermSalesRead,
+	PermCRMRead,
+	PermCRMWrite,
+	PermAutomationRead,
+	PermAutomationManage,
+	PermAnalyticsServingRead,
+	PermMarketIntelligenceRead,
+}
+
 func ParseRole(raw string) (Role, error) {
 	role := Role(strings.ToLower(strings.TrimSpace(raw)))
 	if !role.IsValid() {
@@ -75,6 +93,10 @@ func ParseRole(raw string) (Role, error) {
 
 func (r Role) IsValid() bool {
 	return slices.Contains(allowedRoles, r)
+}
+
+func AllPermissions() []Permission {
+	return slices.Clone(allowedPermissions)
 }
 
 func (a RoleAssignment) Validate() error {

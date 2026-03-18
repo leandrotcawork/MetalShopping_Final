@@ -55,6 +55,7 @@ func NewCORSMiddleware(allowedOrigins []string) func(http.Handler) http.Handler 
 			headers := w.Header()
 			headers.Set("Vary", "Origin")
 			headers.Set("Access-Control-Allow-Origin", origin)
+			headers.Set("Access-Control-Allow-Credentials", "true")
 			headers.Set("Access-Control-Allow-Headers", allowHeaders)
 			headers.Set("Access-Control-Allow-Methods", allowMethods)
 

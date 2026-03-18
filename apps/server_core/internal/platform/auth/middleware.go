@@ -12,12 +12,20 @@ type Authenticator interface {
 	Authenticate(ctx context.Context, accessToken string) (Principal, error)
 }
 
+type RequestAuthenticator interface {
+	AuthenticateRequest(ctx context.Context, r *http.Request) (Principal, error)
+}
+
 type Middleware struct {
-	authenticator Authenticator
-	publicPaths   map[string]struct{}
+	requestAuthenticator RequestAuthenticator
+	publicPaths          map[string]struct{}
 }
 
 func NewMiddleware(authenticator Authenticator, publicPaths []string) *Middleware {
+	return NewMiddlewareWithRequestAuthenticator(NewBearerRequestAuthenticator(authenticator), publicPaths)
+}
+
+func NewMiddlewareWithRequestAuthenticator(requestAuthenticator RequestAuthenticator, publicPaths []string) *Middleware {
 	pathSet := make(map[string]struct{}, len(publicPaths))
 	for _, path := range publicPaths {
 		trimmed := strings.TrimSpace(path)
@@ -28,13 +36,13 @@ func NewMiddleware(authenticator Authenticator, publicPaths []string) *Middlewar
 	}
 
 	return &Middleware{
-		authenticator: authenticator,
-		publicPaths:   pathSet,
+		requestAuthenticator: requestAuthenticator,
+		publicPaths:          pathSet,
 	}
 }
 
 func (m *Middleware) Wrap(next http.Handler) http.Handler {
-	if m == nil || m.authenticator == nil {
+	if m == nil || m.requestAuthenticator == nil {
 		return next
 	}
 
@@ -44,13 +52,7 @@ func (m *Middleware) Wrap(next http.Handler) http.Handler {
 			return
 		}
 
-		accessToken, err := ExtractBearerToken(r.Header.Get("Authorization"))
-		if err != nil {
-			writeAPIError(w, http.StatusUnauthorized, "AUTH_UNAUTHORIZED", "Authentication required", requestTraceID(r))
-			return
-		}
-
-		principal, err := m.authenticator.Authenticate(r.Context(), accessToken)
+		principal, err := m.requestAuthenticator.AuthenticateRequest(r.Context(), r)
 		if err != nil {
 			if errors.Is(err, ErrUnauthenticated) {
 				writeAPIError(w, http.StatusUnauthorized, "AUTH_UNAUTHORIZED", "Authentication failed", requestTraceID(r))
@@ -67,6 +69,50 @@ func (m *Middleware) Wrap(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r.WithContext(WithPrincipal(r.Context(), principal)))
 	})
+}
+
+type bearerRequestAuthenticator struct {
+	authenticator Authenticator
+}
+
+func NewBearerRequestAuthenticator(authenticator Authenticator) RequestAuthenticator {
+	if authenticator == nil {
+		return nil
+	}
+	return &bearerRequestAuthenticator{authenticator: authenticator}
+}
+
+func (a *bearerRequestAuthenticator) AuthenticateRequest(ctx context.Context, r *http.Request) (Principal, error) {
+	accessToken, err := ExtractBearerToken(r.Header.Get("Authorization"))
+	if err != nil {
+		return Principal{}, ErrUnauthenticated
+	}
+	return a.authenticator.Authenticate(ctx, accessToken)
+}
+
+type bearerOrCookieRequestAuthenticator struct {
+	bearer RequestAuthenticator
+	cookie RequestAuthenticator
+}
+
+func NewBearerOrCookieRequestAuthenticator(bearer RequestAuthenticator, cookie RequestAuthenticator) RequestAuthenticator {
+	return &bearerOrCookieRequestAuthenticator{
+		bearer: bearer,
+		cookie: cookie,
+	}
+}
+
+func (a *bearerOrCookieRequestAuthenticator) AuthenticateRequest(ctx context.Context, r *http.Request) (Principal, error) {
+	if strings.TrimSpace(r.Header.Get("Authorization")) != "" {
+		if a.bearer == nil {
+			return Principal{}, ErrUnauthenticated
+		}
+		return a.bearer.AuthenticateRequest(ctx, r)
+	}
+	if a.cookie == nil {
+		return Principal{}, ErrUnauthenticated
+	}
+	return a.cookie.AuthenticateRequest(ctx, r)
 }
 
 func (m *Middleware) isPublicPath(path string) bool {

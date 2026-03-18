@@ -11,8 +11,10 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -20,13 +22,18 @@ type JWTAuthenticator struct {
 	issuer     string
 	audience   string
 	algorithm  string
+	jwksURL    string
 	hmacSecret []byte
 	publicKey  *rsa.PublicKey
+	httpClient *http.Client
+	keyCache   map[string]*rsa.PublicKey
+	keyMu      sync.RWMutex
 	now        func() time.Time
 }
 
 type jwtHeader struct {
 	Algorithm string `json:"alg"`
+	KeyID     string `json:"kid"`
 }
 
 type jwtClaims struct {
@@ -50,7 +57,12 @@ func NewJWTAuthenticatorFromEnv() (*JWTAuthenticator, error) {
 		issuer:    strings.TrimSpace(os.Getenv("MS_AUTH_JWT_ISSUER")),
 		audience:  strings.TrimSpace(os.Getenv("MS_AUTH_JWT_AUDIENCE")),
 		algorithm: algorithm,
-		now:       func() time.Time { return time.Now().UTC() },
+		jwksURL:   strings.TrimSpace(os.Getenv("MS_AUTH_JWT_JWKS_URL")),
+		httpClient: &http.Client{
+			Timeout: 10 * time.Second,
+		},
+		keyCache: make(map[string]*rsa.PublicKey),
+		now:      func() time.Time { return time.Now().UTC() },
 	}
 
 	switch algorithm {
@@ -61,11 +73,16 @@ func NewJWTAuthenticatorFromEnv() (*JWTAuthenticator, error) {
 		}
 		authenticator.hmacSecret = []byte(secret)
 	case "RS256":
-		publicKey, err := parseRSAPublicKey(strings.TrimSpace(os.Getenv("MS_AUTH_JWT_PUBLIC_KEY_PEM")))
-		if err != nil {
-			return nil, err
+		publicKeyPEM := strings.TrimSpace(os.Getenv("MS_AUTH_JWT_PUBLIC_KEY_PEM"))
+		if publicKeyPEM != "" {
+			publicKey, err := parseRSAPublicKey(publicKeyPEM)
+			if err != nil {
+				return nil, err
+			}
+			authenticator.publicKey = publicKey
+		} else if authenticator.jwksURL == "" {
+			return nil, fmt.Errorf("auth jwt public key pem or jwks url is required")
 		}
-		authenticator.publicKey = publicKey
 	default:
 		return nil, fmt.Errorf("%w: %s", ErrInvalidAuthenticationMode, algorithm)
 	}
@@ -100,7 +117,7 @@ func (a *JWTAuthenticator) Authenticate(_ context.Context, accessToken string) (
 	if err != nil {
 		return Principal{}, ErrUnauthenticated
 	}
-	if err := a.verifySignature([]byte(parts[0]+"."+parts[1]), signature); err != nil {
+	if err := a.verifySignature(header, []byte(parts[0]+"."+parts[1]), signature); err != nil {
 		return Principal{}, ErrUnauthenticated
 	}
 
@@ -124,7 +141,7 @@ func (a *JWTAuthenticator) Authenticate(_ context.Context, accessToken string) (
 	return principal, nil
 }
 
-func (a *JWTAuthenticator) verifySignature(message, signature []byte) error {
+func (a *JWTAuthenticator) verifySignature(header jwtHeader, message, signature []byte) error {
 	hashed := sha256.Sum256(message)
 	switch a.algorithm {
 	case "HS256":
@@ -135,10 +152,50 @@ func (a *JWTAuthenticator) verifySignature(message, signature []byte) error {
 		}
 		return nil
 	case "RS256":
-		return rsa.VerifyPKCS1v15(a.publicKey, crypto.SHA256, hashed[:], signature)
+		publicKey, err := a.resolveRSAPublicKey(header.KeyID)
+		if err != nil {
+			return ErrUnauthenticated
+		}
+		return rsa.VerifyPKCS1v15(publicKey, crypto.SHA256, hashed[:], signature)
 	default:
 		return ErrUnauthenticated
 	}
+}
+
+func (a *JWTAuthenticator) resolveRSAPublicKey(keyID string) (*rsa.PublicKey, error) {
+	if a.publicKey != nil {
+		return a.publicKey, nil
+	}
+	keyID = strings.TrimSpace(keyID)
+	if keyID == "" {
+		return nil, ErrUnauthenticated
+	}
+
+	a.keyMu.RLock()
+	cachedKey, ok := a.keyCache[keyID]
+	a.keyMu.RUnlock()
+	if ok {
+		return cachedKey, nil
+	}
+
+	if strings.TrimSpace(a.jwksURL) == "" {
+		return nil, ErrUnauthenticated
+	}
+	keys, err := fetchJWKS(a.httpClient, a.jwksURL)
+	if err != nil {
+		return nil, err
+	}
+
+	a.keyMu.Lock()
+	defer a.keyMu.Unlock()
+	for jwksKeyID, publicKey := range keys {
+		a.keyCache[jwksKeyID] = publicKey
+	}
+	publicKey, ok := a.keyCache[keyID]
+	if !ok {
+		return nil, ErrUnauthenticated
+	}
+	return publicKey, nil
 }
 
 func (a *JWTAuthenticator) validateClaims(claims jwtClaims) error {

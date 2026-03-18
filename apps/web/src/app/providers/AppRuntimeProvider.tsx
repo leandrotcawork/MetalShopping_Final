@@ -40,14 +40,43 @@ export function AppRuntimeProvider({ children }: PropsWithChildren) {
   const bearerToken = import.meta.env.VITE_API_BEARER_TOKEN ?? defaultBearerToken;
 
   const runtime = useMemo<AppRuntime>(() => {
+    function buildHeaders() {
+      const headers: Record<string, string> = {
+        Accept: "application/json",
+      };
+      if (bearerToken.trim() !== "") {
+        headers.Authorization = `Bearer ${bearerToken}`;
+      }
+      return headers;
+    }
+
     const httpClient: AppHttpClient = {
       async getJson<T>(path: string, options?: { query?: Record<string, QueryParamValue> }) {
         const queryString = buildQueryString(options?.query);
         const response = await fetch(`${apiBaseUrl}${path}${queryString ? `?${queryString}` : ""}`, {
-          headers: {
-            Authorization: `Bearer ${bearerToken}`,
-            Accept: "application/json",
-          },
+          credentials: "include",
+          headers: buildHeaders(),
+        });
+
+        if (!response.ok) {
+          const errorPayload = (await response.json().catch(() => null)) as CommonErrorV1 | null;
+          const message =
+            errorPayload?.error?.message ??
+            `Request failed with status ${response.status}`;
+          throw new Error(message);
+        }
+
+        return (await response.json()) as T;
+      },
+      async postJson<T>(path: string, options?: { body?: unknown; query?: Record<string, QueryParamValue> }) {
+        const queryString = buildQueryString(options?.query);
+        const headers = buildHeaders();
+        headers["Content-Type"] = "application/json";
+        const response = await fetch(`${apiBaseUrl}${path}${queryString ? `?${queryString}` : ""}`, {
+          method: "POST",
+          credentials: "include",
+          headers,
+          body: options?.body === undefined ? undefined : JSON.stringify(options.body),
         });
 
         if (!response.ok) {

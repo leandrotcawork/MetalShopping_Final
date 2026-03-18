@@ -25,6 +25,7 @@ import (
 	pricingapp "metalshopping/server_core/internal/modules/pricing/application"
 	pricinghttp "metalshopping/server_core/internal/modules/pricing/transport/http"
 	platformauth "metalshopping/server_core/internal/platform/auth"
+	"metalshopping/server_core/internal/platform/authsession"
 	pgdb "metalshopping/server_core/internal/platform/db/postgres"
 	governancebootstrap "metalshopping/server_core/internal/platform/governance/bootstrap"
 	"metalshopping/server_core/internal/platform/governance/feature_flags"
@@ -93,18 +94,51 @@ func main() {
 	pricingService := pricingapp.NewService(pricingRepo, pricingManualOverrideGuard)
 	pricingHandler := pricinghttp.NewHandler(pricingService, iamAuthorization)
 
-	authMiddleware := platformauth.NewMiddleware(authenticator, []string{
+	mux := http.NewServeMux()
+	requestAuthenticator := platformauth.NewBearerRequestAuthenticator(authenticator)
+	publicAuthPaths := []string{
 		"/health/live",
 		"/health/ready",
-	})
+	}
+	if authSessionConfig, err := authsession.ConfigFromEnv(environment); err == nil {
+		if tokenValidator, validatorErr := platformauth.NewJWTAuthenticatorFromEnv(); validatorErr == nil {
+			authSessionStore := authsession.NewStore(db)
+			authSessionService := authsession.NewService(
+				authSessionConfig,
+				authSessionStore,
+				authsession.NewOIDCClient(authSessionConfig),
+				tokenValidator,
+				authsession.NewRuntimePolicyResolver(featureFlagResolver, thresholdResolver, environment),
+				iamRepo,
+				iamAuthorizer,
+			)
+			authSessionHandler := authsession.NewHandler(authSessionService, authSessionConfig)
+			authSessionHandler.RegisterRoutes(mux)
+			requestAuthenticator = platformauth.NewBearerOrCookieRequestAuthenticator(
+				requestAuthenticator,
+				authsession.NewRequestAuthenticator(authSessionConfig, authSessionStore),
+			)
+			publicAuthPaths = append(publicAuthPaths,
+				"/api/v1/auth/session/login",
+				"/api/v1/auth/session/callback",
+			)
+		} else {
+			log.Printf("auth/session disabled: %v", validatorErr)
+		}
+	} else {
+		log.Printf("auth/session disabled: %v", err)
+	}
+
+	authMiddleware := platformauth.NewMiddlewareWithRequestAuthenticator(requestAuthenticator, publicAuthPaths)
 	tenancyMiddleware := tenancy_runtime.NewMiddleware([]string{
 		"/health/live",
 		"/health/ready",
+		"/api/v1/auth/session/login",
+		"/api/v1/auth/session/callback",
 	})
 	requestLogging := observability.NewRequestLoggingMiddleware()
 	corsMiddleware := observability.NewCORSMiddleware(runtime_config.CORSAllowedOriginsFromEnv(environment))
 
-	mux := http.NewServeMux()
 	mux.Handle("/health/live", observability.NewLiveHandler())
 	mux.Handle("/health/ready", observability.NewReadyHandler(postgresReadiness(db)))
 	iamAdminHandler.RegisterRoutes(mux)
