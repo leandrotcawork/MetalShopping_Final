@@ -80,7 +80,7 @@ Current status:
 
 - substantially in progress
 - Postgres, auth, tenancy, IAM, catalog, governance runtime foundation, and first event/outbox path are already implemented
-- remaining work in this phase is focused on operating the new hardening path end-to-end and preparing the gate into `pricing`
+- remaining work in this phase is focused on operating the new hardening path end-to-end and keeping `pricing` semantically clean while its follow-on boundaries to `inventory`, `procurement`, and analytics are frozen
 
 ## Phase 3A: Foundation hardening
 
@@ -125,6 +125,7 @@ Phase 4 gate:
 - `pricing` must build on the canonical `catalog`, not on the original minimal `catalog_products` slice
 - the canonical ownership of product identity, taxonomy, identifiers, descriptions, and non-catalog data boundaries must be explicit first
 - SKU data ownership across `catalog`, `pricing`, `inventory`, `procurement`, and analytics must be frozen before pricing semantics evolve further
+- legacy `product_erp` signals must be explicitly split so `pricing` does not absorb stock, stale-stock, tax, or advisory analytics fields by convenience
 
 ## Ongoing workstreams
 

@@ -27,17 +27,23 @@ That means the first slice must optimize for explicit semantics and safe evoluti
 - internal price values
 - price validity windows
 - price origin and reason metadata
-- cost basis used for internal pricing decisions
-- margin-aware pricing decisions
+- replacement and average cost semantics used for internal pricing decisions
+- pricing history as commercial state change history
 - price write history as pricing-owned state or pricing-owned event lineage
-- governed thresholds and policies that shape pricing behavior
+- governed policies that shape pricing behavior
 
 ### `pricing` does not own
 
 - canonical product identity
 - taxonomy ownership
 - stock quantities
+- stock aging
+- days without sale
+- last purchase or last sale operational dates
 - supplier operational lead time
+- supplier replenishment semantics
+- tax status by ERP inertia
+- competitive classification signals
 - competitor observations
 - CRM customer state
 
@@ -55,7 +61,6 @@ The first slice should answer:
 
 - what is the current internal price for one canonical product in one tenant
 - what cost basis was used
-- what margin floor applies
 - why and from where was the price set
 - when does this price become effective
 
@@ -109,6 +114,7 @@ Minimum target fields:
 
 - optional average cost aligned to legacy `custo_medio`
 - should remain explicit if the product needs to compare replacement cost and average cost without collapsing both meanings
+- analytics can later choose one or the other as a preferred margin basis without forcing `pricing` to erase the distinction
 
 ### `pricing_status`
 
@@ -216,6 +222,50 @@ Material change for the first slice means a change in one or more of:
 
 Operational fields such as actor, origin reference, and request execution time do not justify a new canonical history row by themselves
 
+## Legacy signal boundaries
+
+The legacy `product_erp` table mixes pricing-adjacent facts with inventory, tax, and analytics signals.
+
+The professional target model must separate them explicitly.
+
+### Remain in `pricing`
+
+- `preco_interno`
+- `custo_variavel`
+- `custo_medio`
+
+Target interpretation:
+
+- `preco_interno` maps to the canonical internal price amount
+- `custo_variavel` maps to `replacement_cost_amount`
+- `custo_medio` maps to `average_cost_amount`
+
+### Reserved for `inventory`
+
+- `estoque_disponivel`
+- `dt_compra`
+- `dt_venda`
+
+These are not canonical price fields.
+
+`pricing` may consume them later through read paths or derived signals, but it must not own or persist them as if they were part of the pricing aggregate.
+
+### Reserved for analytics or inventory-serving read models
+
+- `dias_sem_venda`
+- `competitivo`
+- `classificacao`
+
+These are useful for future pricing decisions and advisory behavior, but they are not canonical write ownership for the first `pricing` aggregate.
+
+### Reserved for a future explicit owner
+
+- `st_imposto`
+
+This must not be absorbed into `pricing` by convenience.
+
+If it becomes relevant to commercial execution later, it should be introduced under a clearer domain boundary such as tax, finance, or commercial policy governance.
+
 ## Explicit non-goals for the first slice
 
 Do not add all of the following now:
@@ -227,6 +277,10 @@ Do not add all of the following now:
 - competitor-driven automatic repricing
 - supplier quote comparison
 - price simulation UI model
+- live stock state
+- stale stock pressure fields
+- ERP tax snapshots
+- advisory competitive labels
 
 Those can come later, but they should not distort the first canonical model.
 

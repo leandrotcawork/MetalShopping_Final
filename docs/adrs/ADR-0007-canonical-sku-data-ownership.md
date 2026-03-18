@@ -66,9 +66,25 @@ The canonical SKU model must therefore be persisted as a split model, not a sing
 - market-relative indicators
 - operational classifications and advisory outputs that are not canonical write ownership
 
+### Explicit `product_erp` split
+
+The following legacy `product_erp` fields are now explicitly split:
+
+- `preco_interno` -> `pricing`
+- `custo_variavel` -> `pricing`
+- `custo_medio` -> `pricing`
+- `estoque_disponivel` -> `inventory`
+- `dt_compra` -> `inventory` or inventory-serving read model
+- `dt_venda` -> `inventory` or inventory-serving read model
+- `dias_sem_venda` -> analytics or inventory-serving read model
+- `st_imposto` -> future explicit owner, not `pricing` by inertia
+- `competitivo` -> analytics or market-intelligence-serving read model
+- `classificacao` -> analytics or portfolio read model
+
 ## Consequences
 
 - no single `products` replacement table should absorb all legacy columns
 - `catalog_products` must stay focused on identity and stable master data
 - `pricing` must be revised to reflect MetalShopping legacy semantics instead of generic fields that do not belong to the real business language
+- `pricing` must not absorb inventory pressure, tax, or advisory classification fields just because they coexist in legacy `product_erp`
 - future legacy migration work must map every `products` and `product_erp` field to an explicit target owner before implementation

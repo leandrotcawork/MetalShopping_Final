@@ -58,6 +58,13 @@ Useful signals include:
 - explicit `preco_interno`
 - `custo_variavel`
 - `custo_medio`
+- `estoque_disponivel`
+- `dt_compra`
+- `dt_venda`
+- `dias_sem_venda`
+- `st_imposto`
+- `competitivo`
+- `classificacao`
 - realized price and realized margin analysis
 - margin leakage and pricing execution quality
 - market-relative pricing signals
@@ -67,6 +74,7 @@ Important rule:
 
 - reuse these as semantics
 - do not copy the legacy schema or analytics payloads directly into the first pricing table
+- map each legacy signal to an explicit target owner before adding new canonical fields
 
 ## First-slice objective
 
@@ -106,8 +114,7 @@ The first slice of `pricing` should solve one clean problem:
 
 - internal price records
 - price validity windows
-- cost basis used for price decision
-- margin floor and pricing decision context
+- replacement and average cost semantics used for price decision
 - price reason metadata
 - price write lineage and events
 
@@ -116,7 +123,11 @@ The first slice of `pricing` should solve one clean problem:
 - product identity
 - taxonomy ownership
 - inventory state
+- stock timing state
 - procurement workflow state
+- procurement replenishment semantics
+- tax-state snapshots by ERP inertia
+- analytics classifications
 - competitor observations
 - customer negotiations
 
@@ -207,6 +218,8 @@ First behavior:
 
 - if manual override is not allowed for the resolved scope, reject manual-origin price writes
 
+No pricing threshold should be introduced again by inertia unless the real product language first justifies it.
+
 ## Event plan
 
 ### Event name
@@ -272,8 +285,10 @@ Use existing IAM semantics:
 ### Phase 4. Post-slice hardening
 
 1. review whether a current-price read model is needed
-2. review whether analytics-serving should consume the pricing event
-3. review whether procurement and market intelligence need explicit follow-up contracts
+2. freeze legacy signal boundaries between `pricing`, `inventory`, `procurement`, and analytics
+3. review whether analytics-serving should consume the pricing event
+4. review whether procurement and market intelligence need explicit follow-up contracts
+5. open `inventory` only after the split of stock-owned versus pricing-owned semantics is explicit
 
 ## Acceptance criteria
 
@@ -292,6 +307,8 @@ Pricing is considered complete for the first slice only if:
 - putting price columns in `catalog`
 - adding analytics-specific output fields into canonical pricing writes
 - mixing procurement semantics into first pricing write model
+- copying stock pressure fields directly from `product_erp` into pricing writes
+- copying advisory competitive flags into canonical pricing rows
 - skipping effective windows
 - skipping governance because the first slice seems small
 - treating realized sales price as the same thing as canonical internal price
