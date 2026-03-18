@@ -59,7 +59,18 @@ without querying Keycloak dynamically after each container reset.
 
 ## Bootstrap order
 
-### 1. Start Keycloak
+### 1. Apply the auth session migrations completely
+
+Before starting the real issuer flow, ensure all auth session migrations are applied:
+
+- `0016_auth_web_sessions.sql`
+- `0017_auth_session_governance_defaults.sql`
+- `0018_auth_web_session_runtime_grants.sql`
+
+The grants migration is required when the tables were created by a superuser but
+`server_core` runs with the application role `metalshopping_app`.
+
+### 2. Start Keycloak
 
 Run:
 
@@ -76,13 +87,13 @@ Admin credentials:
 - username: `admin`
 - password: `admin`
 
-## 2. Confirm realm import
+## 3. Confirm realm import
 
 Open the admin console and confirm that the realm `metalshopping` exists.
 
 The realm import is startup-based. If the realm already exists, Keycloak skips import.
 
-## 3. Bootstrap IAM role assignments while `server_core` is still in static mode
+## 4. Bootstrap IAM role assignments while `server_core` is still in static mode
 
 Before switching `server_core` to JWT/OIDC mode, use the existing static bootstrap
 token to create internal IAM role assignments for the imported Keycloak subjects.
@@ -101,7 +112,7 @@ This creates:
 These assignments are stored in MetalShopping Postgres and remain valid after the
 backend switches from static auth to JWT mode.
 
-## 4. Switch `.env` to OIDC/JWT mode
+## 5. Switch `.env` to OIDC/JWT mode
 
 Use these values in `.env`:
 
@@ -129,11 +140,11 @@ MS_AUTH_WEB_COOKIE_PATH=/
 MS_AUTH_WEB_COOKIE_SAMESITE=lax
 ```
 
-## 5. Restart `server_core`
+## 6. Restart `server_core`
 
 After updating `.env`, restart the backend.
 
-## 6. Smoke the session surface
+## 7. Smoke the session surface
 
 Validate:
 
