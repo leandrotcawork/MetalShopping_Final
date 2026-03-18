@@ -4,6 +4,8 @@
 
 Define how MetalShopping should recover its first real product surfaces from the legacy application without reintroducing legacy coupling or weakening the new platform architecture.
 
+This plan should now be read together with `docs/FRONTEND_MIGRATION_CHARTER.md`, which freezes the rule that legacy visual language is preserved while legacy frontend shortcuts are rejected.
+
 The immediate target surfaces are:
 
 - `Products`
@@ -25,6 +27,7 @@ The target frontend must stay:
 - contract-driven
 - reusable by design
 - aligned with generated SDKs and generated types
+- aligned with the frontend migration charter for visual reuse and package ownership
 
 ## Execution order
 

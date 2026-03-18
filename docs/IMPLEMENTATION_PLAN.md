@@ -139,3 +139,4 @@ Phase 4 gate:
 - domain sequencing
 - migration planning from legacy
 - thin-client operational surface recovery
+- frontend migration guardrails for legacy visual reuse with modern package ownership

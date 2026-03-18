@@ -75,6 +75,8 @@
 - operational surface recovery order frozen as `Products -> Shopping -> Home`
 - first `Products` surface implementation plan frozen as the next real UI slice
 - `Products` read-surface ownership and frontend quality gates frozen before web code expansion
+- frontend migration charter frozen so legacy MetalShopping visuals are preserved without reusing weak DTO, API, CSS, and package patterns
+- dedicated frontend migration skill added to keep future UI work aligned with the charter
 
 ## Next
 
@@ -93,6 +95,7 @@
 - scaffold the first thin-client operational surface around `Products`
 - define the first `Products` read surface contract and scaffold `apps/web`
 - validate contract generation after adding the `Products` read surface contract
+- execute the first `Products` UI slice using the frozen frontend migration charter and new frontend skill
 - prepare phase transition checklist from foundation hardening to domain expansion
 - use the MetalDocs reuse matrix to decide the first extracted patterns without copying unsafe defaults
 

@@ -4,6 +4,8 @@
 
 Implement the first real MetalShopping frontend surface by rebuilding the legacy `Products` experience on top of the new canonical backend.
 
+This implementation must follow `docs/FRONTEND_MIGRATION_CHARTER.md`.
+
 ## Why `Products` first
 
 `Products` is the best first surface because it can already be grounded in the current backend foundation:
@@ -28,6 +30,7 @@ But the implementation must not preserve:
 - page-local coupling to backend envelopes
 - manual DTO duplication
 - hard dependency on legacy sidecar contracts
+- ambiguous frontend ownership such as reusable widgets buried inside app-local folders
 
 ## Frontend target structure
 
