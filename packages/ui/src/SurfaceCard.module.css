@@ -1,0 +1,46 @@
+.card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #eadfe4;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.soft {
+  background: linear-gradient(180deg, #fff, #fdfafc);
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.headMain {
+  display: grid;
+  gap: 4px;
+}
+
+.title,
+.subtitle {
+  margin: 0;
+}
+
+.title {
+  color: #251b22;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.subtitle {
+  color: #73606a;
+  font-size: 0.82rem;
+}
+
+.actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}

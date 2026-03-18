@@ -1,28 +1,90 @@
 .stack {
   display: grid;
-  gap: 24px;
+  gap: 14px;
 }
 
-.metrics {
+.heroAside {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
-.surface {
+.bannerRow {
   display: grid;
-  gap: 20px;
-  padding: 24px;
-  border-radius: 28px;
-  border: 1px solid rgba(17, 33, 59, 0.08);
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 18px 50px rgba(17, 33, 59, 0.08);
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.statusBanner {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(145, 19, 42, 0.18);
+  border-radius: 12px;
+  background: rgba(194, 59, 84, 0.06);
+  color: #6a2134;
+}
+
+.statusBanner strong,
+.statusBanner span {
+  margin: 0;
+}
+
+.statusBanner strong {
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.statusBanner span {
+  font-size: 0.9rem;
+}
+
+.statusBannerSuccess {
+  border-color: rgba(145, 19, 42, 0.18);
+}
+
+.statusBannerError {
+  border-color: rgba(166, 27, 27, 0.24);
+  background: rgba(173, 39, 39, 0.08);
+  color: #8d2020;
+}
+
+.quickActions {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.actionButton {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid #d8c9cf;
+  border-radius: 10px;
+  background: #fff;
+  color: #4d3e47;
+  font-weight: 800;
+}
+
+.actionButtonPrimary {
+  border-color: rgba(194, 59, 84, 0.82);
+  background: linear-gradient(180deg, #d45a74, #a92a46);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(145, 19, 42, 0.18);
+}
+
+.filtersCard,
+.tableCard {
+  display: grid;
+  gap: 12px;
 }
 
 .toolbar {
   display: grid;
-  grid-template-columns: minmax(260px, 1.5fr) repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: 1.6fr repeat(3, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .field {
@@ -31,21 +93,21 @@
 }
 
 .label {
-  font-size: 0.8rem;
-  font-weight: 800;
+  font-size: 0.72rem;
+  font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #657692;
+  color: #73606a;
 }
 
 .input,
 .select {
-  min-height: 48px;
-  padding: 0 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(94, 114, 147, 0.22);
-  background: rgba(248, 250, 255, 0.92);
-  color: #152544;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(145, 19, 42, 0.22);
+  background: #fff;
+  color: #251b22;
 }
 
 .statusRow {
@@ -53,8 +115,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  color: #5d6f8b;
-  font-size: 0.95rem;
+  color: #73606a;
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .error {
@@ -62,38 +125,44 @@
   font-weight: 700;
 }
 
+.tableMeta {
+  color: #73606a;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
 .tableWrap {
   overflow: auto;
-  border-radius: 20px;
-  border: 1px solid rgba(17, 33, 59, 0.06);
+  border-radius: 14px;
+  border: 1px solid #f1e8ec;
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
   min-width: 1180px;
-  background: rgba(255, 255, 255, 0.9);
+  background: #fff;
 }
 
 .table thead th {
-  padding: 14px 16px;
+  padding: 12px 14px;
   text-align: left;
-  font-size: 0.8rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #64758f;
-  background: rgba(237, 243, 253, 0.85);
+  color: #8a1735;
+  background: linear-gradient(180deg, #fff, #f8f3f5);
 }
 
 .table tbody td {
-  padding: 16px;
-  border-top: 1px solid rgba(17, 33, 59, 0.06);
+  padding: 12px 14px;
+  border-top: 1px solid #f1e8ec;
   vertical-align: top;
 }
 
 .table tbody tr:hover {
-  background: rgba(240, 246, 255, 0.7);
+  background: rgba(194, 59, 84, 0.04);
 }
 
 .identity {
@@ -104,35 +173,35 @@
 .name {
   margin: 0;
   font-weight: 800;
-  color: #11213b;
+  color: #251b22;
 }
 
 .meta {
   margin: 0;
-  font-size: 0.92rem;
-  color: #5f718c;
+  font-size: 0.88rem;
+  color: #73606a;
 }
 
 .secondary {
   display: grid;
   gap: 4px;
-  font-size: 0.92rem;
-  color: #5a6a84;
+  font-size: 0.88rem;
+  color: #4d3e47;
 }
 
 .money {
   font-weight: 800;
-  color: #0f4f77;
+  color: #8a1735;
 }
 
 .empty {
   padding: 32px;
   text-align: center;
-  color: #677892;
+  color: #73606a;
 }
 
 @media (max-width: 1100px) {
-  .metrics {
+  .heroAside {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -142,11 +211,8 @@
 }
 
 @media (max-width: 720px) {
-  .metrics {
+  .heroAside,
+  .bannerRow {
     grid-template-columns: 1fr;
-  }
-
-  .surface {
-    padding: 18px;
   }
 }

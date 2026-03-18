@@ -1,5 +1,16 @@
 :root {
   color-scheme: light;
+  --ms-wine-900: #5f1227;
+  --ms-wine-700: #8a1735;
+  --ms-wine-500: #c23b54;
+  --ms-ink-900: #251b22;
+  --ms-ink-700: #4d3e47;
+  --ms-ink-500: #73606a;
+  --ms-line-200: #eadfe4;
+  --ms-line-100: #f3ebee;
+  --ms-surface-0: #ffffff;
+  --ms-surface-50: #fdfafc;
+  --ms-surface-100: #f8f2f5;
   font-family:
     "Segoe UI",
     "Helvetica Neue",
@@ -7,9 +18,10 @@
   line-height: 1.5;
   font-weight: 400;
   background:
-    radial-gradient(circle at top left, rgba(214, 225, 255, 0.8), transparent 28%),
-    linear-gradient(180deg, #f4f7fb 0%, #eef2f8 52%, #e8edf5 100%);
-  color: #11213b;
+    radial-gradient(circle at 12% 4%, rgba(194, 59, 84, 0.14), transparent 22%),
+    radial-gradient(circle at 90% 12%, rgba(31, 67, 133, 0.08), transparent 20%),
+    linear-gradient(180deg, #fdfafc 0%, #f7f1f4 48%, #f1f3f8 100%);
+  color: var(--ms-ink-900);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -29,6 +41,7 @@ body,
 
 body {
   min-height: 100vh;
+  background: transparent;
 }
 
 button,

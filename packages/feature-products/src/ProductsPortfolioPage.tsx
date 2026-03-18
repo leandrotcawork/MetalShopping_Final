@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { AppFrame, MetricCard, StatusPill } from "@metalshopping/ui";
+import { AppFrame, MetricCard, StatusPill, SurfaceCard } from "@metalshopping/ui";
 
 import { listProductsPortfolio, type ProductsPortfolioQuery, type ProductsPortfolioResult } from "./api";
 import styles from "./ProductsPortfolioPage.module.css";
@@ -60,38 +60,66 @@ export function ProductsPortfolioPage() {
   const brands = result?.filters.brands ?? [];
   const taxonomyLeaf0Names = result?.filters.taxonomy_leaf0_names ?? [];
   const statuses = result?.filters.status ?? [];
+  const totalVisible = result?.paging.returned ?? 0;
+  const totalMatching = result?.paging.total ?? 0;
+  const liveRows = result?.rows.filter((row) => rowHasLiveCommercialState(row)).length ?? 0;
+  const inventoryLive = result?.rows.filter((row) => (row.on_hand_quantity ?? 0) > 0).length ?? 0;
 
   return (
     <AppFrame
       eyebrow="Operational Surface"
       title="Products"
       subtitle="Portfolio visibility rebuilt on top of the canonical backend. Identity comes from Catalog, price from Pricing, and stock from Inventory through a single backend-owned read surface."
+      aside={
+        <div className={styles.heroAside}>
+          <MetricCard
+            label="Visible now"
+            value={totalVisible}
+            hint={`${totalMatching} matching products in the current filter scope.`}
+          />
+          <MetricCard
+            label="Commercially live"
+            value={liveRows}
+            hint="Rows with current price or stock visibility."
+          />
+          <MetricCard
+            label="Inventory live"
+            value={inventoryLive}
+            hint="Rows currently exposing on-hand quantity above zero."
+          />
+          <MetricCard
+            label="Avg visible price"
+            value={summary.averageVisiblePrice}
+            hint="Average over products with a current effective price."
+          />
+        </div>
+      }
     >
       <div className={styles.stack}>
-        <section className={styles.metrics}>
-          <MetricCard
-            label="Portfolio"
-            value={summary.totalProducts}
-            hint="Canonical products visible in the current tenant."
-          />
-          <MetricCard
-            label="Priced Now"
-            value={summary.pricedProducts}
-            hint="Rows with a current effective internal price."
-          />
-          <MetricCard
-            label="Stocked Now"
-            value={summary.stockedProducts}
-            hint="Rows with current on-hand quantity above zero."
-          />
-          <MetricCard
-            label="Avg Visible Price"
-            value={summary.averageVisiblePrice}
-            hint="Average over products that currently expose a price."
-          />
-        </section>
+        <div className={styles.bannerRow}>
+          <div className={`${styles.statusBanner} ${error ? styles.statusBannerError : styles.statusBannerSuccess}`}>
+            <strong>{error ? "Surface degraded" : "Read surface online"}</strong>
+            <span>
+              {error
+                ? error
+                : `Catalog, Pricing, and Inventory are composing ${summary.totalProducts} canonical products for the current tenant.`}
+            </span>
+          </div>
+          <div className={styles.quickActions}>
+            <button type="button" className={`${styles.actionButton} ${styles.actionButtonPrimary}`}>
+              Products live
+            </button>
+            <button type="button" className={styles.actionButton} disabled>
+              Shopping soon
+            </button>
+          </div>
+        </div>
 
-        <section className={styles.surface}>
+        <SurfaceCard
+          title="Portfolio filters"
+          subtitle="Search and narrow the active portfolio the same way the legacy Products workspace did, but now through a backend-owned read surface."
+          className={styles.filtersCard}
+        >
           <div className={styles.toolbar}>
             <label className={styles.field}>
               <span className={styles.label}>Search</span>
@@ -175,14 +203,23 @@ export function ProductsPortfolioPage() {
               </select>
             </label>
           </div>
+        </SurfaceCard>
 
-          <div className={styles.statusRow}>
-            <span>
+        <SurfaceCard
+          title="Portfolio table"
+          subtitle="Current product identity, current pricing state, and current stock position in one operational workspace."
+          actions={
+            <span className={styles.tableMeta}>
               {loading
-                ? "Refreshing portfolio surface..."
-                : `Showing ${result?.paging.returned ?? 0} of ${result?.paging.total ?? 0} products.`}
+                ? "Refreshing..."
+                : `Showing ${result?.paging.returned ?? 0} of ${result?.paging.total ?? 0}`}
             </span>
-            {error ? <span className={styles.error}>{error}</span> : null}
+          }
+          className={styles.tableCard}
+        >
+          <div className={styles.statusRow}>
+            <span>Current workspace status</span>
+            <span>{loading ? "Syncing visible rows..." : "Portfolio synchronized."}</span>
           </div>
 
           <div className={styles.tableWrap}>
@@ -262,7 +299,7 @@ export function ProductsPortfolioPage() {
               </tbody>
             </table>
           </div>
-        </section>
+        </SurfaceCard>
       </div>
     </AppFrame>
   );

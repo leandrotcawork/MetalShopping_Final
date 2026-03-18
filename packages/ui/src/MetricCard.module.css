@@ -1,32 +1,30 @@
 .card {
   display: grid;
-  gap: 8px;
-  padding: 18px 20px;
-  border-radius: 22px;
-  border: 1px solid rgba(49, 95, 189, 0.08);
-  background: rgba(255, 255, 255, 0.84);
-  box-shadow: 0 12px 32px rgba(38, 63, 110, 0.08);
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #eadfe4;
+  background: #fff;
 }
 
 .label {
   margin: 0;
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  color: #73606a;
+  font-size: 0.7rem;
+  font-weight: 800;
   text-transform: uppercase;
-  color: #607089;
 }
 
 .value {
   margin: 0;
-  font-size: 1.9rem;
+  color: #251b22;
+  font-size: 1.25rem;
   font-weight: 800;
-  letter-spacing: -0.04em;
-  color: #102447;
+  letter-spacing: -0.03em;
 }
 
 .hint {
   margin: 0;
-  font-size: 0.92rem;
-  color: #687a95;
+  color: #73606a;
+  font-size: 0.78rem;
 }
