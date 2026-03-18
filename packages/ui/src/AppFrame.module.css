@@ -32,17 +32,17 @@
 
 .title {
   margin: 0;
-  font-size: clamp(1.65rem, 2vw, 2.35rem);
-  line-height: 1.05;
-  letter-spacing: -0.02em;
+  font-size: 2rem;
+  line-height: 1.08;
+  letter-spacing: -0.015em;
   color: #251b22;
 }
 
 .subtitle {
   margin: 0;
   max-width: 64ch;
-  font-size: 0.82rem;
-  line-height: 1.4;
+  font-size: 1rem;
+  line-height: 1.35;
   color: #73606a;
 }
 

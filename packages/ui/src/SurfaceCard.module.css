@@ -30,13 +30,14 @@
 
 .title {
   color: #251b22;
-  font-size: 1rem;
+  font-size: 1.12rem;
   font-weight: 800;
 }
 
 .subtitle {
   color: #73606a;
-  font-size: 0.82rem;
+  font-size: 0.75rem;
+  line-height: 1.35;
 }
 
 .actions {
