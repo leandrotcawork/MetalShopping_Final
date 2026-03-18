@@ -125,6 +125,7 @@ The most important remaining gaps are:
 - explicit canonical SKU data ownership model spanning `catalog`, `pricing`, `inventory`, `procurement`, and analytics
 - explicit canonical pricing model before the first pricing implementation slice
 - explicit canonical procurement model before procurement contracts and runtime code
+- explicit operational surface recovery plan before frontend implementation accelerates
 - explicit decision record for the next implementation area
 
 ## Key planning docs
@@ -153,6 +154,8 @@ The most important remaining gaps are:
 - `docs/INVENTORY_CANONICAL_MODEL.md`
 - `docs/PROCUREMENT_CANONICAL_MODEL.md`
 - `docs/PROCUREMENT_IMPLEMENTATION_PLAN.md`
+- `docs/OPERATIONAL_SURFACES_PLAN.md`
+- `docs/PRODUCTS_SURFACE_IMPLEMENTATION_PLAN.md`
 - `docs/NEXT_EXECUTION_DECISION.md`
 - `docs/IMPLEMENTATION_PLAN.md`
 - `docs/PROGRESS.md`

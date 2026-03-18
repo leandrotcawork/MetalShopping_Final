@@ -138,3 +138,4 @@ Phase 4 gate:
 - operational observability and security
 - domain sequencing
 - migration planning from legacy
+- thin-client operational surface recovery

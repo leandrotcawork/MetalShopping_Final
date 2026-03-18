@@ -72,6 +72,8 @@
 - first tenant-aware `inventory` module slice implemented with canonical stock position ownership, contracts, outbox event, and HTTP transport
 - canonical inventory model frozen with `on_hand_quantity`, `last_purchase_at`, and `last_sale_at` as first owned semantics
 - procurement birth constraints frozen so supplier-side replenishment semantics do not leak into `pricing`, `inventory`, or direct ERP reads
+- operational surface recovery order frozen as `Products -> Shopping -> Home`
+- first `Products` surface implementation plan frozen as the next real UI slice
 
 ## Next
 
@@ -87,6 +89,8 @@
 - keep pricing and inventory semantically narrow while preparing procurement follow-on ownership
 - freeze procurement canonical model and upstream integration gate before procurement contracts or runtime code
 - decide the first canonical procurement inputs and contracts that integration must publish
+- scaffold the first thin-client operational surface around `Products`
+- define the first `Products` read surface contract and scaffold `apps/web`
 - prepare phase transition checklist from foundation hardening to domain expansion
 - use the MetalDocs reuse matrix to decide the first extracted patterns without copying unsafe defaults
 
