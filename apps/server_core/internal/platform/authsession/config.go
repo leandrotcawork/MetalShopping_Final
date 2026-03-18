@@ -19,6 +19,8 @@ type Config struct {
 	DefaultReturnTo       string
 	SessionCookieName     string
 	StateCookieName       string
+	CSRFCookieName        string
+	CSRFHeaderName        string
 	CookieDomain          string
 	CookiePath            string
 	CookieSecure          bool
@@ -38,6 +40,8 @@ func ConfigFromEnv(environment string) (Config, error) {
 		CookiePath:            firstNonEmpty(strings.TrimSpace(os.Getenv("MS_AUTH_WEB_COOKIE_PATH")), "/"),
 		SessionCookieName:     firstNonEmpty(strings.TrimSpace(os.Getenv("MS_AUTH_WEB_SESSION_COOKIE_NAME")), "ms_web_session"),
 		StateCookieName:       firstNonEmpty(strings.TrimSpace(os.Getenv("MS_AUTH_WEB_STATE_COOKIE_NAME")), "ms_web_login_state"),
+		CSRFCookieName:        firstNonEmpty(strings.TrimSpace(os.Getenv("MS_AUTH_WEB_CSRF_COOKIE_NAME")), "ms_web_csrf"),
+		CSRFHeaderName:        firstNonEmpty(strings.TrimSpace(os.Getenv("MS_AUTH_WEB_CSRF_HEADER_NAME")), "X-CSRF-Token"),
 		DefaultReturnTo:       firstNonEmpty(strings.TrimSpace(os.Getenv("MS_AUTH_WEB_DEFAULT_RETURN_TO")), "/products"),
 		CookieSecure:          strings.ToLower(strings.TrimSpace(environment)) != "local",
 		CookieSameSite:        parseSameSite(os.Getenv("MS_AUTH_WEB_COOKIE_SAMESITE")),
@@ -70,6 +74,12 @@ func (c Config) Validate() error {
 	}
 	if strings.TrimSpace(c.RedirectURI) == "" {
 		return fmt.Errorf("%w: redirect uri is required", ErrOIDCConfigIncomplete)
+	}
+	if strings.TrimSpace(c.CSRFCookieName) == "" {
+		return fmt.Errorf("%w: csrf cookie name is required", ErrOIDCConfigIncomplete)
+	}
+	if strings.TrimSpace(c.CSRFHeaderName) == "" {
+		return fmt.Errorf("%w: csrf header name is required", ErrOIDCConfigIncomplete)
 	}
 	if len(c.Scopes) == 0 {
 		return fmt.Errorf("%w: scopes are required", ErrOIDCConfigIncomplete)

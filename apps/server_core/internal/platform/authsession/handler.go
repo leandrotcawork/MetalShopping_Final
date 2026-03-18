@@ -12,10 +12,20 @@ import (
 type Handler struct {
 	service *Service
 	config  Config
+	allowedOrigins map[string]struct{}
 }
 
-func NewHandler(service *Service, config Config) *Handler {
-	return &Handler{service: service, config: config}
+func NewHandler(service *Service, config Config, allowedOrigins []string) *Handler {
+	originSet := make(map[string]struct{}, len(allowedOrigins))
+	for _, origin := range allowedOrigins {
+		trimmed := strings.TrimSpace(origin)
+		if trimmed == "" {
+			continue
+		}
+		originSet[trimmed] = struct{}{}
+	}
+
+	return &Handler{service: service, config: config, allowedOrigins: originSet}
 }
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
@@ -70,6 +80,7 @@ func (h *Handler) handleCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	SetSessionCookie(w, h.config, session.SessionID, session.IdleTimeoutExpiresAt)
+	SetCSRFCookie(w, h.config, randomCSRFToken(), session.IdleTimeoutExpiresAt)
 	ClearLoginStateCookie(w, h.config)
 	http.Redirect(w, r, returnTo, http.StatusFound)
 }
@@ -90,12 +101,16 @@ func (h *Handler) handleMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	SetCSRFCookie(w, h.config, randomCSRFToken(), state.IdleTimeoutExpiresAt)
 	writeJSON(w, http.StatusOK, mapSessionState(state))
 }
 
 func (h *Handler) handleRefresh(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	if !h.validateCSRFCookieRequest(w, r) {
 		return
 	}
 
@@ -110,12 +125,16 @@ func (h *Handler) handleRefresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	SetSessionCookie(w, h.config, nextSession.SessionID, nextSession.IdleTimeoutExpiresAt)
+	SetCSRFCookie(w, h.config, randomCSRFToken(), nextSession.IdleTimeoutExpiresAt)
 	writeJSON(w, http.StatusOK, mapSessionState(state))
 }
 
 func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	if !h.validateCSRFCookieRequest(w, r) {
 		return
 	}
 
@@ -129,9 +148,37 @@ func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ClearSessionCookie(w, h.config)
+	ClearCSRFCookie(w, h.config)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"logged_out": true,
 	})
+}
+
+func (h *Handler) validateCSRFCookieRequest(w http.ResponseWriter, r *http.Request) bool {
+	origin := strings.TrimSpace(r.Header.Get("Origin"))
+	if origin != "" && len(h.allowedOrigins) > 0 {
+		if _, ok := h.allowedOrigins[origin]; !ok {
+			writeAPIError(w, http.StatusForbidden, "CSRF_REJECTED", "Request origin is not allowed", requestTraceID(r))
+			return false
+		}
+	}
+
+	csrfCookie, err := r.Cookie(h.config.CSRFCookieName)
+	if err != nil || strings.TrimSpace(csrfCookie.Value) == "" {
+		writeAPIError(w, http.StatusForbidden, "CSRF_REJECTED", "Missing CSRF cookie", requestTraceID(r))
+		return false
+	}
+
+	headerValue := strings.TrimSpace(r.Header.Get(h.config.CSRFHeaderName))
+	if headerValue == "" {
+		writeAPIError(w, http.StatusForbidden, "CSRF_REJECTED", "Missing CSRF header", requestTraceID(r))
+		return false
+	}
+	if headerValue != strings.TrimSpace(csrfCookie.Value) {
+		writeAPIError(w, http.StatusForbidden, "CSRF_REJECTED", "Invalid CSRF token", requestTraceID(r))
+		return false
+	}
+	return true
 }
 
 func (h *Handler) requireSessionCookie(w http.ResponseWriter, r *http.Request) (string, bool) {
@@ -213,4 +260,12 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
+}
+
+func randomCSRFToken() string {
+	token, err := randomToken(24)
+	if err != nil {
+		return "csrf-token-unavailable"
+	}
+	return token
 }

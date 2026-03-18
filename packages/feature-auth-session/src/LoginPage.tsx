@@ -12,12 +12,6 @@ type LoginPageProps = {
   autoRedirect?: boolean;
 };
 
-const loginHighlights = [
-  { value: "OIDC", label: "Login corporativo" },
-  { value: "RLS", label: "Tenant isolado" },
-  { value: "IAM", label: "Permissoes no core" },
-];
-
 export function LoginPage({
   apiBaseUrl,
   defaultReturnTo = "/products",
@@ -66,15 +60,6 @@ export function LoginPage({
             Compare precos de mercado, acompanhe tendencias e opere com uma sessao
             web protegida pelo backend do MetalShopping.
           </p>
-
-          <div className={styles.stats}>
-            {loginHighlights.map((item) => (
-              <div key={item.label} className={styles.statCard}>
-                <strong>{item.value}</strong>
-                <span>{item.label}</span>
-              </div>
-            ))}
-          </div>
         </div>
       </aside>
 
@@ -97,13 +82,6 @@ export function LoginPage({
                 sessao sao controladas pelo backend com cookie HttpOnly.
               </p>
             </div>
-
-            <ul className={styles.featureList}>
-              <li>OIDC e issuer externo reais</li>
-              <li>Tenancy e autorizacao resolvidas no server_core</li>
-              <li>Mesmo modelo de identidade para web e app futuro</li>
-            </ul>
-
             {errorMessage ? <p className={`${styles.alert} ${styles.alertError}`}>{errorMessage}</p> : null}
 
             {autoRedirect && status !== "starting_login" && errorMessage.trim() === "" ? (

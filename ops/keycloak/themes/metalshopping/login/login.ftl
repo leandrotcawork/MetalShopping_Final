@@ -21,21 +21,6 @@
                     Compare precos de mercado, acompanhe tendencias e opere com
                     uma sessao web protegida pelo backend do MetalShopping.
                 </p>
-
-                <div class="ms-stats" aria-label="Destaques do MetalShopping">
-                    <div class="ms-stat-card">
-                        <strong>OIDC</strong>
-                        <span>Login corporativo</span>
-                    </div>
-                    <div class="ms-stat-card">
-                        <strong>RLS</strong>
-                        <span>Tenant isolado</span>
-                    </div>
-                    <div class="ms-stat-card">
-                        <strong>IAM</strong>
-                        <span>Permissoes no core</span>
-                    </div>
-                </div>
             </div>
         </aside>
 
@@ -56,13 +41,6 @@
                             sessao sao controladas pelo backend com cookie HttpOnly.
                         </p>
                     </div>
-
-                    <ul class="ms-feature-list">
-                        <li>OIDC e issuer externo reais</li>
-                        <li>Tenancy e autorizacao resolvidas no server_core</li>
-                        <li>Mesmo modelo de identidade para web e app futuro</li>
-                    </ul>
-
                     <#if message?has_content>
                         <div class="ms-alert ms-alert-${message.type}">
                             ${message.summary}

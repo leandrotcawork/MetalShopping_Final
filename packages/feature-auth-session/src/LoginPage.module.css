@@ -13,7 +13,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 64px;
+  padding: 52px;
   position: relative;
   overflow: hidden;
 }
@@ -47,8 +47,8 @@
 }
 
 .eyebrow {
-  margin: 0 0 24px;
-  font-size: 13px;
+  margin: 0 0 20px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -56,8 +56,8 @@
 }
 
 .title {
-  margin: 0 0 18px;
-  font-size: 44px;
+  margin: 0 0 14px;
+  font-size: 38px;
   line-height: 1.12;
   letter-spacing: -0.5px;
   font-weight: 900;
@@ -71,33 +71,10 @@
 }
 
 .subtitle {
-  margin: 0 0 42px;
-  font-size: 17px;
-  line-height: 1.55;
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
   color: rgba(255, 255, 255, 0.8);
-}
-
-.stats {
-  display: flex;
-  gap: 24px;
-}
-
-.statCard {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.statCard strong {
-  font-size: 28px;
-  font-weight: 900;
-}
-
-.statCard span {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: rgba(255, 255, 255, 0.68);
 }
 
 .formArea {
@@ -105,31 +82,31 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 48px 32px;
+  padding: 36px 24px;
   background: #fdfcfc;
 }
 
 .card {
   width: 100%;
-  max-width: 460px;
+  max-width: 432px;
   animation: fadeUp 0.45s ease-out;
 }
 
 .header {
-  margin-bottom: 28px;
+  margin-bottom: 22px;
   text-align: center;
 }
 
 .logo {
-  width: min(260px, 78%);
+  width: min(220px, 72%);
   height: auto;
-  margin: 0 auto 16px;
+  margin: 0 auto 14px;
   display: block;
 }
 
 .header h2 {
   margin: 0;
-  font-size: 29px;
+  font-size: 26px;
   color: #1e1b1c;
 }
 
@@ -140,13 +117,14 @@
 .header p {
   margin: 8px 0 0;
   color: #5e5458;
-  font-size: 15px;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .sessionPanel {
   display: grid;
-  gap: 18px;
-  padding: 24px;
+  gap: 14px;
+  padding: 20px;
   border: 1px solid #e7e2e4;
   border-radius: 18px;
   background: linear-gradient(180deg, #ffffff 0%, #fbf7f9 100%);
@@ -155,7 +133,7 @@
 
 .copyBlock {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .panelEyebrow,
@@ -166,7 +144,7 @@
 
 .panelEyebrow {
   color: #91132a;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 1.2px;
   text-transform: uppercase;
@@ -174,43 +152,15 @@
 
 .panelTitle {
   color: #1e1b1c;
-  font-size: 24px;
+  font-size: 21px;
   line-height: 1.15;
   font-weight: 900;
 }
 
 .panelText {
   color: #5e5458;
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.featureList {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 10px;
-}
-
-.featureList li {
-  position: relative;
-  padding-left: 22px;
-  color: #3a3436;
-  font-size: 14px;
-  line-height: 1.45;
-}
-
-.featureList li::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 8px;
-  width: 9px;
-  height: 9px;
-  border-radius: 999px;
-  background: #91132a;
-  box-shadow: 0 0 0 4px rgba(145, 19, 42, 0.12);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .alert {
@@ -236,11 +186,11 @@
 
 .submitButton {
   width: 100%;
-  min-height: 52px;
+  min-height: 48px;
 }
 
 .footer {
-  margin-top: 24px;
+  margin-top: 18px;
   display: flex;
   flex-direction: column;
   gap: 4px;

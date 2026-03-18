@@ -122,6 +122,8 @@ Required controls:
 - environment-aware cookie configuration
 - issuer, audience, expiry, and clock-skew validation
 - CSRF protection for state-changing cookie-backed endpoints
+- backend-owned double-submit CSRF cookie plus required request header for cookie-backed mutations
+- trusted-origin validation for browser-driven cookie-backed mutations
 - rate limiting and abuse protection on login and refresh paths
 
 ## Web client rules

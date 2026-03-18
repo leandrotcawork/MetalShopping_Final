@@ -26,7 +26,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 64px;
+  padding: 52px;
   position: relative;
   overflow: hidden;
 }
@@ -60,8 +60,8 @@
 }
 
 .ms-eyebrow {
-  margin: 0 0 24px;
-  font-size: 13px;
+  margin: 0 0 20px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -69,8 +69,8 @@
 }
 
 .ms-title {
-  margin: 0 0 18px;
-  font-size: 44px;
+  margin: 0 0 14px;
+  font-size: 38px;
   line-height: 1.12;
   letter-spacing: -0.5px;
   font-weight: 900;
@@ -84,33 +84,10 @@
 }
 
 .ms-subtitle {
-  margin: 0 0 42px;
-  font-size: 17px;
-  line-height: 1.55;
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
   color: rgba(255, 255, 255, 0.8);
-}
-
-.ms-stats {
-  display: flex;
-  gap: 24px;
-}
-
-.ms-stat-card {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.ms-stat-card strong {
-  font-size: 28px;
-  font-weight: 900;
-}
-
-.ms-stat-card span {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: rgba(255, 255, 255, 0.68);
 }
 
 .ms-form-area {
@@ -118,31 +95,31 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 48px 32px;
+  padding: 36px 24px;
   background: #fdfcfc;
 }
 
 .ms-card {
   width: 100%;
-  max-width: 460px;
+  max-width: 432px;
   animation: ms-fade-up 0.45s ease-out;
 }
 
 .ms-header {
-  margin-bottom: 28px;
+  margin-bottom: 22px;
   text-align: center;
 }
 
 .ms-logo {
-  width: min(260px, 78%);
+  width: min(220px, 72%);
   height: auto;
-  margin: 0 auto 16px;
+  margin: 0 auto 14px;
   display: block;
 }
 
 .ms-header h2 {
   margin: 0;
-  font-size: 29px;
+  font-size: 26px;
   color: #1e1b1c;
 }
 
@@ -153,14 +130,14 @@
 .ms-header p {
   margin: 8px 0 0;
   color: #5e5458;
-  font-size: 15px;
-  line-height: 1.55;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .ms-session-panel {
   display: grid;
-  gap: 18px;
-  padding: 24px;
+  gap: 14px;
+  padding: 20px;
   border: 1px solid #e7e2e4;
   border-radius: 18px;
   background: linear-gradient(180deg, #ffffff 0%, #fbf7f9 100%);
@@ -169,7 +146,7 @@
 
 .ms-copy-block {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .ms-panel-eyebrow,
@@ -180,7 +157,7 @@
 
 .ms-panel-eyebrow {
   color: #91132a;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 1.2px;
   text-transform: uppercase;
@@ -188,43 +165,15 @@
 
 .ms-panel-title {
   color: #1e1b1c;
-  font-size: 24px;
+  font-size: 21px;
   line-height: 1.15;
   font-weight: 900;
 }
 
 .ms-panel-text {
   color: #5e5458;
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.ms-feature-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 10px;
-}
-
-.ms-feature-list li {
-  position: relative;
-  padding-left: 22px;
-  color: #3a3436;
-  font-size: 14px;
-  line-height: 1.45;
-}
-
-.ms-feature-list li::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 8px;
-  width: 9px;
-  height: 9px;
-  border-radius: 999px;
-  background: #91132a;
-  box-shadow: 0 0 0 4px rgba(145, 19, 42, 0.12);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .ms-alert {
@@ -257,17 +206,17 @@
 
 .ms-form {
   display: grid;
-  gap: 16px;
+  gap: 14px;
 }
 
 .ms-field {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .ms-label {
   color: #5f1227;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 1px;
   text-transform: uppercase;
@@ -275,15 +224,15 @@
 
 .ms-input {
   width: 100%;
-  min-height: 48px;
+  min-height: 44px;
   box-sizing: border-box;
-  padding: 12px 14px;
+  padding: 10px 13px;
   border: 1px solid #ead5dc;
   border-radius: 12px;
   background: #fff;
   color: #2f262a;
   font: inherit;
-  font-size: 15px;
+  font-size: 14px;
   transition:
     border-color 180ms ease,
     box-shadow 180ms ease,
@@ -300,26 +249,76 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
 .ms-checkbox {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   color: #5e5458;
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer;
 }
 
 .ms-checkbox input {
-  accent-color: #91132a;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 19px;
+  height: 19px;
+  margin: 0;
+  border-radius: 6px;
+  border: 1.5px solid #d7b0ba;
+  background: linear-gradient(180deg, #ffffff 0%, #faf5f7 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  display: inline-grid;
+  place-items: center;
+  position: relative;
+  cursor: pointer;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.ms-checkbox input:hover {
+  border-color: #c73f67;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 0 0 4px rgba(199, 63, 103, 0.08);
+}
+
+.ms-checkbox input:focus {
+  outline: none;
+  border-color: #c73f67;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 0 0 4px rgba(199, 63, 103, 0.14);
+}
+
+.ms-checkbox input:checked {
+  border-color: #91132a;
+  background: linear-gradient(180deg, #c73f67 0%, #91132a 100%);
+  box-shadow: 0 0 0 4px rgba(145, 19, 42, 0.12);
+}
+
+.ms-checkbox input:checked::after {
+  content: "";
+  width: 5px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-1px, -1px);
 }
 
 .ms-link {
   color: #91132a;
   text-decoration: none;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -332,14 +331,14 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 52px;
-  padding: 12px 16px;
+  min-height: 48px;
+  padding: 11px 16px;
   border-radius: 12px;
   border: 1px solid rgba(145, 19, 42, 0.2);
   background: linear-gradient(180deg, #df7b96 0%, #c73f67 100%);
   color: #fff;
   font: inherit;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
   transition:
@@ -362,7 +361,7 @@
 }
 
 .ms-footer {
-  margin-top: 24px;
+  margin-top: 18px;
   display: flex;
   flex-direction: column;
   gap: 4px;

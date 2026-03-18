@@ -111,6 +111,7 @@ Current status:
 - catalog readiness for `pricing` is now explicitly reviewed and the next work is freezing the pricing contract and model boundary before implementation
 - the `Products` surface now proves the thin-client direction, so the next gate is freezing OIDC-backed cookie sessions before the login surface
 - the auth/session foundation is now implemented, so the next gate is real issuer bootstrap with Keycloak and tenant claim wiring before login UI work
+- the login hardening tranche now closes CSRF defense, generated browser HTTP runtime centralization, and thinner auth composition so the next gate can move to post-login operational surfaces
 
 ## Phase 4: Domain expansion
 

@@ -102,6 +102,7 @@ The repository now includes:
 - first tenant-aware `inventory` module slice implemented with canonical stock-position ownership
 - first thin-client `Products` surface implemented with generated frontend transport and backend-owned sorting
 - backend-owned `auth/session` foundation implemented with OIDC cookie-session runtime and generated transport support
+- login hardening now includes browser-safe CSRF defense for cookie-backed mutations, centralized generated browser HTTP runtime, and a thinner auth composition in `apps/web`
 
 ## Current structural gaps
 

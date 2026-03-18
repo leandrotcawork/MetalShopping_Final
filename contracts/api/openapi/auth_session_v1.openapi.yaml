@@ -103,6 +103,12 @@ paths:
     post:
       operationId: refreshAuthSession
       summary: "Rotate or extend the current authenticated web session"
+      parameters:
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           description: "Session refreshed"
@@ -126,6 +132,12 @@ paths:
     post:
       operationId: logoutAuthSession
       summary: "Terminate the current authenticated browser session"
+      parameters:
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           description: "Session terminated"

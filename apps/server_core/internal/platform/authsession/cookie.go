@@ -5,6 +5,32 @@ import (
 	"time"
 )
 
+func SetCSRFCookie(w http.ResponseWriter, config Config, csrfToken string, expiresAt time.Time) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     config.CSRFCookieName,
+		Value:    csrfToken,
+		Path:     config.CookiePath,
+		Domain:   config.CookieDomain,
+		HttpOnly: false,
+		Secure:   config.CookieSecure,
+		SameSite: config.CookieSameSite,
+		Expires:  expiresAt.UTC(),
+	})
+}
+
+func ClearCSRFCookie(w http.ResponseWriter, config Config) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     config.CSRFCookieName,
+		Value:    "",
+		Path:     config.CookiePath,
+		Domain:   config.CookieDomain,
+		HttpOnly: false,
+		Secure:   config.CookieSecure,
+		SameSite: config.CookieSameSite,
+		MaxAge:   -1,
+	})
+}
+
 func SetSessionCookie(w http.ResponseWriter, config Config, sessionID string, expiresAt time.Time) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     config.SessionCookieName,

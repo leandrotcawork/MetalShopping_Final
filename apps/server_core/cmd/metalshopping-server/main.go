@@ -96,6 +96,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	requestAuthenticator := platformauth.NewBearerRequestAuthenticator(authenticator)
+	allowedOrigins := runtime_config.CORSAllowedOriginsFromEnv(environment)
 	publicAuthPaths := []string{
 		"/health/live",
 		"/health/ready",
@@ -112,7 +113,7 @@ func main() {
 				iamRepo,
 				iamAuthorizer,
 			)
-			authSessionHandler := authsession.NewHandler(authSessionService, authSessionConfig)
+			authSessionHandler := authsession.NewHandler(authSessionService, authSessionConfig, allowedOrigins)
 			authSessionHandler.RegisterRoutes(mux)
 			requestAuthenticator = platformauth.NewBearerOrCookieRequestAuthenticator(
 				requestAuthenticator,
@@ -137,7 +138,7 @@ func main() {
 		"/api/v1/auth/session/callback",
 	})
 	requestLogging := observability.NewRequestLoggingMiddleware()
-	corsMiddleware := observability.NewCORSMiddleware(runtime_config.CORSAllowedOriginsFromEnv(environment))
+	corsMiddleware := observability.NewCORSMiddleware(allowedOrigins)
 
 	mux.Handle("/health/live", observability.NewLiveHandler())
 	mux.Handle("/health/ready", observability.NewReadyHandler(postgresReadiness(db)))

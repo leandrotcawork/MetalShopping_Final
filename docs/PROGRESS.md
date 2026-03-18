@@ -82,6 +82,7 @@
 - backend-owned `auth/session` runtime implemented in `server_core` with cookie session storage, OIDC callback flow, governance-aware timeouts, and generated web transport support
 - login and identity architecture frozen with Keycloak as the initial IdP, tenant claim mapping, and a cross-channel identity model for future app surfaces
 - reproducible local Keycloak bootstrap assets added for realm import, tenant claim mapping, local test users, and repeatable IAM role seeding
+- login hardening completed with backend-owned CSRF protection for cookie-backed mutations, centralized generated browser HTTP runtime, thinner auth routing composition, and a frozen login visual baseline shared with the Keycloak theme
 
 ## Next
 
@@ -96,6 +97,7 @@
 - enforce contract validation and artifact generation in team workflow and CI
 - connect the JWT/OIDC auth path to a real issuer configuration
 - bootstrap authenticated session state in `apps/web`
+- validate the hardened login flow end-to-end against the running Keycloak issuer after every local restart
 - apply pricing migrations and database-backed governance defaults in runtime
 - validate pricing write/list/current and outbox publication through smoke tests
 - revise pricing semantics to align with the accepted canonical SKU data ownership model

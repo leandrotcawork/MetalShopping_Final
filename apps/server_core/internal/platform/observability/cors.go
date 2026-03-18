@@ -9,6 +9,7 @@ var defaultCORSAllowedHeaders = []string{
 	"Authorization",
 	"Accept",
 	"Content-Type",
+	"X-CSRF-Token",
 	"X-Trace-Id",
 }
 

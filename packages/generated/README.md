@@ -5,6 +5,6 @@
 - `sdk_ts/`: SDK TypeScript para clientes web e admin
 - `sdk_py/`: SDK Python para workers e integracoes
 - `types_ts/`: tipos TS compartilhados derivados de schema
+- o runtime HTTP compartilhado do frontend deve sair daqui quando fizer parte do fluxo gerado do SDK
 
 Nenhum artefato aqui deve virar fonte primaria manual.
-
