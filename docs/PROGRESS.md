@@ -71,6 +71,7 @@
 - legacy `product_erp` signal boundaries are now frozen so price, stock, procurement, tax, and advisory semantics do not collapse back into a single module
 - first tenant-aware `inventory` module slice implemented with canonical stock position ownership, contracts, outbox event, and HTTP transport
 - canonical inventory model frozen with `on_hand_quantity`, `last_purchase_at`, and `last_sale_at` as first owned semantics
+- procurement birth constraints frozen so supplier-side replenishment semantics do not leak into `pricing`, `inventory`, or direct ERP reads
 
 ## Next
 
@@ -83,8 +84,9 @@
 - revise pricing semantics to align with the accepted canonical SKU data ownership model
 - validate the revised pricing slice and migration path end-to-end after semantic alignment
 - continue domain expansion from the proven tenant-aware foundation
-- keep pricing semantically narrow while preparing `inventory` and procurement follow-on ownership
-- apply inventory migration and validate the new write/list/current path in runtime
+- keep pricing and inventory semantically narrow while preparing procurement follow-on ownership
+- freeze procurement canonical model and upstream integration gate before procurement contracts or runtime code
+- decide the first canonical procurement inputs and contracts that integration must publish
 - prepare phase transition checklist from foundation hardening to domain expansion
 - use the MetalDocs reuse matrix to decide the first extracted patterns without copying unsafe defaults
 

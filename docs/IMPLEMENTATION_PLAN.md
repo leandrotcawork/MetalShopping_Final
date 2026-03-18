@@ -80,7 +80,7 @@ Current status:
 
 - substantially in progress
 - Postgres, auth, tenancy, IAM, catalog, governance runtime foundation, and first event/outbox path are already implemented
-- remaining work in this phase is focused on operating the new hardening path end-to-end and keeping `pricing` semantically clean while its follow-on boundaries to `inventory`, `procurement`, and analytics are frozen
+- remaining work in this phase is focused on operating the new hardening path end-to-end and keeping `pricing`, `inventory`, and upcoming `procurement` boundaries clean while supplier-side semantics are frozen before code
 
 ## Phase 3A: Foundation hardening
 
@@ -114,11 +114,12 @@ Candidate order:
 1. freeze the canonical `catalog` product model from legacy signals
 2. pricing
 3. inventory
-4. market_intelligence
-5. analytics_serving
-6. procurement
-7. CRM
-8. alerts and notifications
+4. procurement planning and integration gate
+5. procurement
+6. market_intelligence
+7. analytics_serving
+8. CRM
+9. alerts and notifications
 
 Phase 4 gate:
 
@@ -126,6 +127,9 @@ Phase 4 gate:
 - the canonical ownership of product identity, taxonomy, identifiers, descriptions, and non-catalog data boundaries must be explicit first
 - SKU data ownership across `catalog`, `pricing`, `inventory`, `procurement`, and analytics must be frozen before pricing semantics evolve further
 - legacy `product_erp` signals must be explicitly split so `pricing` does not absorb stock, stale-stock, tax, or advisory analytics fields by convenience
+- `procurement` must not start on raw ERP or direct external DB reads as its long-term model
+- the first procurement slice must depend on published canonical procurement inputs such as `inventory_position`, `sales_orders_open`, `purchase_orders_open`, and `supplier_lead_time`
+- `procurement` must not import analytics internals to recover operational facts
 
 ## Ongoing workstreams
 

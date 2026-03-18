@@ -98,6 +98,8 @@ The repository now includes:
 - initial API, event, and governance contracts
 - functional contract validation and generated artifact scripts
 - explicit canonical SKU data ownership model aligned to legacy `products` and `product_erp`
+- first tenant-aware `pricing` module slice implemented and semantically realigned against legacy replacement-cost and average-cost language
+- first tenant-aware `inventory` module slice implemented with canonical stock-position ownership
 
 ## Current structural gaps
 
@@ -106,7 +108,7 @@ The most important remaining gaps are:
 - production identity integration is not yet connected to a real issuer or JWKS source
 - outbox exists and catalog emits real events, but broker delivery and worker consumption are still not in place
 - governance is operational in runtime, but broader operational surfaces still need administrative mutation paths
-- catalog is now a strong canonical foundation, pricing semantics have been realigned against the accepted SKU ownership model, and the next gate is keeping legacy `product_erp` signals split cleanly across `pricing`, `inventory`, `procurement`, and analytics read models
+- catalog is now a strong canonical foundation, pricing semantics have been realigned against the accepted SKU ownership model, inventory owns live stock position, and the next gate is freezing procurement so supplier-side replenishment semantics do not leak into existing modules
 - contract validation and generation are now functional locally and must next be enforced in team workflow and CI
 
 ## Planning deliverables
@@ -122,6 +124,7 @@ The most important remaining gaps are:
 - explicit canonical product model for `catalog` before pricing and inventory expansion
 - explicit canonical SKU data ownership model spanning `catalog`, `pricing`, `inventory`, `procurement`, and analytics
 - explicit canonical pricing model before the first pricing implementation slice
+- explicit canonical procurement model before procurement contracts and runtime code
 - explicit decision record for the next implementation area
 
 ## Key planning docs
@@ -148,6 +151,8 @@ The most important remaining gaps are:
 - `docs/PRICING_LEGACY_SIGNAL_BOUNDARIES.md`
 - `docs/PRICING_IMPLEMENTATION_PLAN.md`
 - `docs/INVENTORY_CANONICAL_MODEL.md`
+- `docs/PROCUREMENT_CANONICAL_MODEL.md`
+- `docs/PROCUREMENT_IMPLEMENTATION_PLAN.md`
 - `docs/NEXT_EXECUTION_DECISION.md`
 - `docs/IMPLEMENTATION_PLAN.md`
 - `docs/PROGRESS.md`
