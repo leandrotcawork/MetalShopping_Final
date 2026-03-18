@@ -70,6 +70,12 @@ paths:
             schema:
               $ref: "../jsonschema/pricing_set_product_price_request_v1.schema.json"
       responses:
+        "200":
+          description: "No material pricing change was detected; current price record returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/pricing_product_price_v1.schema.json"
         "201":
           description: "Price record accepted"
           content:

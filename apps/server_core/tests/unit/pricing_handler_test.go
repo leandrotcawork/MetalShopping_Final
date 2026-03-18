@@ -15,7 +15,7 @@ import (
 )
 
 func TestPricingHandlerSetsProductPrice(t *testing.T) {
-	repo := &fakePricingRepository{}
+	repo := &fakePricingRepository{applied: true}
 	service := application.NewService(repo, &fakeManualOverrideGuard{})
 	handler := pricinghttp.NewHandler(service, &fakePermissionChecker{allowed: true})
 
@@ -33,8 +33,55 @@ func TestPricingHandlerSetsProductPrice(t *testing.T) {
 	if rr.Code != http.StatusCreated {
 		t.Fatalf("expected 201, got %d body=%s", rr.Code, rr.Body.String())
 	}
+	if rr.Header().Get("X-Change-Applied") != "true" {
+		t.Fatalf("expected X-Change-Applied true, got %q", rr.Header().Get("X-Change-Applied"))
+	}
 	if !strings.Contains(rr.Body.String(), `"currency_code":"BRL"`) {
 		t.Fatalf("expected currency code in response, got %s", rr.Body.String())
+	}
+}
+
+func TestPricingHandlerReturns200WhenPriceDidNotChange(t *testing.T) {
+	avg := 84.5
+	repo := &fakePricingRepository{
+		applied: false,
+		current: domain.ProductPrice{
+			PriceID:               "prc_current",
+			TenantID:              "tenant-1",
+			ProductID:             "prd_1",
+			CurrencyCode:          "BRL",
+			PriceAmount:           120,
+			ReplacementCostAmount: 90,
+			AverageCostAmount:     &avg,
+			PricingStatus:         domain.PricingStatusActive,
+			EffectiveFrom:         time.Date(2026, 3, 17, 12, 0, 0, 0, time.UTC),
+			OriginType:            domain.OriginTypeImport,
+			ReasonCode:            "existing",
+			UpdatedBy:             "integration-worker",
+		},
+	}
+	service := application.NewService(repo, &fakeManualOverrideGuard{})
+	handler := pricinghttp.NewHandler(service, &fakePermissionChecker{allowed: true})
+
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/pricing/products/prd_1/prices", strings.NewReader(`{"currency_code":"BRL","price_amount":120,"replacement_cost_amount":90,"average_cost_amount":84.5,"pricing_status":"active","effective_from":"2026-03-18T12:00:00Z","origin_type":"import","reason_code":"rerun_same_price"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{SubjectID: "pricing-admin", TenantID: "tenant-1"}))
+	req = req.WithContext(tenancy_runtime.WithTenant(req.Context(), tenancy_runtime.Tenant{ID: "tenant-1"}))
+
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", rr.Code, rr.Body.String())
+	}
+	if rr.Header().Get("X-Change-Applied") != "false" {
+		t.Fatalf("expected X-Change-Applied false, got %q", rr.Header().Get("X-Change-Applied"))
+	}
+	if !strings.Contains(rr.Body.String(), `"price_id":"prc_current"`) {
+		t.Fatalf("expected current price to be returned, got %s", rr.Body.String())
 	}
 }
 

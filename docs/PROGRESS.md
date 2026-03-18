@@ -67,6 +67,7 @@
 - pricing unit tests added and passing
 - canonical SKU data ownership model frozen from legacy `products` and `product_erp` semantics
 - pricing revision started to replace generic cost-basis and margin-floor persistence with legacy-aligned cost semantics
+- pricing write path now deduplicates no-op reruns so history is change-based instead of execution-based
 
 ## Next
 

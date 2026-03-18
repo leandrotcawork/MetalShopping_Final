@@ -2,6 +2,7 @@ package domain
 
 import (
 	"fmt"
+	"math"
 	"regexp"
 	"strings"
 	"time"
@@ -96,4 +97,33 @@ func (s PricingStatus) IsValid() bool {
 
 func (o OriginType) IsValid() bool {
 	return o == OriginTypeManual || o == OriginTypePolicy || o == OriginTypeImport
+}
+
+func (p ProductPrice) HasSameCommercialState(other ProductPrice) bool {
+	return strings.EqualFold(strings.TrimSpace(p.TenantID), strings.TrimSpace(other.TenantID)) &&
+		strings.EqualFold(strings.TrimSpace(p.ProductID), strings.TrimSpace(other.ProductID)) &&
+		strings.EqualFold(strings.TrimSpace(p.CurrencyCode), strings.TrimSpace(other.CurrencyCode)) &&
+		sameRoundedNumber(p.PriceAmount, other.PriceAmount) &&
+		sameRoundedNumber(p.ReplacementCostAmount, other.ReplacementCostAmount) &&
+		sameOptionalRoundedNumber(p.AverageCostAmount, other.AverageCostAmount) &&
+		p.PricingStatus == other.PricingStatus &&
+		sameOptionalTime(p.EffectiveTo, other.EffectiveTo)
+}
+
+func sameRoundedNumber(a, b float64) bool {
+	return math.Abs(a-b) < 0.00005
+}
+
+func sameOptionalRoundedNumber(a, b *float64) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return sameRoundedNumber(*a, *b)
+}
+
+func sameOptionalTime(a, b *time.Time) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return a.UTC().Equal(b.UTC())
 }

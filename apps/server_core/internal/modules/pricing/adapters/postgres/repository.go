@@ -22,12 +22,36 @@ func NewRepository(db *sql.DB, outboxStore *outbox.Store) *Repository {
 	return &Repository{db: db, outboxStore: outboxStore}
 }
 
-func (r *Repository) CreateProductPrice(ctx context.Context, price domain.ProductPrice, traceID string) error {
+func (r *Repository) CreateProductPrice(ctx context.Context, price domain.ProductPrice, traceID string) (domain.ProductPrice, bool, error) {
 	tx, err := pgdb.BeginTenantTx(ctx, r.db, price.TenantID, nil)
 	if err != nil {
-		return err
+		return domain.ProductPrice{}, false, err
 	}
 	defer func() { _ = tx.Rollback() }()
+
+	const currentOpenSQL = `
+SELECT price_id, tenant_id, product_id, currency_code, price_amount, replacement_cost_amount, average_cost_amount, pricing_status, effective_from, effective_to, origin_type, COALESCE(origin_ref, ''), reason_code, updated_by, created_at, updated_at
+FROM pricing_product_prices
+WHERE tenant_id = current_tenant_id()
+  AND product_id = $1
+  AND effective_to IS NULL
+ORDER BY effective_from DESC, created_at DESC
+LIMIT 1
+`
+	currentRow := tx.QueryRowContext(ctx, currentOpenSQL, price.ProductID)
+	currentOpen, err := scanProductPrice(currentRow)
+	switch {
+	case err == nil:
+		if currentOpen.HasSameCommercialState(price) {
+			if err := tx.Commit(); err != nil {
+				return domain.ProductPrice{}, false, fmt.Errorf("commit pricing product price no-op: %w", err)
+			}
+			return currentOpen, false, nil
+		}
+	case errors.Is(err, sql.ErrNoRows):
+	default:
+		return domain.ProductPrice{}, false, fmt.Errorf("load current open pricing product price: %w", err)
+	}
 
 	const closeOpenWindowSQL = `
 UPDATE pricing_product_prices
@@ -38,7 +62,7 @@ WHERE tenant_id = current_tenant_id()
   AND effective_to IS NULL
 `
 	if _, err := tx.ExecContext(ctx, closeOpenWindowSQL, price.ProductID, price.EffectiveFrom, price.UpdatedAt); err != nil {
-		return fmt.Errorf("close pricing open window: %w", err)
+		return domain.ProductPrice{}, false, fmt.Errorf("close pricing open window: %w", err)
 	}
 
 	const insertSQL = `
@@ -98,23 +122,23 @@ VALUES (
 		price.CreatedAt,
 		price.UpdatedAt,
 	); err != nil {
-		return fmt.Errorf("insert pricing product price: %w", err)
+		return domain.ProductPrice{}, false, fmt.Errorf("insert pricing product price: %w", err)
 	}
 
 	if r.outboxStore != nil {
 		record, err := pricingevents.NewPriceSetOutboxRecord(price, traceID, price.CreatedAt)
 		if err != nil {
-			return err
+			return domain.ProductPrice{}, false, err
 		}
 		if err := r.outboxStore.AppendInTx(ctx, tx, []outbox.Record{record}); err != nil {
-			return err
+			return domain.ProductPrice{}, false, err
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit pricing product price: %w", err)
+		return domain.ProductPrice{}, false, fmt.Errorf("commit pricing product price: %w", err)
 	}
-	return nil
+	return price, true, nil
 }
 
 func (r *Repository) ListProductPrices(ctx context.Context, tenantID, productID string) ([]domain.ProductPrice, error) {

@@ -8,7 +8,7 @@ import (
 )
 
 type Repository interface {
-	CreateProductPrice(ctx context.Context, price domain.ProductPrice, traceID string) error
+	CreateProductPrice(ctx context.Context, price domain.ProductPrice, traceID string) (domain.ProductPrice, bool, error)
 	ListProductPrices(ctx context.Context, tenantID, productID string) ([]domain.ProductPrice, error)
 	GetCurrentProductPrice(ctx context.Context, tenantID, productID string) (domain.ProductPrice, error)
 }

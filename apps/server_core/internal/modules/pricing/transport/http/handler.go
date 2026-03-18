@@ -102,7 +102,7 @@ func (h *Handler) handleSetProductPrice(w http.ResponseWriter, r *http.Request, 
 		effectiveTo = &parsed
 	}
 
-	price, err := h.service.SetProductPrice(r.Context(), application.SetProductPriceCommand{
+	price, applied, err := h.service.SetProductPrice(r.Context(), application.SetProductPriceCommand{
 		TenantID:              tenantID,
 		TraceID:               requestTraceID(r),
 		ProductID:             productID,
@@ -142,7 +142,12 @@ func (h *Handler) handleSetProductPrice(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, mapProductPrice(price))
+	w.Header().Set("X-Change-Applied", boolToString(applied))
+	if applied {
+		writeJSON(w, http.StatusCreated, mapProductPrice(price))
+		return
+	}
+	writeJSON(w, http.StatusOK, mapProductPrice(price))
 }
 
 func (h *Handler) handleListProductPrices(w http.ResponseWriter, r *http.Request, userID, tenantID, productID string) {
@@ -264,4 +269,11 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
+}
+
+func boolToString(value bool) string {
+	if value {
+		return "true"
+	}
+	return "false"
 }

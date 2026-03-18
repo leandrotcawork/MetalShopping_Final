@@ -42,7 +42,7 @@ func NewService(repo ports.Repository, manualOverrideGuard ports.ManualPriceOver
 	}
 }
 
-func (s *Service) SetProductPrice(ctx context.Context, cmd SetProductPriceCommand) (domain.ProductPrice, error) {
+func (s *Service) SetProductPrice(ctx context.Context, cmd SetProductPriceCommand) (domain.ProductPrice, bool, error) {
 	status := domain.PricingStatus(strings.ToLower(strings.TrimSpace(cmd.PricingStatus)))
 	if status == "" {
 		status = domain.PricingStatusActive
@@ -55,7 +55,7 @@ func (s *Service) SetProductPrice(ctx context.Context, cmd SetProductPriceComman
 
 	if s.manualOverrideGuard != nil {
 		if err := s.manualOverrideGuard.ValidateManualOverride(ctx, strings.TrimSpace(cmd.TenantID), originType); err != nil {
-			return domain.ProductPrice{}, err
+			return domain.ProductPrice{}, false, err
 		}
 	}
 
@@ -79,12 +79,13 @@ func (s *Service) SetProductPrice(ctx context.Context, cmd SetProductPriceComman
 		UpdatedAt:             now,
 	}
 	if err := price.ValidateForWrite(); err != nil {
-		return domain.ProductPrice{}, err
+		return domain.ProductPrice{}, false, err
 	}
-	if err := s.repo.CreateProductPrice(ctx, price, strings.TrimSpace(cmd.TraceID)); err != nil {
-		return domain.ProductPrice{}, err
+	storedPrice, applied, err := s.repo.CreateProductPrice(ctx, price, strings.TrimSpace(cmd.TraceID))
+	if err != nil {
+		return domain.ProductPrice{}, false, err
 	}
-	return price, nil
+	return storedPrice, applied, nil
 }
 
 func (s *Service) ListProductPrices(ctx context.Context, tenantID, productID string) ([]domain.ProductPrice, error) {

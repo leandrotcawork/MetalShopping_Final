@@ -193,6 +193,28 @@ It should be:
 - linked to `catalog_products(product_id)`
 - constrained to one open effective price window per product and tenant
 - protected by RLS
+- treated as canonical change history, not run history
+
+## Historical write rule
+
+`pricing_product_prices` is the canonical history table for internal pricing changes.
+
+Frozen rule:
+
+- write a new row only when commercial state changes materially
+- repeated imports or reruns with the same semantic price state must not create a new history row
+- no-op writes must not publish new pricing events
+
+Material change for the first slice means a change in one or more of:
+
+- `currency_code`
+- `price_amount`
+- `replacement_cost_amount`
+- `average_cost_amount`
+- `pricing_status`
+- `effective_to`
+
+Operational fields such as actor, origin reference, and request execution time do not justify a new canonical history row by themselves
 
 ## Explicit non-goals for the first slice
 
