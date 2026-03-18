@@ -1,0 +1,6 @@
+{
+  "name": "@metalshopping/feature-products",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Products surface feature package for MetalShopping"
+}

@@ -74,6 +74,7 @@
 - procurement birth constraints frozen so supplier-side replenishment semantics do not leak into `pricing`, `inventory`, or direct ERP reads
 - operational surface recovery order frozen as `Products -> Shopping -> Home`
 - first `Products` surface implementation plan frozen as the next real UI slice
+- `Products` read-surface ownership and frontend quality gates frozen before web code expansion
 
 ## Next
 
@@ -91,6 +92,7 @@
 - decide the first canonical procurement inputs and contracts that integration must publish
 - scaffold the first thin-client operational surface around `Products`
 - define the first `Products` read surface contract and scaffold `apps/web`
+- validate contract generation after adding the `Products` read surface contract
 - prepare phase transition checklist from foundation hardening to domain expansion
 - use the MetalDocs reuse matrix to decide the first extracted patterns without copying unsafe defaults
 

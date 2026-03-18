@@ -10,6 +10,7 @@ OPERATION_IDS = [
     'listCatalogTaxonomyNodes',
     'listInventoryProductPositions',
     'listPricingProductPrices',
+    'listProductsPortfolio',
     'setInventoryProductPosition',
     'setPricingProductPrice',
     'upsertIamUserRoleAssignment',

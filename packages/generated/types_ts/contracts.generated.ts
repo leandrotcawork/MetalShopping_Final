@@ -25,7 +25,9 @@ export const schemaIds = {
   "pricing_price_set_payload_v1.schema": "https://contracts.metalshopping.local/schema/pricing/price_set_payload/v1",
   "pricing_product_price_list_v1.schema": "https://contracts.metalshopping.local/schema/pricing/product_price_list/v1",
   "pricing_product_price_v1.schema": "https://contracts.metalshopping.local/schema/pricing/product_price/v1",
-  "pricing_set_product_price_request_v1.schema": "https://contracts.metalshopping.local/schema/pricing/set_product_price_request/v1"
+  "pricing_set_product_price_request_v1.schema": "https://contracts.metalshopping.local/schema/pricing/set_product_price_request/v1",
+  "products_portfolio_item_v1.schema": "https://metalshopping.dev/contracts/api/jsonschema/products_portfolio_item_v1.schema.json",
+  "products_portfolio_list_v1.schema": "https://metalshopping.dev/contracts/api/jsonschema/products_portfolio_list_v1.schema.json"
 } as const;
 
 export const eventNames = [

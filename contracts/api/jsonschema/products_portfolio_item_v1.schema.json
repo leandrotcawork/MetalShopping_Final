@@ -1,0 +1,119 @@
+{
+  "$id": "https://metalshopping.dev/contracts/api/jsonschema/products_portfolio_item_v1.schema.json",
+  "title": "ProductsPortfolioItemV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "product_id",
+    "sku",
+    "name",
+    "product_status",
+    "updated_at"
+  ],
+  "properties": {
+    "product_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sku": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "brand_name": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "pn_interno": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "reference": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "ean": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "taxonomy_leaf_name": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "taxonomy_leaf0_name": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "stock_profile_code": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "product_status": {
+      "type": "string",
+      "minLength": 1
+    },
+    "current_price_amount": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "replacement_cost_amount": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "average_cost_amount": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "currency_code": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "on_hand_quantity": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "inventory_position_status": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "updated_at": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

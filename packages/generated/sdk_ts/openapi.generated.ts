@@ -10,6 +10,7 @@ export const operationIds = [
   "listCatalogTaxonomyNodes",
   "listInventoryProductPositions",
   "listPricingProductPrices",
+  "listProductsPortfolio",
   "setInventoryProductPosition",
   "setPricingProductPrice",
   "upsertIamUserRoleAssignment"

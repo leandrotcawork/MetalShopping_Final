@@ -1,0 +1,81 @@
+openapi: 3.1.0
+info:
+  title: "Products Operational Read API"
+  version: "v1"
+  summary: "Operational read contract for the first MetalShopping products surface"
+  description: >
+    Draft OpenAPI contract for the thin-client Products portfolio surface.
+    This is a backend-owned operational read surface that consolidates
+    canonical product identity, current pricing, and current inventory state.
+  x-metalshopping:
+    contract_name: "products_v1"
+    contract_status: "draft"
+    bounded_context: "catalog"
+    owner_team: "product_core"
+servers:
+  - url: https://api.metalshopping.local
+paths:
+  /api/v1/products/portfolio:
+    get:
+      operationId: listProductsPortfolio
+      summary: "List portfolio products for the authenticated tenant"
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: brand_name
+          schema:
+            type: string
+        - in: query
+          name: taxonomy_leaf0_name
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        "200":
+          description: "Portfolio products returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/products_portfolio_list_v1.schema.json"
+        "400":
+          description: "Validation failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Authorization failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+components:
+  schemas: {}
