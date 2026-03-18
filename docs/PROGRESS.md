@@ -81,13 +81,16 @@
 - next auth/session boundary for `web` frozen on OIDC plus `HttpOnly` cookie sessions
 - backend-owned `auth/session` runtime implemented in `server_core` with cookie session storage, OIDC callback flow, governance-aware timeouts, and generated web transport support
 - login and identity architecture frozen with Keycloak as the initial IdP, tenant claim mapping, and a cross-channel identity model for future app surfaces
+- reproducible local Keycloak bootstrap assets added for realm import, tenant claim mapping, local test users, and repeatable IAM role seeding
 
 ## Next
 
 - keep ADR set complete and stable
 - freeze and implement the backend-owned `auth/session` surface before login UI work
 - bootstrap Keycloak locally as the first real issuer
+- start the local Keycloak issuer from the committed bootstrap assets
 - configure realm, client, redirect URI, and `tenant_id` mapper
+- seed internal IAM roles for the imported Keycloak subject ids before switching the backend to JWT mode
 - connect `.env` to the Keycloak local issuer and validate `auth/session` end to end
 - validate migrations `0008`, `0009`, and `0010` end-to-end in the running server with smoke coverage
 - enforce contract validation and artifact generation in team workflow and CI

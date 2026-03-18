@@ -10,12 +10,14 @@ The next implementation area should be real local issuer bootstrap with Keycloak
 - the next structural gap is connecting that runtime to a real issuer instead of bootstrap auth
 - login UI should not start before realm, client, claims, and callback wiring are real
 - the future app strategy depends on choosing the initial IdP and cross-channel identity model correctly
+- the local bootstrap now has committed assets, so the next work is operational bring-up and smoke validation rather than more design freeze
 
 ## Constraints
 
 This decision is valid only if planning and implementation follow:
 
 - `docs/LOGIN_AND_IDENTITY_ARCHITECTURE.md`
+- `docs/KEYCLOAK_LOCAL_BOOTSTRAP.md`
 - `docs/WEB_AUTH_SESSION_IMPLEMENTATION_PLAN.md`
 - `docs/adrs/ADR-0009-web-session-boundary-on-oidc-and-http-only-cookies.md`
 - `docs/adrs/ADR-0010-initial-identity-provider-keycloak.md`
