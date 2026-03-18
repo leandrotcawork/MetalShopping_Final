@@ -1,0 +1,26 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 76px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.success {
+  background: rgba(34, 144, 92, 0.12);
+  color: #17704b;
+}
+
+.neutral {
+  background: rgba(58, 92, 154, 0.1);
+  color: #3158a3;
+}
+
+.muted {
+  background: rgba(98, 114, 137, 0.12);
+  color: #5a697f;
+}

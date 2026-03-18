@@ -1,13 +1,11 @@
 {
-  "name": "@metalshopping/web",
+  "name": "metalshopping",
   "private": true,
-  "version": "0.1.0",
-  "description": "Thin-client web surface for MetalShopping",
-  "scripts": {
-    "dev": "vite",
-    "typecheck": "tsc --noEmit",
-    "build": "vite build"
-  },
+  "workspaces": [
+    "apps/web",
+    "packages/ui",
+    "packages/feature-products"
+  ],
   "dependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
@@ -18,5 +16,9 @@
     "@vitejs/plugin-react": "^4.4.1",
     "typescript": "^5.7.3",
     "vite": "^6.1.1"
+  },
+  "scripts": {
+    "web:typecheck": "npm --workspace @metalshopping/web run typecheck",
+    "web:build": "npm --workspace @metalshopping/web run build"
   }
 }

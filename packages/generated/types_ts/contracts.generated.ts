@@ -30,6 +30,287 @@ export const schemaIds = {
   "products_portfolio_list_v1.schema": "https://metalshopping.dev/contracts/api/jsonschema/products_portfolio_list_v1.schema.json"
 } as const;
 
+export type CatalogCreateProductRequestV1 = {
+  sku: string;
+  name: string;
+  description?: string;
+  brand_name?: string;
+  stock_profile_code?: string;
+  primary_taxonomy_node_id?: string;
+  identifiers?: Array<{
+    identifier_type: string;
+    identifier_value: string;
+    source_system?: string;
+    is_primary?: boolean;
+  }>;
+  status?: "active" | "inactive";
+};
+
+export type CatalogProductCreatedPayloadV1 = {
+  product_id: string;
+  tenant_id: string;
+  sku: string;
+  name: string;
+  description?: string;
+  status: "active" | "inactive";
+};
+
+export type CatalogProductIdentifierListV1 = {
+  items: Array<CatalogProductIdentifierV1>;
+};
+
+export type CatalogProductIdentifierV1 = {
+  product_identifier_id: string;
+  product_id: string;
+  tenant_id: string;
+  identifier_type: string;
+  identifier_value: string;
+  source_system?: string;
+  is_primary: boolean;
+};
+
+export type CatalogProductListV1 = {
+  items: Array<CatalogProductV1>;
+};
+
+export type CatalogProductV1 = {
+  product_id: string;
+  tenant_id: string;
+  sku: string;
+  name: string;
+  description?: string;
+  brand_name?: string;
+  stock_profile_code?: string;
+  primary_taxonomy_node_id?: string;
+  identifiers?: Array<CatalogProductIdentifierV1>;
+  status: "active" | "inactive";
+};
+
+export type CatalogTaxonomyLevelDefListV1 = {
+  items: Array<CatalogTaxonomyLevelDefV1>;
+};
+
+export type CatalogTaxonomyLevelDefV1 = {
+  tenant_id: string;
+  level: number;
+  label: string;
+  short_label?: string;
+  is_enabled: boolean;
+};
+
+export type CatalogTaxonomyNodeListV1 = {
+  items: Array<CatalogTaxonomyNodeV1>;
+};
+
+export type CatalogTaxonomyNodeV1 = {
+  taxonomy_node_id: string;
+  tenant_id: string;
+  name: string;
+  name_norm?: string;
+  code?: string;
+  parent_taxonomy_node_id?: string;
+  level: number;
+  path?: string;
+  is_active: boolean;
+};
+
+export type CommonErrorV1 = {
+  error: {
+    code: string;
+    message: string;
+    details: Record<string, unknown>;
+    trace_id: string;
+  };
+};
+
+export type CommonHealthV1 = {
+  status: string;
+};
+
+export type GovernanceFeatureFlagV1 = {
+  flag_name: string;
+  version: string;
+  status: "draft" | "proposed" | "accepted" | "deprecated";
+  bounded_context: string;
+  scope: Array<"global" | "environment" | "tenant" | "feature-target">;
+  description?: string;
+  schema_ref: string;
+};
+
+export type GovernancePolicyV1 = {
+  policy_name: string;
+  version: string;
+  status: "draft" | "proposed" | "accepted" | "deprecated";
+  bounded_context: string;
+  scope: Array<"global" | "environment" | "tenant" | "module">;
+  description?: string;
+  schema_ref: string;
+};
+
+export type GovernanceThresholdV1 = {
+  threshold_name: string;
+  version: string;
+  status: "draft" | "proposed" | "accepted" | "deprecated";
+  bounded_context: string;
+  scope: Array<"global" | "environment" | "tenant" | "module" | "entity/profile">;
+  description?: string;
+  schema_ref: string;
+};
+
+export type IamRoleAssignedPayloadV1 = {
+  user_id: string;
+  display_name: string;
+  role: "admin" | "tenant_admin" | "catalog_manager" | "pricing_manager" | "sales_manager" | "analyst" | "automation_owner" | "viewer";
+  assigned_by: string;
+};
+
+export type IamRoleAssignmentV1 = {
+  user_id: string;
+  display_name: string;
+  role: "admin" | "tenant_admin" | "catalog_manager" | "pricing_manager" | "sales_manager" | "analyst" | "automation_owner" | "viewer";
+};
+
+export type IamUpsertRoleAssignmentRequestV1 = {
+  display_name?: string;
+  role: "admin" | "tenant_admin" | "catalog_manager" | "pricing_manager" | "sales_manager" | "analyst" | "automation_owner" | "viewer";
+};
+
+export type InventoryPositionUpdatedPayloadV1 = {
+  position_id: string;
+  tenant_id: string;
+  product_id: string;
+  on_hand_quantity: number;
+  last_purchase_at?: string;
+  last_sale_at?: string;
+  position_status: "active" | "inactive";
+  effective_from: string;
+  effective_to?: string;
+  origin_type: "manual" | "import" | "reconciliation";
+  origin_ref?: string;
+  reason_code: string;
+  updated_by: string;
+};
+
+export type InventoryProductPositionListV1 = {
+  items: Array<InventoryProductPositionV1>;
+};
+
+export type InventoryProductPositionV1 = {
+  position_id: string;
+  tenant_id: string;
+  product_id: string;
+  on_hand_quantity: number;
+  last_purchase_at?: string;
+  last_sale_at?: string;
+  position_status: "active" | "inactive";
+  effective_from: string;
+  effective_to?: string;
+  origin_type: "manual" | "import" | "reconciliation";
+  origin_ref?: string;
+  reason_code: string;
+  updated_by: string;
+};
+
+export type InventorySetProductPositionRequestV1 = {
+  on_hand_quantity: number;
+  last_purchase_at?: string;
+  last_sale_at?: string;
+  position_status: "active" | "inactive";
+  effective_from: string;
+  effective_to?: string;
+  origin_type: "manual" | "import" | "reconciliation";
+  origin_ref?: string;
+  reason_code: string;
+};
+
+export type PricingPriceSetPayloadV1 = {
+  price_id: string;
+  tenant_id: string;
+  product_id: string;
+  currency_code: string;
+  price_amount: number;
+  replacement_cost_amount: number;
+  average_cost_amount?: number;
+  pricing_status: "draft" | "active" | "inactive";
+  effective_from: string;
+  effective_to?: string;
+  origin_type: "manual" | "policy" | "import";
+  origin_ref?: string;
+  reason_code: string;
+  updated_by: string;
+};
+
+export type PricingProductPriceListV1 = {
+  items: Array<PricingProductPriceV1>;
+};
+
+export type PricingProductPriceV1 = {
+  price_id: string;
+  tenant_id: string;
+  product_id: string;
+  currency_code: string;
+  price_amount: number;
+  replacement_cost_amount: number;
+  average_cost_amount?: number;
+  pricing_status: "draft" | "active" | "inactive";
+  effective_from: string;
+  effective_to?: string;
+  origin_type: "manual" | "policy" | "import";
+  origin_ref?: string;
+  reason_code: string;
+  updated_by: string;
+};
+
+export type PricingSetProductPriceRequestV1 = {
+  currency_code: string;
+  price_amount: number;
+  replacement_cost_amount: number;
+  average_cost_amount?: number;
+  pricing_status?: "draft" | "active" | "inactive";
+  effective_from: string;
+  effective_to?: string;
+  origin_type: "manual" | "policy" | "import";
+  origin_ref?: string;
+  reason_code: string;
+};
+
+export type ProductsPortfolioItemV1 = {
+  product_id: string;
+  sku: string;
+  name: string;
+  description?: string | null;
+  brand_name?: string | null;
+  pn_interno?: string | null;
+  reference?: string | null;
+  ean?: string | null;
+  taxonomy_leaf_name?: string | null;
+  taxonomy_leaf0_name?: string | null;
+  stock_profile_code?: string | null;
+  product_status: string;
+  current_price_amount?: number | null;
+  replacement_cost_amount?: number | null;
+  average_cost_amount?: number | null;
+  currency_code?: string | null;
+  on_hand_quantity?: number | null;
+  inventory_position_status?: string | null;
+  updated_at: string;
+};
+
+export type ProductsPortfolioListV1 = {
+  rows: Array<ProductsPortfolioItemV1>;
+  filters: {
+    brands: Array<string>;
+    taxonomy_leaf0_names: Array<string>;
+    status: Array<string>;
+  };
+  paging: {
+    offset: number;
+    limit: number;
+    returned: number;
+    total: number;
+  };
+};
+
 export const eventNames = [
   "catalog.product_created",
   "iam.role_assigned",

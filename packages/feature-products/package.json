@@ -2,5 +2,9 @@
   "name": "@metalshopping/feature-products",
   "private": true,
   "version": "0.1.0",
-  "description": "Products surface feature package for MetalShopping"
+  "description": "Products surface feature package for MetalShopping",
+  "peerDependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
 }

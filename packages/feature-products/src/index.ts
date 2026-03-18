@@ -1,1 +1,1 @@
-export {};
+export { ProductsPortfolioPage } from "./ProductsPortfolioPage";

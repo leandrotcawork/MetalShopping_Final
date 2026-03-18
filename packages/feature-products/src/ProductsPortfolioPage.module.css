@@ -1,0 +1,152 @@
+.stack {
+  display: grid;
+  gap: 24px;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.surface {
+  display: grid;
+  gap: 20px;
+  padding: 24px;
+  border-radius: 28px;
+  border: 1px solid rgba(17, 33, 59, 0.08);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 18px 50px rgba(17, 33, 59, 0.08);
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.5fr) repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.label {
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #657692;
+}
+
+.input,
+.select {
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(94, 114, 147, 0.22);
+  background: rgba(248, 250, 255, 0.92);
+  color: #152544;
+}
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: #5d6f8b;
+  font-size: 0.95rem;
+}
+
+.error {
+  color: #b23b3b;
+  font-weight: 700;
+}
+
+.tableWrap {
+  overflow: auto;
+  border-radius: 20px;
+  border: 1px solid rgba(17, 33, 59, 0.06);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1180px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.table thead th {
+  padding: 14px 16px;
+  text-align: left;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64758f;
+  background: rgba(237, 243, 253, 0.85);
+}
+
+.table tbody td {
+  padding: 16px;
+  border-top: 1px solid rgba(17, 33, 59, 0.06);
+  vertical-align: top;
+}
+
+.table tbody tr:hover {
+  background: rgba(240, 246, 255, 0.7);
+}
+
+.identity {
+  display: grid;
+  gap: 4px;
+}
+
+.name {
+  margin: 0;
+  font-weight: 800;
+  color: #11213b;
+}
+
+.meta {
+  margin: 0;
+  font-size: 0.92rem;
+  color: #5f718c;
+}
+
+.secondary {
+  display: grid;
+  gap: 4px;
+  font-size: 0.92rem;
+  color: #5a6a84;
+}
+
+.money {
+  font-weight: 800;
+  color: #0f4f77;
+}
+
+.empty {
+  padding: 32px;
+  text-align: center;
+  color: #677892;
+}
+
+@media (max-width: 1100px) {
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .toolbar {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .surface {
+    padding: 18px;
+  }
+}

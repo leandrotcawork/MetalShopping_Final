@@ -1,0 +1,43 @@
+.frame {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 40px 28px 64px;
+}
+
+.hero {
+  display: grid;
+  gap: 10px;
+  padding: 28px 32px;
+  border: 1px solid rgba(17, 33, 59, 0.08);
+  border-radius: 28px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(244, 248, 255, 0.9)),
+    linear-gradient(135deg, #ffffff, #ecf3ff);
+  box-shadow: 0 22px 60px rgba(17, 33, 59, 0.1);
+}
+
+.eyebrow {
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #315fbd;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(2rem, 2.6vw, 3.2rem);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.subtitle {
+  margin: 0;
+  max-width: 72ch;
+  font-size: 1rem;
+  color: #52627d;
+}
+
+.content {
+  margin-top: 26px;
+}

@@ -1,15 +1,30 @@
 {
   "compilerOptions": {
     "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "strict": true,
     "jsx": "react-jsx",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
     "noEmit": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@metalshopping/ui": ["../../packages/ui/src/index.ts"],
+      "@metalshopping/feature-products": ["../../packages/feature-products/src/index.ts"],
+      "@metalshopping/generated-types": ["../../packages/generated/types_ts/contracts.generated.ts"]
+    }
   },
   "include": [
     "src/**/*.ts",
-    "src/**/*.tsx"
+    "src/**/*.tsx",
+    "../../packages/ui/src/**/*.ts",
+    "../../packages/ui/src/**/*.tsx",
+    "../../packages/feature-products/src/**/*.ts",
+    "../../packages/feature-products/src/**/*.tsx",
+    "../../packages/generated/types_ts/**/*.ts"
   ]
 }
