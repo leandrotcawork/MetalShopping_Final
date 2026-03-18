@@ -334,6 +334,7 @@ func (r *Repository) ListProductsPortfolio(ctx context.Context, tenantID string,
 	defer func() { _ = tx.Rollback() }()
 
 	whereSQL, args := buildProductsPortfolioWhereClause(filter, 1)
+	orderBySQL := buildProductsPortfolioOrderBy(filter)
 
 	querySQL := productsPortfolioCommonCTE + `
 SELECT
@@ -366,7 +367,7 @@ LEFT JOIN identifier_lookup idf ON idf.product_id = p.product_id
 LEFT JOIN current_prices cp ON cp.product_id = p.product_id
 LEFT JOIN current_positions ip ON ip.product_id = p.product_id
 ` + whereSQL + `
-ORDER BY p.sku ASC
+` + orderBySQL + `
 LIMIT $` + fmt.Sprintf("%d", len(args)+1) + ` OFFSET $` + fmt.Sprintf("%d", len(args)+2)
 
 	rows, err := tx.QueryContext(ctx, querySQL, append(args, filter.Limit, filter.Offset)...)
@@ -591,7 +592,7 @@ LIMIT 1
 		return catalogreadmodel.ProductsPortfolioFilters{}, fmt.Errorf("query products portfolio taxonomy label: %w", err)
 	}
 	if strings.TrimSpace(taxonomyLeaf0Label) == "" {
-		taxonomyLeaf0Label = "Grupo"
+		taxonomyLeaf0Label = "Taxonomia"
 	}
 
 	return catalogreadmodel.ProductsPortfolioFilters{
@@ -600,6 +601,34 @@ LIMIT 1
 		TaxonomyLeaf0Label: taxonomyLeaf0Label,
 		Status:             statuses,
 	}, nil
+}
+
+func buildProductsPortfolioOrderBy(filter catalogreadmodel.ProductsPortfolioFilter) string {
+	direction := "ASC"
+	if strings.EqualFold(filter.SortDirection, "desc") {
+		direction = "DESC"
+	}
+
+	switch filter.SortKey {
+	case "pn_interno":
+		return fmt.Sprintf("ORDER BY (idf.pn_interno IS NULL) ASC, idf.pn_interno %s, p.sku ASC", direction)
+	case "name":
+		return fmt.Sprintf("ORDER BY p.name %s, p.sku ASC", direction)
+	case "brand_name":
+		return fmt.Sprintf("ORDER BY (p.brand_name IS NULL) ASC, p.brand_name %s, p.sku ASC", direction)
+	case "taxonomy_leaf0_name":
+		return fmt.Sprintf("ORDER BY (txo.taxonomy_leaf0_name IS NULL) ASC, txo.taxonomy_leaf0_name %s, p.sku ASC", direction)
+	case "product_status":
+		return fmt.Sprintf("ORDER BY p.status %s, p.sku ASC", direction)
+	case "current_price_amount":
+		return fmt.Sprintf("ORDER BY (cp.price_amount IS NULL) ASC, cp.price_amount %s, p.sku ASC", direction)
+	case "replacement_cost_amount":
+		return fmt.Sprintf("ORDER BY (cp.replacement_cost_amount IS NULL) ASC, cp.replacement_cost_amount %s, p.sku ASC", direction)
+	case "on_hand_quantity":
+		return fmt.Sprintf("ORDER BY (ip.on_hand_quantity IS NULL) ASC, ip.on_hand_quantity %s, p.sku ASC", direction)
+	default:
+		return "ORDER BY (idf.pn_interno IS NULL) ASC, idf.pn_interno ASC, p.sku ASC"
+	}
 }
 
 func queryStringList(ctx context.Context, tx *sql.Tx, query string) ([]string, error) {

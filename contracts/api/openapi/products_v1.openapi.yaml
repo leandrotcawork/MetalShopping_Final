@@ -37,6 +37,26 @@ paths:
           schema:
             type: string
         - in: query
+          name: sort_key
+          schema:
+            type: string
+            enum:
+              - pn_interno
+              - name
+              - brand_name
+              - taxonomy_leaf0_name
+              - product_status
+              - current_price_amount
+              - replacement_cost_amount
+              - on_hand_quantity
+        - in: query
+          name: sort_direction
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+        - in: query
           name: limit
           schema:
             type: integer

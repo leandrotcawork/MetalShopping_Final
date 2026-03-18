@@ -19,6 +19,7 @@ type fakeCatalogRepository struct {
 	taxonomyNodes []domain.TaxonomyNode
 	taxonomyDefs  []domain.TaxonomyLevelDef
 	portfolio     catalogreadmodel.ProductsPortfolioResult
+	portfolioFilter catalogreadmodel.ProductsPortfolioFilter
 	err           error
 }
 
@@ -59,10 +60,11 @@ func (f *fakeCatalogRepository) ListTaxonomyLevelDefs(context.Context, string) (
 	return f.taxonomyDefs, nil
 }
 
-func (f *fakeCatalogRepository) ListProductsPortfolio(context.Context, string, catalogreadmodel.ProductsPortfolioFilter) (catalogreadmodel.ProductsPortfolioResult, error) {
+func (f *fakeCatalogRepository) ListProductsPortfolio(_ context.Context, _ string, filter catalogreadmodel.ProductsPortfolioFilter) (catalogreadmodel.ProductsPortfolioResult, error) {
 	if f.err != nil {
 		return catalogreadmodel.ProductsPortfolioResult{}, f.err
 	}
+	f.portfolioFilter = filter
 	return f.portfolio, nil
 }
 

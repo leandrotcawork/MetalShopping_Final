@@ -23,4 +23,12 @@ export default defineConfig({
     host: "127.0.0.1",
     port: 4173,
   },
+  test: {
+    include: [
+      "src/**/*.test.ts",
+      "src/**/*.test.tsx",
+      "../../packages/feature-products/src/**/*.test.ts",
+      "../../packages/feature-products/src/**/*.test.tsx",
+    ],
+  },
 });

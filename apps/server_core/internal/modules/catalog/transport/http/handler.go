@@ -345,6 +345,8 @@ func productsPortfolioFilterFromRequest(r *http.Request) (catalogreadmodel.Produ
 		BrandName:         r.URL.Query().Get("brand_name"),
 		TaxonomyLeaf0Name: r.URL.Query().Get("taxonomy_leaf0_name"),
 		Status:            r.URL.Query().Get("status"),
+		SortKey:           r.URL.Query().Get("sort_key"),
+		SortDirection:     r.URL.Query().Get("sort_direction"),
 	}
 
 	limitRaw := strings.TrimSpace(r.URL.Query().Get("limit"))
@@ -363,6 +365,20 @@ func productsPortfolioFilterFromRequest(r *http.Request) (catalogreadmodel.Produ
 			return catalogreadmodel.ProductsPortfolioFilter{}, errors.New("products portfolio offset must be zero or greater")
 		}
 		filter.Offset = offset
+	}
+	if sortKey := strings.TrimSpace(strings.ToLower(filter.SortKey)); sortKey != "" {
+		switch sortKey {
+		case "pn_interno", "name", "brand_name", "taxonomy_leaf0_name", "product_status", "current_price_amount", "replacement_cost_amount", "on_hand_quantity":
+		default:
+			return catalogreadmodel.ProductsPortfolioFilter{}, errors.New("products portfolio sort_key is invalid")
+		}
+	}
+	if sortDirection := strings.TrimSpace(strings.ToLower(filter.SortDirection)); sortDirection != "" {
+		switch sortDirection {
+		case "asc", "desc":
+		default:
+			return catalogreadmodel.ProductsPortfolioFilter{}, errors.New("products portfolio sort_direction must be asc or desc")
+		}
 	}
 
 	return filter, nil

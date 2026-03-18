@@ -1,14 +1,27 @@
 import type {
-  CommonErrorV1,
   ProductsPortfolioItemV1,
   ProductsPortfolioListV1,
 } from "@metalshopping/generated-types";
+
+export type ProductsPortfolioSortKey =
+  | "pn_interno"
+  | "name"
+  | "brand_name"
+  | "taxonomy_leaf0_name"
+  | "product_status"
+  | "current_price_amount"
+  | "replacement_cost_amount"
+  | "on_hand_quantity";
+
+export type ProductsPortfolioSortDirection = "asc" | "desc";
 
 export type ProductsPortfolioQuery = {
   search: string;
   brandName: string;
   taxonomyLeaf0Name: string;
   status: string;
+  sortKey: ProductsPortfolioSortKey;
+  sortDirection: ProductsPortfolioSortDirection;
   limit: number;
   offset: number;
 };
@@ -16,55 +29,37 @@ export type ProductsPortfolioQuery = {
 export type ProductsPortfolioResult = ProductsPortfolioListV1;
 export type ProductsPortfolioItem = ProductsPortfolioItemV1;
 
-const defaultApiBaseUrl = "http://127.0.0.1:8080";
-const defaultBearerToken = "local-dev-token";
+export type QueryParamValue = string | number | boolean | null | undefined;
 
-function apiBaseUrl() {
-  return (import.meta.env.VITE_API_BASE_URL ?? defaultApiBaseUrl).replace(/\/$/, "");
-}
+export type HttpClient = {
+  getJson<T>(path: string, options?: { query?: Record<string, QueryParamValue> }): Promise<T>;
+};
 
-function apiBearerToken() {
-  return import.meta.env.VITE_API_BEARER_TOKEN ?? defaultBearerToken;
-}
+export type ProductsPortfolioApi = {
+  listProductsPortfolio(query: ProductsPortfolioQuery): Promise<ProductsPortfolioResult>;
+};
 
-function toQueryString(query: ProductsPortfolioQuery) {
-  const params = new URLSearchParams();
-  if (query.search.trim() !== "") {
-    params.set("search", query.search.trim());
-  }
-  if (query.brandName.trim() !== "") {
-    params.set("brand_name", query.brandName.trim());
-  }
-  if (query.taxonomyLeaf0Name.trim() !== "") {
-    params.set("taxonomy_leaf0_name", query.taxonomyLeaf0Name.trim());
-  }
-  if (query.status.trim() !== "") {
-    params.set("status", query.status.trim());
-  }
-  params.set("limit", String(query.limit));
-  params.set("offset", String(query.offset));
-  return params.toString();
-}
-
-export async function listProductsPortfolio(
+export function toProductsPortfolioQueryParams(
   query: ProductsPortfolioQuery,
-): Promise<ProductsPortfolioResult> {
-  const response = await fetch(
-    `${apiBaseUrl()}/api/v1/products/portfolio?${toQueryString(query)}`,
-    {
-      headers: {
-        Authorization: `Bearer ${apiBearerToken()}`,
-      },
+): Record<string, QueryParamValue> {
+  return {
+    search: query.search.trim() || undefined,
+    brand_name: query.brandName.trim() || undefined,
+    taxonomy_leaf0_name: query.taxonomyLeaf0Name.trim() || undefined,
+    status: query.status.trim() || undefined,
+    sort_key: query.sortKey,
+    sort_direction: query.sortDirection,
+    limit: query.limit,
+    offset: query.offset,
+  };
+}
+
+export function createProductsPortfolioApi(client: HttpClient): ProductsPortfolioApi {
+  return {
+    listProductsPortfolio(query) {
+      return client.getJson<ProductsPortfolioResult>("/api/v1/products/portfolio", {
+        query: toProductsPortfolioQueryParams(query),
+      });
     },
-  );
-
-  if (!response.ok) {
-    const errorPayload = (await response.json().catch(() => null)) as CommonErrorV1 | null;
-    const message =
-      errorPayload?.error?.message ??
-      `Products portfolio request failed with status ${response.status}`;
-    throw new Error(message);
-  }
-
-  return (await response.json()) as ProductsPortfolioResult;
+  };
 }

@@ -1,6 +1,10 @@
 export { AppFrame } from "./AppFrame";
+export { Button } from "./Button";
 export { FilterDropdown } from "./FilterDropdown";
 export { MetricCard } from "./MetricCard";
+export { MetricChip } from "./MetricChip";
 export type { SelectMenuOption } from "./FilterDropdown";
+export { SortHeaderButton } from "./SortHeaderButton";
+export { StatusBanner } from "./StatusBanner";
 export { StatusPill } from "./StatusPill";
 export { SurfaceCard } from "./SurfaceCard";

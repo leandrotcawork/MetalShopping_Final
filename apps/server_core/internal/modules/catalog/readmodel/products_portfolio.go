@@ -9,6 +9,8 @@ import (
 const (
 	defaultProductsPortfolioLimit = 50
 	maxProductsPortfolioLimit     = 200
+	defaultProductsPortfolioSortKey = "pn_interno"
+	defaultProductsPortfolioSortDirection = "asc"
 )
 
 type ProductsPortfolioFilter struct {
@@ -16,6 +18,8 @@ type ProductsPortfolioFilter struct {
 	BrandName         string
 	TaxonomyLeaf0Name string
 	Status            string
+	SortKey           string
+	SortDirection     string
 	Limit             int
 	Offset            int
 }
@@ -84,6 +88,8 @@ func normalizeProductsPortfolioFilter(filter ProductsPortfolioFilter) ProductsPo
 	filter.BrandName = strings.TrimSpace(filter.BrandName)
 	filter.TaxonomyLeaf0Name = strings.TrimSpace(filter.TaxonomyLeaf0Name)
 	filter.Status = strings.ToLower(strings.TrimSpace(filter.Status))
+	filter.SortKey = strings.ToLower(strings.TrimSpace(filter.SortKey))
+	filter.SortDirection = strings.ToLower(strings.TrimSpace(filter.SortDirection))
 
 	if filter.Limit <= 0 {
 		filter.Limit = defaultProductsPortfolioLimit
@@ -93,6 +99,12 @@ func normalizeProductsPortfolioFilter(filter ProductsPortfolioFilter) ProductsPo
 	}
 	if filter.Offset < 0 {
 		filter.Offset = 0
+	}
+	if filter.SortKey == "" {
+		filter.SortKey = defaultProductsPortfolioSortKey
+	}
+	if filter.SortDirection == "" {
+		filter.SortDirection = defaultProductsPortfolioSortDirection
 	}
 
 	return filter

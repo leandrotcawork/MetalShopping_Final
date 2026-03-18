@@ -1,0 +1,28 @@
+.chip {
+  min-width: 96px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(145, 19, 42, 0.14);
+  background: rgba(255, 255, 255, 0.94);
+  display: grid;
+  gap: 2px;
+}
+
+.chip small,
+.chip strong {
+  margin: 0;
+}
+
+.chip small {
+  color: #6f5d65;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.chip strong {
+  color: #231b1f;
+  font-size: 1.4rem;
+  line-height: 1;
+  font-weight: 900;
+}

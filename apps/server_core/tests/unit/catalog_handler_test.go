@@ -161,7 +161,7 @@ func TestCatalogHandlerListsProductsPortfolio(t *testing.T) {
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/products/portfolio?search=SKU&limit=25", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/products/portfolio?search=SKU&limit=25&sort_key=current_price_amount&sort_direction=desc", nil)
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{SubjectID: "viewer-local", TenantID: "tenant-1"}))
 	req = req.WithContext(tenancy_runtime.WithTenant(req.Context(), tenancy_runtime.Tenant{ID: "tenant-1"}))
 
@@ -179,6 +179,9 @@ func TestCatalogHandlerListsProductsPortfolio(t *testing.T) {
 	}
 	if !strings.Contains(rr.Body.String(), `"taxonomy_leaf0_label":"Departamento"`) {
 		t.Fatalf("expected taxonomy level label in response, got %s", rr.Body.String())
+	}
+	if repo.portfolioFilter.SortKey != "current_price_amount" || repo.portfolioFilter.SortDirection != "desc" {
+		t.Fatalf("expected sort filter to be propagated, got %+v", repo.portfolioFilter)
 	}
 }
 

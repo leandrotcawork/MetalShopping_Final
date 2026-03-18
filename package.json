@@ -19,6 +19,7 @@
   },
   "scripts": {
     "web:typecheck": "npm --workspace @metalshopping/web run typecheck",
-    "web:build": "npm --workspace @metalshopping/web run build"
+    "web:build": "npm --workspace @metalshopping/web run build",
+    "web:test": "npm --workspace @metalshopping/web run test"
   }
 }
