@@ -172,7 +172,7 @@ func (h *Handler) handleRunsList(w http.ResponseWriter, r *http.Request) {
 			requestedBy = "unknown"
 		}
 
-		created, err := h.service.CreateRunRequest(r.Context(), tenantID, ports.CreateRunRequestInput{
+		created, err := h.service.CreateRunRequest(r.Context(), tenantID, traceID, ports.CreateRunRequestInput{
 			InputMode:         requestBody.InputMode,
 			CatalogProductIDs: requestBody.CatalogProductIDs,
 			XLSXFilePath:      requestBody.XLSXFilePath,

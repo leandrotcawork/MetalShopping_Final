@@ -55,7 +55,7 @@ func composeModules(ctx context.Context, runtime runtimeComposition, governance 
 	suppliersDirectoryReader := supplierspg.NewDirectoryReader(runtime.db)
 	suppliersService := suppliersapp.NewService(suppliersDirectoryReader)
 	shoppingReader := shoppingpg.NewReader(runtime.db, suppliersService)
-	shoppingWriter := shoppingpg.NewWriter(runtime.db)
+	shoppingWriter := shoppingpg.NewWriter(runtime.db, outboxStore)
 
 	iamAuthorizer := iamapp.NewStaticAuthorizer()
 	iamAuthorization := iamapp.NewAuthorizationService(iamRepo, iamAuthorizer)

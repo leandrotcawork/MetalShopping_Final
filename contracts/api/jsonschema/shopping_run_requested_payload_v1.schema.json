@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.metalshopping.local/schema/shopping/run_requested_payload/v1",
+  "title": "shopping_run_requested_payload_v1",
+  "description": "Event payload for a queued shopping run request.",
+  "type": "object",
+  "additionalProperties": false,
+  "x-metalshopping": {
+    "contract_name": "shopping_run_requested_payload_v1",
+    "contract_status": "draft",
+    "bounded_context": "shopping",
+    "owner_team": "product_core"
+  },
+  "required": [
+    "run_request_id",
+    "tenant_id",
+    "input_mode",
+    "requested_by",
+    "requested_at",
+    "catalog_product_ids",
+    "supplier_codes"
+  ],
+  "properties": {
+    "run_request_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tenant_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_mode": {
+      "type": "string",
+      "enum": [
+        "xlsx",
+        "catalog"
+      ]
+    },
+    "requested_by": {
+      "type": "string",
+      "minLength": 1
+    },
+    "requested_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "catalog_product_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      }
+    },
+    "supplier_codes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "xlsx_file_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "xlsx_scope_identifiers": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "notes": {
+      "type": "string"
+    }
+  }
+}

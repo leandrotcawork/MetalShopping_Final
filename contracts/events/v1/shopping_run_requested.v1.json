@@ -1,0 +1,16 @@
+{
+  "event_name": "shopping.run_requested",
+  "version": "v1",
+  "status": "draft",
+  "bounded_context": "shopping",
+  "producer": "apps/server_core",
+  "trigger": "A tenant-scoped shopping run request is created and queued for async execution.",
+  "description": "Versioned event for Shopping run orchestration delivery.",
+  "envelope": {
+    "event_id": "string",
+    "occurred_at": "timestamp",
+    "tenant_id": "string",
+    "trace_id": "string"
+  },
+  "payload_schema_ref": "../../api/jsonschema/shopping_run_requested_payload_v1.schema.json"
+}

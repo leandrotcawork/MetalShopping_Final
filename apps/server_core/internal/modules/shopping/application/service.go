@@ -41,7 +41,7 @@ func (s *Service) GetRunRequest(ctx context.Context, tenantID, runRequestID stri
 	return s.reader.GetRunRequest(ctx, strings.TrimSpace(tenantID), strings.TrimSpace(runRequestID))
 }
 
-func (s *Service) CreateRunRequest(ctx context.Context, tenantID string, input ports.CreateRunRequestInput) (ports.RunRequest, error) {
+func (s *Service) CreateRunRequest(ctx context.Context, tenantID, traceID string, input ports.CreateRunRequestInput) (ports.RunRequest, error) {
 	input.InputMode = strings.ToLower(strings.TrimSpace(input.InputMode))
 	input.XLSXFilePath = strings.TrimSpace(input.XLSXFilePath)
 	input.Notes = strings.TrimSpace(input.Notes)
@@ -77,7 +77,7 @@ func (s *Service) CreateRunRequest(ctx context.Context, tenantID string, input p
 	}
 	input.XLSXScopeIDs = filteredScopeIDs
 
-	return s.writer.CreateRunRequest(ctx, strings.TrimSpace(tenantID), input)
+	return s.writer.CreateRunRequest(ctx, strings.TrimSpace(tenantID), strings.TrimSpace(traceID), input)
 }
 
 func (s *Service) ListSupplierSignals(ctx context.Context, tenantID string, filter ports.SupplierSignalListFilter) (ports.SupplierSignalList, error) {

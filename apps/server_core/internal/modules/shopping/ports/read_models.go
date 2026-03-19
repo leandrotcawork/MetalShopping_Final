@@ -151,6 +151,6 @@ type RunRequest struct {
 }
 
 type Writer interface {
-	CreateRunRequest(ctx context.Context, tenantID string, input CreateRunRequestInput) (RunRequest, error)
+	CreateRunRequest(ctx context.Context, tenantID, traceID string, input CreateRunRequestInput) (RunRequest, error)
 	UpsertSupplierSignal(ctx context.Context, tenantID string, input UpsertSupplierSignalInput) (SupplierSignal, error)
 }

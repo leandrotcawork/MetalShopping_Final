@@ -1,7 +1,8 @@
-"""Shopping Price worker (ADR-0018 Phase 1).
+"""Shopping Price worker (ADR-0018/ADR-0025).
 
 Worker responsibility:
 - queue mode: claim shopping run requests from Postgres and process lifecycle
+- event mode: consume published shopping.run_requested events and process targeted requests
 - legacy mode: ingest shopping run snapshots from an input JSON
 - write read-model rows consumed by server_core APIs
 - keep idempotent upserts to avoid duplicate run items on retry
@@ -46,6 +47,13 @@ class RunRequest:
     input_mode: str
     input_payload: dict[str, Any]
     requested_by: str
+
+
+@dataclass(frozen=True)
+class PublishedRunRequestedEvent:
+    event_id: str
+    tenant_id: str
+    run_request_id: str
 
 
 @dataclass(frozen=True)
@@ -394,6 +402,120 @@ def claim_next_request(
     )
 
 
+def claim_request_by_id(
+    conn: psycopg.Connection,
+    tenant_id: str,
+    run_request_id: str,
+    worker_id: str,
+) -> RunRequest | None:
+    with conn.cursor() as cur:
+        cur.execute("BEGIN")
+        cur.execute("SELECT set_config('app.tenant_id', %s, true)", (tenant_id,))
+        cur.execute(
+            """
+            SELECT run_request_id, tenant_id, input_mode, input_payload_json, requested_by
+            FROM shopping_price_run_requests
+            WHERE tenant_id = current_tenant_id()
+              AND run_request_id = %s
+              AND request_status = 'queued'
+            FOR UPDATE SKIP LOCKED
+            LIMIT 1
+            """,
+            (run_request_id,),
+        )
+        row = cur.fetchone()
+        if row is None:
+            cur.execute("COMMIT")
+            return None
+
+        cur.execute(
+            """
+            UPDATE shopping_price_run_requests
+            SET request_status = 'claimed',
+                claimed_at = NOW(),
+                worker_id = %s,
+                updated_at = NOW()
+            WHERE run_request_id = %s
+            """,
+            (worker_id, run_request_id),
+        )
+        cur.execute("COMMIT")
+
+    payload = row[3]
+    if not isinstance(payload, dict):
+        raise ValueError("input_payload_json must be a JSON object")
+    return RunRequest(
+        run_request_id=str(row[0]),
+        tenant_id=str(row[1]),
+        input_mode=str(row[2]),
+        input_payload=payload,
+        requested_by=str(row[4]),
+    )
+
+
+def fetch_published_run_requested_events(
+    conn: psycopg.Connection,
+    limit: int,
+    tenant_id_filter: str | None,
+) -> list[PublishedRunRequestedEvent]:
+    with conn.cursor() as cur:
+        if tenant_id_filter:
+            cur.execute(
+                """
+                SELECT
+                  e.event_id,
+                  e.tenant_id,
+                  e.payload_json ->> 'run_request_id' AS run_request_id
+                FROM outbox_events e
+                JOIN shopping_price_run_requests r
+                  ON r.tenant_id = e.tenant_id
+                 AND r.run_request_id = (e.payload_json ->> 'run_request_id')
+                 AND r.request_status = 'queued'
+                WHERE e.event_name = 'shopping.run_requested'
+                  AND e.status = 'published'
+                  AND e.tenant_id = %s
+                ORDER BY e.created_at ASC
+                LIMIT %s
+                """,
+                (tenant_id_filter, limit),
+            )
+        else:
+            cur.execute(
+                """
+                SELECT
+                  e.event_id,
+                  e.tenant_id,
+                  e.payload_json ->> 'run_request_id' AS run_request_id
+                FROM outbox_events e
+                JOIN shopping_price_run_requests r
+                  ON r.tenant_id = e.tenant_id
+                 AND r.run_request_id = (e.payload_json ->> 'run_request_id')
+                 AND r.request_status = 'queued'
+                WHERE e.event_name = 'shopping.run_requested'
+                  AND e.status = 'published'
+                ORDER BY e.created_at ASC
+                LIMIT %s
+                """,
+                (limit,),
+            )
+        rows = cur.fetchall()
+
+    events: list[PublishedRunRequestedEvent] = []
+    for row in rows:
+        event_id = str(row[0]).strip()
+        tenant_id = str(row[1]).strip()
+        run_request_id = str(row[2]).strip()
+        if event_id and tenant_id and run_request_id:
+            events.append(
+                PublishedRunRequestedEvent(
+                    event_id=event_id,
+                    tenant_id=tenant_id,
+                    run_request_id=run_request_id,
+                )
+            )
+    return events
+
+
 def mark_request_running(
     conn: psycopg.Connection,
     tenant_id: str,
@@ -724,11 +846,70 @@ def run_queue_once(
     return True
 
 
+def run_event_once(
+    conn: psycopg.Connection,
+    worker_id: str,
+    xlsx_fallback_limit: int,
+    tenant_id_filter: str | None,
+) -> bool:
+    events = fetch_published_run_requested_events(conn, limit=1, tenant_id_filter=tenant_id_filter)
+    if len(events) == 0:
+        log("shopping_event_idle", worker_id=worker_id, tenant_id=tenant_id_filter or "all")
+        return False
+
+    event = events[0]
+    run_request = claim_request_by_id(conn, event.tenant_id, event.run_request_id, worker_id)
+    if run_request is None:
+        log(
+            "shopping_event_skipped",
+            worker_id=worker_id,
+            event_id=event.event_id,
+            tenant_id=event.tenant_id,
+            run_request_id=event.run_request_id,
+            reason="run_request_not_queued_or_locked",
+        )
+        return True
+
+    log(
+        "shopping_event_claimed",
+        worker_id=worker_id,
+        event_id=event.event_id,
+        tenant_id=run_request.tenant_id,
+        run_request_id=run_request.run_request_id,
+        input_mode=run_request.input_mode,
+    )
+    try:
+        run_id, rows_written = process_claimed_request(conn, run_request, xlsx_fallback_limit)
+    except Exception as exc:
+        mark_request_failed(conn, run_request.tenant_id, run_request.run_request_id, str(exc))
+        log(
+            "shopping_event_failed",
+            worker_id=worker_id,
+            event_id=event.event_id,
+            tenant_id=run_request.tenant_id,
+            run_request_id=run_request.run_request_id,
+            error=str(exc),
+        )
+        return True
+
+    log(
+        "shopping_event_completed",
+        worker_id=worker_id,
+        event_id=event.event_id,
+        tenant_id=run_request.tenant_id,
+        run_request_id=run_request.run_request_id,
+        run_id=run_id,
+        rows_written=rows_written,
+    )
+    return True
+
+
 def main() -> int:
     database_url = os.getenv("MS_DATABASE_URL", "").strip()
     input_path = os.getenv("MS_SHOPPING_INPUT_PATH", "").strip()
     tenant_id = os.getenv("MS_TENANT_ID", "").strip()
     worker_id = os.getenv("MS_WORKER_ID", "").strip() or f"{socket.gethostname()}-{os.getpid()}"
+    mode = os.getenv("MS_SHOPPING_WORKER_MODE", "").strip().lower() or "queue"
     xlsx_fallback_limit_raw = os.getenv("MS_SHOPPING_XLSX_FALLBACK_LIMIT", "").strip() or "50"
     max_queue_claims_raw = os.getenv("MS_SHOPPING_MAX_QUEUE_CLAIMS", "").strip() or "1"
 
@@ -773,45 +954,56 @@ def main() -> int:
         log("shopping_worker_end", tenant_id=tenant_id, run_id=run_id, rows_written=rows_written, mode="legacy_input")
         return 0
 
-    if tenant_id == "":
+    if mode not in {"queue", "event"}:
+        print("MS_SHOPPING_WORKER_MODE must be queue or event", file=sys.stderr)
+        return 2
+    if mode == "queue" and tenant_id == "":
         print("Missing required env var for queue mode: MS_TENANT_ID", file=sys.stderr)
         return 2
 
     log(
         "shopping_worker_start",
-        tenant_id=tenant_id,
+        tenant_id=tenant_id or "all",
         worker_id=worker_id,
-        mode="queue",
+        mode=mode,
         max_queue_claims=max_queue_claims,
     )
     handled = 0
     try:
         with psycopg.connect(database_url) as conn:
             for _ in range(max_queue_claims):
-                did_handle = run_queue_once(
-                    conn=conn,
-                    tenant_id=tenant_id,
-                    worker_id=worker_id,
-                    xlsx_fallback_limit=xlsx_fallback_limit,
-                )
+                if mode == "queue":
+                    did_handle = run_queue_once(
+                        conn=conn,
+                        tenant_id=tenant_id,
+                        worker_id=worker_id,
+                        xlsx_fallback_limit=xlsx_fallback_limit,
+                    )
+                else:
+                    did_handle = run_event_once(
+                        conn=conn,
+                        worker_id=worker_id,
+                        xlsx_fallback_limit=xlsx_fallback_limit,
+                        tenant_id_filter=tenant_id or None,
+                    )
                 if not did_handle:
                     break
                 handled += 1
     except Exception as exc:  # pragma: no cover - worker boundary log
         log(
             "shopping_worker_error",
-            tenant_id=tenant_id,
+            tenant_id=tenant_id or "all",
             worker_id=worker_id,
-            mode="queue",
+            mode=mode,
             error=str(exc),
         )
         return 1
 
     log(
         "shopping_worker_end",
-        tenant_id=tenant_id,
+        tenant_id=tenant_id or "all",
         worker_id=worker_id,
-        mode="queue",
+        mode=mode,
         handled=handled,
     )
     return 0

@@ -10,19 +10,22 @@ import (
 	"slices"
 	"strings"
 
+	shoppingevents "metalshopping/server_core/internal/modules/shopping/events"
 	"metalshopping/server_core/internal/modules/shopping/ports"
 	pgdb "metalshopping/server_core/internal/platform/db/postgres"
+	"metalshopping/server_core/internal/platform/messaging/outbox"
 )
 
 type Writer struct {
-	db *sql.DB
+	db          *sql.DB
+	outboxStore *outbox.Store
 }
 
-func NewWriter(db *sql.DB) *Writer {
-	return &Writer{db: db}
+func NewWriter(db *sql.DB, outboxStore *outbox.Store) *Writer {
+	return &Writer{db: db, outboxStore: outboxStore}
 }
 
-func (w *Writer) CreateRunRequest(ctx context.Context, tenantID string, input ports.CreateRunRequestInput) (ports.RunRequest, error) {
+func (w *Writer) CreateRunRequest(ctx context.Context, tenantID, traceID string, input ports.CreateRunRequestInput) (ports.RunRequest, error) {
 	if input.InputMode != "xlsx" && input.InputMode != "catalog" {
 		return ports.RunRequest{}, fmt.Errorf("invalid shopping input_mode: %s", input.InputMode)
 	}
@@ -123,6 +126,16 @@ RETURNING run_request_id, request_status, input_mode, requested_at, requested_by
 		return ports.RunRequest{}, fmt.Errorf("insert shopping run request: %w", err)
 	}
 	result.RequestedAt = result.RequestedAt.UTC()
+
+	if w.outboxStore != nil {
+		record, err := shoppingevents.NewRunRequestedOutboxRecord(tenantID, result, input, traceID, result.RequestedAt)
+		if err != nil {
+			return ports.RunRequest{}, err
+		}
+		if err := w.outboxStore.AppendInTx(ctx, tx, []outbox.Record{record}); err != nil {
+			return ports.RunRequest{}, err
+		}
+	}
 
 	if err := tx.Commit(); err != nil {
 		return ports.RunRequest{}, fmt.Errorf("commit shopping run request: %w", err)
