@@ -37,11 +37,19 @@ export const schemaIds = {
   "shopping_product_latest_v1.schema": "https://schemas.metalshopping.local/api/shopping_product_latest_v1.schema.json",
   "shopping_run_list_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_list_v1.schema.json",
   "shopping_run_request_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_request_v1.schema.json",
+  "shopping_run_requested_payload_v1.schema": "https://contracts.metalshopping.local/schema/shopping/run_requested_payload/v1",
   "shopping_run_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_v1.schema.json",
   "shopping_summary_v1.schema": "https://schemas.metalshopping.local/api/shopping_summary_v1.schema.json",
   "shopping_supplier_signal_list_v1.schema": "https://schemas.metalshopping.local/api/shopping_supplier_signal_list_v1.schema.json",
   "shopping_supplier_signal_v1.schema": "https://schemas.metalshopping.local/api/shopping_supplier_signal_v1.schema.json",
-  "shopping_upsert_supplier_signal_request_v1.schema": "https://schemas.metalshopping.local/api/shopping_upsert_supplier_signal_request_v1.schema.json"
+  "shopping_upsert_supplier_signal_request_v1.schema": "https://schemas.metalshopping.local/api/shopping_upsert_supplier_signal_request_v1.schema.json",
+  "suppliers_create_driver_manifest_request_v1.schema": "https://schemas.metalshopping.local/api/suppliers_create_driver_manifest_request_v1.schema.json",
+  "suppliers_directory_list_v1.schema": "https://schemas.metalshopping.local/api/suppliers_directory_list_v1.schema.json",
+  "suppliers_directory_supplier_v1.schema": "https://schemas.metalshopping.local/api/suppliers_directory_supplier_v1.schema.json",
+  "suppliers_driver_manifest_list_v1.schema": "https://schemas.metalshopping.local/api/suppliers_driver_manifest_list_v1.schema.json",
+  "suppliers_driver_manifest_v1.schema": "https://schemas.metalshopping.local/api/suppliers_driver_manifest_v1.schema.json",
+  "suppliers_set_directory_supplier_enabled_request_v1.schema": "https://schemas.metalshopping.local/api/suppliers_set_directory_supplier_enabled_request_v1.schema.json",
+  "suppliers_upsert_directory_supplier_request_v1.schema": "https://schemas.metalshopping.local/api/suppliers_upsert_directory_supplier_request_v1.schema.json"
 } as const;
 
 export type AuthSessionLogoutResponseV1 = {
@@ -434,6 +442,19 @@ export type ShoppingRunRequestV1 = {
   ambiguousScopeIdentifiers?: Array<string>;
 };
 
+export type ShoppingRunRequestedPayloadV1 = {
+  run_request_id: string;
+  tenant_id: string;
+  input_mode: "xlsx" | "catalog";
+  requested_by: string;
+  requested_at: string;
+  catalog_product_ids: Array<string>;
+  supplier_codes: Array<string>;
+  xlsx_file_path?: string;
+  xlsx_scope_identifiers?: Array<string>;
+  notes?: string;
+};
+
 export type ShoppingRunV1 = {
   runId: string;
   status: "queued" | "running" | "completed" | "failed";
@@ -486,11 +507,67 @@ export type ShoppingUpsertSupplierSignalRequestV1 = {
   manualOverride?: boolean;
 };
 
+export type SuppliersCreateDriverManifestRequestV1 = {
+  supplierCode: string;
+  family: string;
+  config: Record<string, unknown>;
+};
+
+export type SuppliersDirectoryListV1 = {
+  rows: Array<SuppliersDirectorySupplierV1>;
+};
+
+export type SuppliersDirectorySupplierV1 = {
+  supplierCode: string;
+  supplierLabel: string;
+  executionKind: "HTTP" | "PLAYWRIGHT";
+  lookupPolicy: "EAN_FIRST" | "REFERENCE_FIRST";
+  enabled: boolean;
+  updatedAt: string;
+};
+
+export type SuppliersDriverManifestListV1 = {
+  rows: Array<SuppliersDriverManifestV1>;
+  paging: {
+    offset: number;
+    limit: number;
+    returned: number;
+    total: number;
+  };
+};
+
+export type SuppliersDriverManifestV1 = {
+  manifestId: string;
+  supplierCode: string;
+  versionNumber: number;
+  family: string;
+  config: Record<string, unknown>;
+  validationStatus: "valid" | "invalid" | "pending";
+  validationErrors: Array<Record<string, unknown>>;
+  isActive: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SuppliersSetDirectorySupplierEnabledRequestV1 = {
+  enabled: boolean;
+};
+
+export type SuppliersUpsertDirectorySupplierRequestV1 = {
+  supplierCode: string;
+  supplierLabel: string;
+  executionKind: "HTTP" | "PLAYWRIGHT";
+  lookupPolicy: "EAN_FIRST" | "REFERENCE_FIRST";
+  enabled?: boolean;
+};
+
 export const eventNames = [
   "catalog.product_created",
   "iam.role_assigned",
   "inventory.position_updated",
-  "pricing.price_set"
+  "pricing.price_set",
+  "shopping.run_requested"
 ] as const;
 
 export const governanceKeys = [

@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.metalshopping.local/api/suppliers_driver_manifest_v1.schema.json",
+  "title": "SuppliersDriverManifestV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifestId",
+    "supplierCode",
+    "versionNumber",
+    "family",
+    "config",
+    "validationStatus",
+    "validationErrors",
+    "isActive",
+    "createdBy",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "manifestId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "supplierCode": {
+      "type": "string",
+      "minLength": 1
+    },
+    "versionNumber": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "family": {
+      "type": "string",
+      "minLength": 1
+    },
+    "config": {
+      "type": "object"
+    },
+    "validationStatus": {
+      "type": "string",
+      "enum": [
+        "valid",
+        "invalid",
+        "pending"
+      ]
+    },
+    "validationErrors": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "isActive": {
+      "type": "boolean"
+    },
+    "createdBy": {
+      "type": "string",
+      "minLength": 1
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "minLength": 1
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "minLength": 1
+    }
+  }
+}

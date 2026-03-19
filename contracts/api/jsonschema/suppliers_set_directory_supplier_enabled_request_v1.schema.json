@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.metalshopping.local/api/suppliers_set_directory_supplier_enabled_request_v1.schema.json",
+  "title": "SuppliersSetDirectorySupplierEnabledRequestV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "enabled"
+  ],
+  "properties": {
+    "enabled": {
+      "type": "boolean"
+    }
+  }
+}

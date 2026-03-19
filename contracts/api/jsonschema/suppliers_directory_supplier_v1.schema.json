@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.metalshopping.local/api/suppliers_directory_supplier_v1.schema.json",
+  "title": "SuppliersDirectorySupplierV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "supplierCode",
+    "supplierLabel",
+    "executionKind",
+    "lookupPolicy",
+    "enabled",
+    "updatedAt"
+  ],
+  "properties": {
+    "supplierCode": {
+      "type": "string",
+      "minLength": 1
+    },
+    "supplierLabel": {
+      "type": "string",
+      "minLength": 1
+    },
+    "executionKind": {
+      "type": "string",
+      "enum": [
+        "HTTP",
+        "PLAYWRIGHT"
+      ]
+    },
+    "lookupPolicy": {
+      "type": "string",
+      "enum": [
+        "EAN_FIRST",
+        "REFERENCE_FIRST"
+      ]
+    },
+    "enabled": {
+      "type": "boolean"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "minLength": 1
+    }
+  }
+}

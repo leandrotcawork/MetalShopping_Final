@@ -29,6 +29,7 @@ import (
 	shoppinghttp "metalshopping/server_core/internal/modules/shopping/transport/http"
 	supplierspg "metalshopping/server_core/internal/modules/suppliers/adapters/postgres"
 	suppliersapp "metalshopping/server_core/internal/modules/suppliers/application"
+	suppliershttp "metalshopping/server_core/internal/modules/suppliers/transport/http"
 	"metalshopping/server_core/internal/platform/messaging/outbox"
 )
 
@@ -52,8 +53,8 @@ func composeModules(ctx context.Context, runtime runtimeComposition, governance 
 	inventoryRepo := inventorypg.NewRepository(runtime.db, outboxStore)
 	pricingRepo := pricingpg.NewRepository(runtime.db, outboxStore)
 	homeSummaryReader := homepg.NewSummaryReader(runtime.db)
-	suppliersDirectoryReader := supplierspg.NewDirectoryReader(runtime.db)
-	suppliersService := suppliersapp.NewService(suppliersDirectoryReader)
+	suppliersRepo := supplierspg.NewRepository(runtime.db)
+	suppliersService := suppliersapp.NewService(suppliersRepo)
 	shoppingReader := shoppingpg.NewReader(runtime.db, suppliersService)
 	shoppingWriter := shoppingpg.NewWriter(runtime.db, outboxStore)
 
@@ -82,6 +83,7 @@ func composeModules(ctx context.Context, runtime runtimeComposition, governance 
 	homeHandler := homehttp.NewHandler(homeService)
 	shoppingService := shoppingapp.NewService(shoppingReader, shoppingWriter)
 	shoppingHandler := shoppinghttp.NewHandler(shoppingService)
+	suppliersHandler := suppliershttp.NewHandler(suppliersService)
 
 	return moduleComposition{
 		iamRepo:       iamRepo,
@@ -93,6 +95,7 @@ func composeModules(ctx context.Context, runtime runtimeComposition, governance 
 			pricingHandler.RegisterRoutes(mux)
 			homeHandler.RegisterRoutes(mux)
 			shoppingHandler.RegisterRoutes(mux)
+			suppliersHandler.RegisterRoutes(mux)
 		},
 	}
 }

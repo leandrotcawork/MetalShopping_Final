@@ -1,0 +1,230 @@
+openapi: 3.1.0
+info:
+  title: "Suppliers API"
+  version: "v1"
+  summary: "Public HTTP contract for MetalShopping suppliers directory and driver manifests"
+  description: >
+    Draft OpenAPI contract for tenant-aware supplier management surfaces split from shopping workflow APIs.
+  x-metalshopping:
+    contract_name: "suppliers_v1"
+    contract_status: "draft"
+    bounded_context: "suppliers"
+    owner_team: "product_core"
+servers:
+  - url: https://api.metalshopping.local
+paths:
+  /api/v1/suppliers/directory:
+    get:
+      operationId: listSuppliersDirectory
+      summary: "List supplier directory rows for the authenticated tenant"
+      parameters:
+        - in: query
+          name: enabled_only
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: "Supplier directory returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/suppliers_directory_list_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Tenant context required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+    put:
+      operationId: upsertSuppliersDirectoryItem
+      summary: "Create or update one supplier directory row for the authenticated tenant"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "../jsonschema/suppliers_upsert_directory_supplier_request_v1.schema.json"
+      responses:
+        "200":
+          description: "Supplier directory row upserted"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/suppliers_directory_supplier_v1.schema.json"
+        "400":
+          description: "Validation failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Tenant context required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+  /api/v1/suppliers/directory/{supplier_code}/enabled:
+    patch:
+      operationId: setSuppliersDirectoryEnabled
+      summary: "Enable or disable one supplier in directory for the authenticated tenant"
+      parameters:
+        - in: path
+          name: supplier_code
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "../jsonschema/suppliers_set_directory_supplier_enabled_request_v1.schema.json"
+      responses:
+        "200":
+          description: "Supplier enablement updated"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/suppliers_directory_supplier_v1.schema.json"
+        "400":
+          description: "Validation failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Tenant context required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "404":
+          description: "Supplier not found"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+  /api/v1/suppliers/manifests:
+    get:
+      operationId: listSupplierDriverManifests
+      summary: "List supplier driver manifests for the authenticated tenant"
+      parameters:
+        - in: query
+          name: supplier_code
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        "200":
+          description: "Supplier driver manifests returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/suppliers_driver_manifest_list_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Tenant context required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+    post:
+      operationId: createSupplierDriverManifest
+      summary: "Create one supplier driver manifest for the authenticated tenant"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "../jsonschema/suppliers_create_driver_manifest_request_v1.schema.json"
+      responses:
+        "201":
+          description: "Supplier driver manifest created"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/suppliers_driver_manifest_v1.schema.json"
+        "400":
+          description: "Validation failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Tenant context required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+components:
+  schemas: {}
