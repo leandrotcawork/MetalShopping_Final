@@ -4,6 +4,12 @@
 
 Sequence the work so the team can move from planning to implementation without reopening base architecture decisions.
 
+Delivery mode for new modules now follows:
+
+1. make it work
+2. make it clean
+3. make it fast
+
 ## Phase 0: Freeze the base
 
 Deliverables:
@@ -150,3 +156,11 @@ Phase 4 gate:
 - frontend migration guardrails for legacy visual reuse with modern package ownership
 - backend-owned web auth/session foundation for thin clients
 - identity provider bootstrap and cross-channel login architecture
+- make-it-work-first module execution (`OpenAPI -> Go handler -> generated SDK -> React page`)
+
+## Current module order (make-it-work-first)
+
+1. Home
+2. Shopping Price
+3. Analytics
+4. CRM

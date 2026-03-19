@@ -15,7 +15,10 @@ This skill is for preserving what the legacy frontend got right visually while r
 
 1. Read only the minimum frozen context:
    `docs/PROJECT_SOT.md`
+   `docs/DEVELOPMENT_GUIDELINES_MAKE_IT_WORK.md`
    `docs/OPERATIONAL_SURFACES_PLAN.md`
+   `docs/FRONTEND_MIGRATION_MATRIX.md`
+   `docs/DATA_CONTRACT_MAP.md`
    `docs/PRODUCTS_SURFACE_IMPLEMENTATION_PLAN.md`
    `docs/PRODUCTS_READMODEL_OWNERSHIP.md`
    `docs/FRONTEND_QUALITY_GATES.md`
@@ -39,6 +42,11 @@ This skill is for preserving what the legacy frontend got right visually while r
    - `packages/feature-*`
 6. Reject any change that reintroduces manual DTOs, page-local transport parsing, direct `fetch` in pages, or ambiguous shared folders.
 7. End with concrete findings or a concrete implementation move, not general advice.
+8. For make-it-work-first modules, validate that the flow stays explicit:
+   - OpenAPI contract first
+   - Go handler with real data
+   - generated SDK refresh
+   - React page bound by sdk-runtime
 
 ## Guardrails
 

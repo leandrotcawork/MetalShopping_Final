@@ -378,6 +378,7 @@ if ($Target -in @("all", "sdk_ts")) {
     $sdkContracts = @(
         @{ Name = "auth_session"; Spec = "contracts\api\openapi\auth_session_v1.openapi.yaml" },
         @{ Name = "catalog"; Spec = "contracts\api\openapi\catalog_v1.openapi.yaml" },
+        @{ Name = "home"; Spec = "contracts\api\openapi\home_v1.openapi.yaml" },
         @{ Name = "iam"; Spec = "contracts\api\openapi\iam_v1.openapi.yaml" },
         @{ Name = "inventory"; Spec = "contracts\api\openapi\inventory_v1.openapi.yaml" },
         @{ Name = "pricing"; Spec = "contracts\api\openapi\pricing_v1.openapi.yaml" },

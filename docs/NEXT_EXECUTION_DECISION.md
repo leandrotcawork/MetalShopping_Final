@@ -2,24 +2,22 @@
 
 ## Decision
 
-The next implementation area is login MVP closure governance and execution (T1/T2/T3) before opening new authenticated surfaces.
+The next implementation area is Home Level 1 closure under the make-it-work-first execution mode, then Shopping readiness.
 
 ## Why
 
-- local issuer bootstrap and login flow are already operational
-- the next structural risk is repeated review loops without a single closure contract
-- closing scope, DoD, and SDK boundary rules now removes ad hoc re-analysis churn
+- login hardening and boundary guards are already implemented
+- Home is now the first surface in the current delivery strategy
+- the team needs deterministic module throughput with `OpenAPI -> Go handler -> generated SDK -> React page`
 
 ## Constraints
 
 This decision is valid only if planning and implementation follow:
 
-- `docs/LOGIN_AND_IDENTITY_ARCHITECTURE.md`
-- `docs/LOGIN_MVP_SCOPE.md`
-- `docs/LOGIN_DOD.md`
-- `docs/LOGIN_MVP_EXECUTION_PLAN.md`
-- `docs/SDK_BOUNDARY.md`
-- `docs/SDK_GENERATION_STRATEGY.md`
+- `docs/DEVELOPMENT_GUIDELINES_MAKE_IT_WORK.md`
+- `docs/OPERATIONAL_SURFACES_PLAN.md`
+- `docs/FRONTEND_MIGRATION_MATRIX.md`
+- `docs/DATA_CONTRACT_MAP.md`
 - `docs/PROJECT_SOT.md`
 - `docs/PROGRESS.md`
 
@@ -27,9 +25,7 @@ This decision is valid only if planning and implementation follow:
 
 Do not jump next to:
 
-- opening additional authenticated surfaces before `docs/LOGIN_DOD.md` is fully checked
-- reintroducing SDK transport emission in generation scripts
-- allowing generated/runtime boundary ambiguity in frontend auth path
-- treating login closure as subjective instead of checklist-governed
-
-until T3 closure validation is complete.
+- changing module order without updating SoT and plan docs in the same tranche
+- implementing Shopping or Analytics without frozen data contract maps
+- introducing manual frontend transport or page-level fetch shortcuts
+- reopening closed Level 1 modules without user-driven need or dependency gate

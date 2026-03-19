@@ -1,0 +1,47 @@
+openapi: 3.1.0
+info:
+  title: "Home Operational Summary API"
+  version: "v1"
+  summary: "Operational summary contract for Home page"
+  description: >
+    Backend-owned Home summary surface for thin clients.
+    Returns simple operational KPIs with real tenant-scoped data.
+  x-metalshopping:
+    contract_name: "home_v1"
+    contract_status: "draft"
+    bounded_context: "home"
+    owner_team: "product_core"
+servers:
+  - url: https://api.metalshopping.local
+paths:
+  /api/v1/home/summary:
+    get:
+      operationId: getHomeSummary
+      summary: "Get Home summary KPIs for authenticated tenant"
+      responses:
+        "200":
+          description: "Home summary returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/home_summary_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Tenant context required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+components:
+  schemas: {}

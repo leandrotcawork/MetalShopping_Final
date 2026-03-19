@@ -17,6 +17,7 @@ export const schemaIds = {
   "governance_feature_flag_v1.schema": "https://contracts.metalshopping.local/schema/governance/feature_flag/v1",
   "governance_policy_v1.schema": "https://contracts.metalshopping.local/schema/governance/policy/v1",
   "governance_threshold_v1.schema": "https://contracts.metalshopping.local/schema/governance/threshold/v1",
+  "home_summary_v1.schema": "https://schemas.metalshopping.local/api/home_summary_v1.schema.json",
   "iam_role_assigned_payload_v1.schema": "https://contracts.metalshopping.local/schema/iam/role_assigned_payload/v1",
   "iam_role_assignment_v1.schema": "https://contracts.metalshopping.local/schema/iam/role_assignment/v1",
   "iam_upsert_role_assignment_request_v1.schema": "https://contracts.metalshopping.local/schema/iam/upsert_role_assignment_request/v1",
@@ -175,6 +176,14 @@ export type GovernanceThresholdV1 = {
   scope: Array<"global" | "environment" | "tenant" | "module" | "entity/profile">;
   description?: string;
   schema_ref: string;
+};
+
+export type HomeSummaryV1 = {
+  productCount: number;
+  activeProductCount: number;
+  pricedProductCount: number;
+  inventoryTrackedCount: number;
+  lastUpdated: string;
 };
 
 export type IamRoleAssignedPayloadV1 = {

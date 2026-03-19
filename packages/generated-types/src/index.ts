@@ -9,3 +9,5 @@ export {
   type ListProductsPortfolioSortKeyEnum as GeneratedProductsPortfolioSortKey,
 } from "../../generated/sdk_ts/generated/products/apis/DefaultApi";
 export { Configuration as ProductsConfiguration } from "../../generated/sdk_ts/generated/products/runtime";
+export { DefaultApi as HomeApiClient } from "../../generated/sdk_ts/generated/home/apis/DefaultApi";
+export { Configuration as HomeConfiguration } from "../../generated/sdk_ts/generated/home/runtime";

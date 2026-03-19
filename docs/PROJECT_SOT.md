@@ -7,6 +7,7 @@ This document is the operational source of truth for the planning and foundation
 ## Current state
 
 - Phase: foundation implementation
+- Delivery mode: make it work first
 - Architecture status: approved
 - Code status: core foundation running with initial platform and business slices
 - Legacy backend status: intentionally not in use
@@ -79,6 +80,7 @@ MetalShopping is not a traditional e-commerce product. It is an enterprise platf
 ## Planning constraints
 
 - Do not add product code just because a structure exists
+- follow `make it work -> make it clean -> make it fast` for new module delivery
 - Prefer writing or updating SoT docs, ADRs, and phase plans first
 - Avoid duplicate planning docs that restate the same rule in different wording
 - Structural changes must be paired with `docs/PROJECT_SOT.md` and `docs/PROGRESS.md` updates in the same tranche
@@ -113,6 +115,7 @@ The repository now includes:
 - `server_core` now uses signal-aware graceful shutdown and shared context cancellation for HTTP server and outbox dispatcher lifecycle
 - frontend authored runtime/facade moved to `packages/platform-sdk`, while `scripts/generate_contract_artifacts.ps1` now orchestrates OpenAPI generation without hand-emitting transport code
 - SoT drift guard now supports branch diff mode (`-BaseRef`) for CI-grade checks and covers workspace manifests plus web runtime config files in addition to local working-tree validation
+- first `Home` Level 1 slice is implemented with contract-first endpoint, server_core handler, generated SDK binding, and real KPI rendering in `apps/web`
 
 ## Current structural gaps
 
@@ -120,7 +123,7 @@ The most important remaining gaps are:
 
 - production identity integration is not yet connected to a real issuer or JWKS source
 - generated artifact drift check is now wired in pull request CI together with contract validation
-- login closure now has T1/T2 implemented and still requires T3 execution plus full DoD completion
+- login closure governance remains documented, and operational module work now follows make-it-work-first sequencing
 - outbox exists and catalog emits real events, but broker delivery and worker consumption are still not in place
 - governance is operational in runtime, but broader operational surfaces still need administrative mutation paths
 - catalog is now a strong canonical foundation, pricing semantics have been realigned against the accepted SKU ownership model, inventory owns live stock position, and the next gate is freezing procurement so supplier-side replenishment semantics do not leak into existing modules
@@ -148,6 +151,8 @@ The most important remaining gaps are:
 - explicit web auth session model before login UI implementation
 - explicit login and identity architecture before local issuer bootstrap and login UI
 - explicit login MVP closure scope, DoD, and SDK boundary governance before opening new authenticated surfaces
+- explicit frontend migration matrix for preserve/refactor/reject decisions by legacy artifact
+- explicit data contract map for Home, Shopping, and Analytics before each module implementation
 
 ## Key planning docs
 
@@ -188,5 +193,8 @@ The most important remaining gaps are:
 - `docs/LOGIN_DOD.md`
 - `docs/LOGIN_MVP_EXECUTION_PLAN.md`
 - `docs/SDK_BOUNDARY.md`
+- `docs/DEVELOPMENT_GUIDELINES_MAKE_IT_WORK.md`
+- `docs/FRONTEND_MIGRATION_MATRIX.md`
+- `docs/DATA_CONTRACT_MAP.md`
 - `docs/IMPLEMENTATION_PLAN.md`
 - `docs/PROGRESS.md`

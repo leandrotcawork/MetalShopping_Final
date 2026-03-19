@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"metalshopping/server_core/internal/handlers"
 	cataloggov "metalshopping/server_core/internal/modules/catalog/adapters/governance"
 	catalogpg "metalshopping/server_core/internal/modules/catalog/adapters/postgres"
 	catalogapp "metalshopping/server_core/internal/modules/catalog/application"
@@ -65,6 +66,7 @@ func composeModules(ctx context.Context, runtime runtimeComposition, governance 
 	pricingManualOverrideGuard := pricinggov.NewManualOverrideGuard(governance.policies, runtime.environment)
 	pricingService := pricingapp.NewService(pricingRepo, pricingManualOverrideGuard)
 	pricingHandler := pricinghttp.NewHandler(pricingService, iamAuthorization)
+	homeHandler := handlers.NewHomeHandler(runtime.db)
 
 	return moduleComposition{
 		iamRepo:       iamRepo,
@@ -74,6 +76,7 @@ func composeModules(ctx context.Context, runtime runtimeComposition, governance 
 			catalogHandler.RegisterRoutes(mux)
 			inventoryHandler.RegisterRoutes(mux)
 			pricingHandler.RegisterRoutes(mux)
+			homeHandler.RegisterRoutes(mux)
 		},
 	}
 }

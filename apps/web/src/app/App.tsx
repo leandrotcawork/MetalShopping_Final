@@ -9,6 +9,7 @@ import { ProductsPortfolioPage } from "@metalshopping/feature-products";
 import { AppFrame } from "@metalshopping/ui";
 
 import logoMetalNobre from "../assets/logo_metal_nobre.svg";
+import { HomePage } from "../pages/HomePage";
 import { AppShell } from "./layouts/AppShell";
 import { AppRuntimeProvider, useAppRuntime } from "./providers/AppRuntimeProvider";
 
@@ -16,6 +17,12 @@ function ProductsRoute() {
   const { sdk } = useAppRuntime();
 
   return <ProductsPortfolioPage api={sdk.products} />;
+}
+
+function HomeRoute() {
+  const { sdk } = useAppRuntime();
+
+  return <HomePage api={sdk.home} />;
 }
 
 function PlaceholderRoute(props: { title: string; subtitle: string }) {
@@ -35,16 +42,8 @@ function RoutedApp() {
           />
           <Route element={<AuthenticatedRoute defaultReturnTo="/products" logoSrc={logoMetalNobre} />}>
             <Route element={<AppShell />}>
-            <Route index element={<Navigate replace to="/products" />} />
-            <Route
-              path="home"
-              element={
-                <PlaceholderRoute
-                  title="Home"
-                  subtitle="Surface reservada. Abertura bloqueada ate fecharmos o hardening de Products."
-                />
-              }
-            />
+            <Route index element={<Navigate replace to="/home" />} />
+            <Route path="home" element={<HomeRoute />} />
             <Route path="products" element={<ProductsRoute />} />
             <Route
               path="shopping"

@@ -72,7 +72,7 @@
 - first tenant-aware `inventory` module slice implemented with canonical stock position ownership, contracts, outbox event, and HTTP transport
 - canonical inventory model frozen with `on_hand_quantity`, `last_purchase_at`, and `last_sale_at` as first owned semantics
 - procurement birth constraints frozen so supplier-side replenishment semantics do not leak into `pricing`, `inventory`, or direct ERP reads
-- operational surface recovery order frozen as `Products -> Shopping -> Home`
+- operational surface recovery order now frozen as `Home -> Shopping -> Analytics -> CRM` under make-it-work-first
 - first `Products` surface implementation plan frozen as the next real UI slice
 - `Products` read-surface ownership and frontend quality gates frozen before web code expansion
 - frontend migration charter frozen so legacy MetalShopping visuals are preserved without reusing weak DTO, API, CSS, and package patterns
@@ -99,13 +99,15 @@
 - login T3 local smoke automation implemented in `scripts/smoke_auth_session_local.ps1` and validated end-to-end against local Keycloak (`login -> me -> refresh/logout with CSRF`)
 - OpenAPI generation check was hardened to run against a sanitized local contract mirror so JSON Schema canonical `$id` values do not force remote resolution during SDK generation drift checks
 - frontend auth route behavior was hardened with explicit route policy functions plus unit tests for redirect/manual/authenticated modes and auto-redirect no-loop guard semantics
+- first Home Level 1 slice delivered with real backend KPI summary endpoint and generated SDK consumption in the web surface
+- make-it-work-first development guideline documented as active delivery mode
 
 ## Next
 
 - keep ADR set complete and stable
-- execute login MVP closure plan T3 and close every remaining checklist item in `docs/LOGIN_DOD.md`
-- validate the hardened login flow end-to-end against the running Keycloak issuer after every local restart
-- keep the Keycloak theme reapply plus login token sync/check as a standard local bring-up step
+- finalize Home Level 1 acceptance with manual validation evidence in docs
+- freeze Shopping data contract map and required backend persistence/read surfaces
+- implement Shopping worker-to-postgres flow and Go read endpoints using generated contracts
 - keep CI workflow scope aligned with future structural package boundaries and new quality gates
 - apply pricing migrations and database-backed governance defaults in runtime
 - validate pricing write/list/current and outbox publication through smoke tests
@@ -115,10 +117,7 @@
 - keep pricing and inventory semantically narrow while preparing procurement follow-on ownership
 - freeze procurement canonical model and upstream integration gate before procurement contracts or runtime code
 - decide the first canonical procurement inputs and contracts that integration must publish
-- scaffold the first thin-client operational surface around `Products`
-- define the first `Products` read surface contract and scaffold `apps/web`
-- validate contract generation after adding the `Products` read surface contract
-- execute the first `Products` UI slice using the frozen frontend migration charter and new frontend skill
+- keep frontend migration execution aligned with the new migration matrix and data contract map
 - prepare phase transition checklist from foundation hardening to domain expansion
 - use the MetalDocs reuse matrix to decide the first extracted patterns without copying unsafe defaults
 

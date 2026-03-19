@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.metalshopping.local/api/home_summary_v1.schema.json",
+  "title": "HomeSummaryV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "productCount",
+    "activeProductCount",
+    "pricedProductCount",
+    "inventoryTrackedCount",
+    "lastUpdated"
+  ],
+  "properties": {
+    "productCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "activeProductCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "pricedProductCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "inventoryTrackedCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "lastUpdated": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

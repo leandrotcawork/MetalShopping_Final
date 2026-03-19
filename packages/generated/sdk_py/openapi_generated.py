@@ -6,6 +6,7 @@ OPERATION_IDS = [
     'getAuthSessionState',
     'getCurrentInventoryProductPosition',
     'getCurrentPricingProductPrice',
+    'getHomeSummary',
     'listCatalogProductIdentifiers',
     'listCatalogProducts',
     'listCatalogTaxonomyLevels',

@@ -14,7 +14,9 @@ Use this skill to perform a senior-level architectural review against the MetalS
 1. Read only the minimum frozen context:
    `ARCHITECTURE.md`
    `docs/PROJECT_SOT.md`
+   `docs/DEVELOPMENT_GUIDELINES_MAKE_IT_WORK.md`
    `docs/IMPLEMENTATION_PLAN.md`
+   `docs/DATA_CONTRACT_MAP.md`
    `docs/SYSTEM_PRINCIPLES.md`
    `docs/ENGINEERING_PRINCIPLES.md`
    `docs/PLATFORM_BOUNDARIES.md`

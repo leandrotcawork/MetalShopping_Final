@@ -8,9 +8,9 @@ This plan should now be read together with `docs/FRONTEND_MIGRATION_CHARTER.md`,
 
 The immediate target surfaces are:
 
-- `Products`
-- `Shopping`
 - `Home`
+- `Shopping`
+- `Analytics`
 
 ## Recovery principle
 
@@ -31,22 +31,16 @@ The target frontend must stay:
 
 ## Execution order
 
-### 1. `Products` first
+### 1. `Home` first
 
-`Products` is the best first surface because the new backend already owns the core product semantics:
+`Home` is now the first operational module under the make-it-work-first mode.
 
-- `catalog` for identity
-- `pricing` for current price and cost semantics
-- `inventory` for stock position
+The first Home slice must stay simple:
 
-What this first surface should provide:
-
-- product portfolio list
-- search and filtering
-- current price visibility
-- current cost visibility
-- current stock visibility
-- route to product-level actions later
+- real tenant-scoped KPIs
+- no mock data
+- no frontend-side aggregation
+- no over-engineering before real usage
 
 ### 2. `Shopping` second
 
@@ -63,16 +57,11 @@ The legacy flow is strong and should be preserved conceptually:
 
 But the new implementation must sit on explicit runtime and integration contracts instead of old sidecar-first assumptions.
 
-### 3. `Home` third
+### 3. `Analytics` third
 
-`Home` should come after `Products` and the first operational `Shopping` foundation because it depends on aggregated read models such as:
+`Analytics` should be implemented after `Home` and the first `Shopping` read flow are operational.
 
-- recent runs
-- supplier health
-- operational counters
-- portfolio and run summaries
-
-It should not be implemented first as a static dashboard shell without trusted data.
+The first analytics slice should map existing front-end visual needs to explicit backend read endpoints before adding advanced computation.
 
 ## Frontend architecture rules
 
@@ -136,10 +125,10 @@ The legacy frontend package split is directionally good and should be reused sel
 
 ### Reuse
 
-- visual composition patterns from legacy `HomePage`, `ProductsPage`, and `ShoppingPage`
+- visual composition patterns from legacy workspace shell and operations center
 - app shell/provider split from the legacy web app
 - package decomposition concept from the legacy frontend
-- good reusable widget patterns already proven in analytics and shopping flows
+- good reusable widget patterns already proven in operational flows
 
 ### Do not reuse blindly
 
@@ -150,9 +139,9 @@ The legacy frontend package split is directionally good and should be reused sel
 
 ## Immediate next implementation slice
 
-The next real implementation slice should be:
+The next real implementation slices should follow:
 
-1. freeze `Products` surface contract and readmodel shape
-2. scaffold `apps/web` with the correct thin-client package boundaries
-3. implement the first `Products` page using the legacy visual context as reference
-4. only then open `Shopping` runtime and UI recovery
+1. finalize Home Level 1 acceptance with real endpoint and real page data
+2. freeze Shopping read/write contracts and worker-to-postgres flow
+3. implement Shopping page binding using generated SDK and backend-owned reads
+4. freeze Analytics read contracts based on real screen needs before implementation

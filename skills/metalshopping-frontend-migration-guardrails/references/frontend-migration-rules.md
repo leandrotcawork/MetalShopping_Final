@@ -50,6 +50,17 @@
 - feature view models
 - feature widgets and composition helpers
 
+## Make-it-work-first flow
+
+For each module-level frontend delivery:
+
+1. freeze OpenAPI endpoint and response schema first
+2. implement Go handler returning real tenant-scoped data
+3. regenerate SDK artifacts
+4. bind React page through `@metalshopping/sdk-runtime`
+
+Do not swap this order.
+
 ## Review questions
 
 1. Does the migrated surface still look and feel like legacy MetalShopping in a good way?

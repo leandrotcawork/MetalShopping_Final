@@ -2,12 +2,15 @@ import type {
   AuthSessionLogoutResponseV1,
   AuthSessionStateV1,
   CommonErrorV1,
+  HomeSummaryV1,
   ProductsPortfolioListV1,
 } from "@metalshopping/sdk-types";
 import {
   AuthSessionApiClient,
+  HomeApiClient,
 } from "@metalshopping/sdk-types";
 import { AuthSessionConfiguration } from "@metalshopping/sdk-types";
+import { HomeConfiguration } from "@metalshopping/sdk-types";
 import {
   ProductsApiClient,
   type GeneratedProductsPortfolioSortDirection,
@@ -62,6 +65,9 @@ export type ListProductsPortfolioQueryParams = {
 };
 
 export type ServerCoreSdk = {
+  home: {
+    getSummary(): Promise<HomeSummaryV1>;
+  };
   authSession: {
     buildStartLoginUrl(query?: StartAuthSessionLoginQueryParams): Promise<string>;
     getSessionState(): Promise<AuthSessionStateV1>;
@@ -181,6 +187,18 @@ function parseProductsPortfolioList(raw: unknown): ProductsPortfolioListV1 {
   assertNumber(paging.returned, "ProductsPortfolioListV1.paging.returned");
   assertNumber(paging.total, "ProductsPortfolioListV1.paging.total");
   return raw as ProductsPortfolioListV1;
+}
+
+function parseHomeSummary(raw: unknown): HomeSummaryV1 {
+  if (!isRecord(raw)) {
+    throw new Error("[sdk-runtime] HomeSummaryV1 response must be an object");
+  }
+  assertNumber(raw.productCount, "HomeSummaryV1.productCount");
+  assertNumber(raw.activeProductCount, "HomeSummaryV1.activeProductCount");
+  assertNumber(raw.pricedProductCount, "HomeSummaryV1.pricedProductCount");
+  assertNumber(raw.inventoryTrackedCount, "HomeSummaryV1.inventoryTrackedCount");
+  assertString(raw.lastUpdated, "HomeSummaryV1.lastUpdated");
+  return raw as HomeSummaryV1;
 }
 
 async function parseCommonError(response: Response) {
@@ -308,8 +326,22 @@ export function createServerCoreSdk(client: GeneratedHttpClient): ServerCoreSdk 
       credentials: "include",
     }),
   );
+  const homeApi = new HomeApiClient(
+    new HomeConfiguration({
+      basePath: client.baseUrl,
+      middleware,
+      headers: client.defaultHeaders,
+      credentials: "include",
+    }),
+  );
 
   return {
+    home: {
+      async getSummary() {
+        const raw = await runGeneratedCall(() => homeApi.getHomeSummary());
+        return parseHomeSummary(raw);
+      },
+    },
     authSession: {
       async buildStartLoginUrl(query) {
         const requestOptions = await authApi.startAuthSessionLoginRequestOpts({

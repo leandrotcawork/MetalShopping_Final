@@ -51,3 +51,9 @@ End with one of:
 - `misaligned`
 
 Then give the single next best structural move.
+
+## 8. Delivery discipline (make-it-work-first)
+
+- Is the module following `OpenAPI -> Go handler -> generated SDK -> React page`?
+- Is the slice reaching Level 1 readiness before optimization/refactor pressure?
+- Are improvements being queued after Level 1 instead of blocking delivery?
