@@ -30,7 +30,11 @@ export const schemaIds = {
   "pricing_product_price_v1.schema": "https://contracts.metalshopping.local/schema/pricing/product_price/v1",
   "pricing_set_product_price_request_v1.schema": "https://contracts.metalshopping.local/schema/pricing/set_product_price_request/v1",
   "products_portfolio_item_v1.schema": "https://metalshopping.dev/contracts/api/jsonschema/products_portfolio_item_v1.schema.json",
-  "products_portfolio_list_v1.schema": "https://metalshopping.dev/contracts/api/jsonschema/products_portfolio_list_v1.schema.json"
+  "products_portfolio_list_v1.schema": "https://metalshopping.dev/contracts/api/jsonschema/products_portfolio_list_v1.schema.json",
+  "shopping_product_latest_v1.schema": "https://schemas.metalshopping.local/api/shopping_product_latest_v1.schema.json",
+  "shopping_run_list_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_list_v1.schema.json",
+  "shopping_run_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_v1.schema.json",
+  "shopping_summary_v1.schema": "https://schemas.metalshopping.local/api/shopping_summary_v1.schema.json"
 } as const;
 
 export type AuthSessionLogoutResponseV1 = {
@@ -339,6 +343,44 @@ export type ProductsPortfolioListV1 = {
     returned: number;
     total: number;
   };
+};
+
+export type ShoppingProductLatestV1 = {
+  productId: string;
+  runId: string;
+  observedAt: string;
+  sellerName: string;
+  channel: string;
+  observedPrice: number;
+  currency: string;
+};
+
+export type ShoppingRunListV1 = {
+  rows: Array<ShoppingRunV1>;
+  paging: {
+    offset: number;
+    limit: number;
+    returned: number;
+    total: number;
+  };
+};
+
+export type ShoppingRunV1 = {
+  runId: string;
+  status: "queued" | "running" | "completed" | "failed";
+  startedAt: string;
+  finishedAt?: string | null;
+  processedItems: number;
+  totalItems: number;
+  notes?: string;
+};
+
+export type ShoppingSummaryV1 = {
+  totalRuns: number;
+  runningRuns: number;
+  completedRuns: number;
+  failedRuns: number;
+  lastRunAt: string;
 };
 
 export const eventNames = [

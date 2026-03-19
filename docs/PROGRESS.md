@@ -100,14 +100,18 @@
 - OpenAPI generation check was hardened to run against a sanitized local contract mirror so JSON Schema canonical `$id` values do not force remote resolution during SDK generation drift checks
 - frontend auth route behavior was hardened with explicit route policy functions plus unit tests for redirect/manual/authenticated modes and auto-redirect no-loop guard semantics
 - first Home Level 1 slice delivered with real backend KPI summary endpoint and generated SDK consumption in the web surface
+- Home backend ownership tightened from generic `internal/handlers` into explicit module structure `internal/modules/home` (`adapters/postgres`, `application`, `ports`, `transport/http`) without changing API contract behavior
 - make-it-work-first development guideline documented as active delivery mode
+- Home Level 1 acceptance was formally closed with objective evidence (`go build`, `go test`, `web:typecheck`, `web:build`, runtime boundary grep) in `docs/HOME_LEVEL1_ACCEPTANCE.md`
+- Shopping API contract surface was frozen in draft (`contracts/api/openapi/shopping_v1.openapi.yaml`) with summary, runs list/detail, and latest-by-product schemas
+- Shopping Level 1 advanced with server_core read endpoints wired, sdk-runtime facade methods available, and `apps/web` route `/shopping` now bound to real API data instead of placeholder
+- integration worker scaffold for Shopping Price added in `apps/integration_worker/shopping_price_worker.py` (worker writes Postgres, Go reads Postgres)
+- root `SKILLS.md` now freezes `metalshopping-module-implementation` as the only feature entry point and maps specialist skills by ordered step
+- Shopping Level 1 acceptance was formally closed with evidence in `docs/SHOPPING_LEVEL1_ACCEPTANCE.md`
 
 ## Next
 
 - keep ADR set complete and stable
-- finalize Home Level 1 acceptance with manual validation evidence in docs
-- freeze Shopping data contract map and required backend persistence/read surfaces
-- implement Shopping worker-to-postgres flow and Go read endpoints using generated contracts
 - keep CI workflow scope aligned with future structural package boundaries and new quality gates
 - apply pricing migrations and database-backed governance defaults in runtime
 - validate pricing write/list/current and outbox publication through smoke tests

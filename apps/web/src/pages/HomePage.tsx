@@ -18,6 +18,13 @@ function formatDateTime(value: string) {
   return parsed.toLocaleString("pt-BR");
 }
 
+function toPercent(numerator: number, denominator: number) {
+  if (denominator <= 0) {
+    return 0;
+  }
+  return Math.round((numerator / denominator) * 100);
+}
+
 export function HomePage({ api }: HomePageProps) {
   const [summary, setSummary] = useState<HomeSummaryV1 | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,15 +66,25 @@ export function HomePage({ api }: HomePageProps) {
     return formatDateTime(summary.lastUpdated);
   }, [summary]);
 
+  const totalProducts = summary?.productCount ?? 0;
+  const activeProducts = summary?.activeProductCount ?? 0;
+  const pricedProducts = summary?.pricedProductCount ?? 0;
+  const trackedProducts = summary?.inventoryTrackedCount ?? 0;
+
+  const activeCoverage = toPercent(activeProducts, totalProducts);
+  const pricingCoverage = toPercent(pricedProducts, totalProducts);
+  const inventoryCoverage = toPercent(trackedProducts, totalProducts);
+
   return (
     <AppFrame
       eyebrow="MetalShopping"
-      title="Home"
-      subtitle="Resumo operacional com dados reais do backend."
+      title="Centro Operacional"
+      subtitle="Visao executiva do acervo atual para catalogo, preco e estoque com dados reais do backend."
       aside={
-        <p className={styles.meta}>
-          {loading ? "Atualizando..." : `Ultima atualizacao: ${lastUpdatedLabel}`}
-        </p>
+        <div className={styles.metaPanel}>
+          <p className={styles.metaKicker}>Sync runtime</p>
+          <p className={styles.metaValue}>{loading ? "Atualizando..." : lastUpdatedLabel}</p>
+        </div>
       }
     >
       <div className={styles.stack}>
@@ -76,31 +93,82 @@ export function HomePage({ api }: HomePageProps) {
         <div className={styles.metrics}>
           <MetricCard
             label="Produtos"
-            value={summary?.productCount ?? 0}
+            value={totalProducts.toLocaleString("pt-BR")}
             hint="Total de produtos cadastrados"
           />
           <MetricCard
             label="Produtos ativos"
-            value={summary?.activeProductCount ?? 0}
+            value={`${activeProducts.toLocaleString("pt-BR")} (${activeCoverage}%)`}
             hint="Itens ativos no catalogo"
           />
           <MetricCard
             label="Com preco atual"
-            value={summary?.pricedProductCount ?? 0}
+            value={`${pricedProducts.toLocaleString("pt-BR")} (${pricingCoverage}%)`}
             hint="Itens com preco vigente"
           />
           <MetricCard
             label="Com estoque atual"
-            value={summary?.inventoryTrackedCount ?? 0}
+            value={`${trackedProducts.toLocaleString("pt-BR")} (${inventoryCoverage}%)`}
             hint="Itens com posicao de estoque vigente"
           />
         </div>
 
-        <SurfaceCard title="Status do modulo Home">
+        <div className={styles.operationalGrid}>
+          <SurfaceCard title="Cobertura operacional" subtitle="Leitura rapida por frente de operacao" tone="soft">
+            <div className={styles.coverageList}>
+              <article className={styles.coverageItem}>
+                <header className={styles.coverageHead}>
+                  <span>Catalogo ativo</span>
+                  <strong>{activeCoverage}%</strong>
+                </header>
+                <div className={styles.coverageBar}>
+                  <span style={{ width: `${activeCoverage}%` }} />
+                </div>
+              </article>
+              <article className={styles.coverageItem}>
+                <header className={styles.coverageHead}>
+                  <span>Preco vigente</span>
+                  <strong>{pricingCoverage}%</strong>
+                </header>
+                <div className={styles.coverageBar}>
+                  <span style={{ width: `${pricingCoverage}%` }} />
+                </div>
+              </article>
+              <article className={styles.coverageItem}>
+                <header className={styles.coverageHead}>
+                  <span>Estoque rastreado</span>
+                  <strong>{inventoryCoverage}%</strong>
+                </header>
+                <div className={styles.coverageBar}>
+                  <span style={{ width: `${inventoryCoverage}%` }} />
+                </div>
+              </article>
+            </div>
+          </SurfaceCard>
+
+          <SurfaceCard title="Leitura do momento" subtitle="Snapshot para decisao rapida">
+            <ul className={styles.snapshotList}>
+              <li>
+                <span>Produtos fora do estado ativo</span>
+                <strong>{Math.max(totalProducts - activeProducts, 0).toLocaleString("pt-BR")}</strong>
+              </li>
+              <li>
+                <span>Sem preco vigente</span>
+                <strong>{Math.max(totalProducts - pricedProducts, 0).toLocaleString("pt-BR")}</strong>
+              </li>
+              <li>
+                <span>Sem estoque rastreado</span>
+                <strong>{Math.max(totalProducts - trackedProducts, 0).toLocaleString("pt-BR")}</strong>
+              </li>
+            </ul>
+          </SurfaceCard>
+        </div>
+
+        <SurfaceCard title="Status do modulo Home" subtitle="Entrega nivel 1 no padrao make-it-work-first">
           <p className={styles.cardText}>
             {loading
-              ? "Carregando indicadores..."
-              : "Resumo operacional conectado em dados reais do Postgres."}
+              ? "Carregando indicadores reais do Postgres..."
+              : "Home conectada ao endpoint backend-owned `/api/v1/home/summary`, sem mock e sem composicao de dados no frontend."}
           </p>
         </SurfaceCard>
       </div>

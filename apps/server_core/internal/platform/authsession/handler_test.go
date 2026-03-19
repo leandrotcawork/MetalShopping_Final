@@ -138,3 +138,23 @@ func TestValidateCSRFCookieRequestRejectsExpiredToken(t *testing.T) {
 		t.Fatalf("expected 403, got %d", recorder.Code)
 	}
 }
+
+func TestResolvePostLoginRedirectTargetUsesFrontendBaseURL(t *testing.T) {
+	handler := NewHandler(nil, Config{
+		PostLoginRedirectBaseURL: "http://127.0.0.1:5173",
+	}, nil)
+
+	target := handler.resolvePostLoginRedirectTarget("/products?status=active")
+	if target != "http://127.0.0.1:5173/products?status=active" {
+		t.Fatalf("expected absolute frontend redirect target, got %q", target)
+	}
+}
+
+func TestResolvePostLoginRedirectTargetKeepsRelativeWhenBaseURLMissing(t *testing.T) {
+	handler := NewHandler(nil, Config{}, nil)
+
+	target := handler.resolvePostLoginRedirectTarget("/products")
+	if target != "/products" {
+		t.Fatalf("expected relative redirect target, got %q", target)
+	}
+}

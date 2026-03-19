@@ -382,7 +382,8 @@ if ($Target -in @("all", "sdk_ts")) {
         @{ Name = "iam"; Spec = "contracts\api\openapi\iam_v1.openapi.yaml" },
         @{ Name = "inventory"; Spec = "contracts\api\openapi\inventory_v1.openapi.yaml" },
         @{ Name = "pricing"; Spec = "contracts\api\openapi\pricing_v1.openapi.yaml" },
-        @{ Name = "products"; Spec = "contracts\api\openapi\products_v1.openapi.yaml" }
+        @{ Name = "products"; Spec = "contracts\api\openapi\products_v1.openapi.yaml" },
+        @{ Name = "shopping"; Spec = "contracts\api\openapi\shopping_v1.openapi.yaml" }
     )
 
     foreach ($sdkContract in $sdkContracts) {

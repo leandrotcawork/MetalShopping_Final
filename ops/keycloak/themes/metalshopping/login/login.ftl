@@ -50,7 +50,9 @@
 
                     <#if realm.password>
                         <form id="kc-form-login" class="ms-form" action="${url.loginAction}" method="post">
-                            <#assign showUsernameField = !(usernameHidden?? && usernameHidden)>
+                            <#assign rememberedUsername = (auth.attemptedUsername!(login.username!''))?trim>
+                            <#assign hideUsernameField = (usernameHidden?? && usernameHidden) && rememberedUsername?has_content>
+                            <#assign showUsernameField = !hideUsernameField>
 
                             <#if showUsernameField>
                                 <div class="ms-field">
@@ -60,13 +62,23 @@
                                         class="ms-input"
                                         name="username"
                                         type="text"
-                                        value="${login.username!''}"
+                                        value="${rememberedUsername}"
                                         autocomplete="username"
                                         autofocus
                                     >
                                 </div>
                             <#else>
-                                <input type="hidden" id="username" name="username" value="${login.username!''}">
+                                <input type="hidden" id="username" name="username" value="${rememberedUsername}">
+                                <div class="ms-account-locked">
+                                    <p class="ms-account-locked-text">
+                                        Entrando como <strong>${rememberedUsername}</strong>
+                                    </p>
+                                    <#if url.loginRestartFlowUrl??>
+                                        <a class="ms-link ms-switch-account" href="${url.loginRestartFlowUrl}">
+                                            Trocar conta
+                                        </a>
+                                    </#if>
+                                </div>
                             </#if>
 
                             <div class="ms-field">
@@ -83,7 +95,7 @@
                             <div class="ms-row">
                                 <#if realm.rememberMe && showUsernameField>
                                     <label class="ms-checkbox">
-                                        <input id="rememberMe" name="rememberMe" type="checkbox" <#if login.rememberMe?? && login.rememberMe>checked</#if>>
+                                        <input id="rememberMe" name="rememberMe" type="checkbox" <#if login.rememberMe?? && login.rememberMe?has_content>checked</#if>>
                                         <span>Lembrar sessao</span>
                                     </label>
                                 </#if>

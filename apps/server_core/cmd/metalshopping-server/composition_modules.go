@@ -5,12 +5,14 @@ import (
 	"log"
 	"net/http"
 
-	"metalshopping/server_core/internal/handlers"
 	cataloggov "metalshopping/server_core/internal/modules/catalog/adapters/governance"
 	catalogpg "metalshopping/server_core/internal/modules/catalog/adapters/postgres"
 	catalogapp "metalshopping/server_core/internal/modules/catalog/application"
 	catalogreadmodel "metalshopping/server_core/internal/modules/catalog/readmodel"
 	cataloghttp "metalshopping/server_core/internal/modules/catalog/transport/http"
+	homepg "metalshopping/server_core/internal/modules/home/adapters/postgres"
+	homeapp "metalshopping/server_core/internal/modules/home/application"
+	homehttp "metalshopping/server_core/internal/modules/home/transport/http"
 	iamgov "metalshopping/server_core/internal/modules/iam/adapters/governance"
 	iampg "metalshopping/server_core/internal/modules/iam/adapters/postgres"
 	iamapp "metalshopping/server_core/internal/modules/iam/application"
@@ -22,6 +24,9 @@ import (
 	pricingpg "metalshopping/server_core/internal/modules/pricing/adapters/postgres"
 	pricingapp "metalshopping/server_core/internal/modules/pricing/application"
 	pricinghttp "metalshopping/server_core/internal/modules/pricing/transport/http"
+	shoppingpg "metalshopping/server_core/internal/modules/shopping/adapters/postgres"
+	shoppingapp "metalshopping/server_core/internal/modules/shopping/application"
+	shoppinghttp "metalshopping/server_core/internal/modules/shopping/transport/http"
 	"metalshopping/server_core/internal/platform/messaging/outbox"
 )
 
@@ -44,6 +49,8 @@ func composeModules(ctx context.Context, runtime runtimeComposition, governance 
 	catalogRepo := catalogpg.NewRepository(runtime.db, outboxStore)
 	inventoryRepo := inventorypg.NewRepository(runtime.db, outboxStore)
 	pricingRepo := pricingpg.NewRepository(runtime.db, outboxStore)
+	homeSummaryReader := homepg.NewSummaryReader(runtime.db)
+	shoppingReader := shoppingpg.NewReader(runtime.db)
 
 	iamAuthorizer := iamapp.NewStaticAuthorizer()
 	iamAuthorization := iamapp.NewAuthorizationService(iamRepo, iamAuthorizer)
@@ -66,7 +73,10 @@ func composeModules(ctx context.Context, runtime runtimeComposition, governance 
 	pricingManualOverrideGuard := pricinggov.NewManualOverrideGuard(governance.policies, runtime.environment)
 	pricingService := pricingapp.NewService(pricingRepo, pricingManualOverrideGuard)
 	pricingHandler := pricinghttp.NewHandler(pricingService, iamAuthorization)
-	homeHandler := handlers.NewHomeHandler(runtime.db)
+	homeService := homeapp.NewService(homeSummaryReader)
+	homeHandler := homehttp.NewHandler(homeService)
+	shoppingService := shoppingapp.NewService(shoppingReader)
+	shoppingHandler := shoppinghttp.NewHandler(shoppingService)
 
 	return moduleComposition{
 		iamRepo:       iamRepo,
@@ -77,6 +87,7 @@ func composeModules(ctx context.Context, runtime runtimeComposition, governance 
 			inventoryHandler.RegisterRoutes(mux)
 			pricingHandler.RegisterRoutes(mux)
 			homeHandler.RegisterRoutes(mux)
+			shoppingHandler.RegisterRoutes(mux)
 		},
 	}
 }

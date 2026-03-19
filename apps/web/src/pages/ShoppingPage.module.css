@@ -1,0 +1,190 @@
+.stack {
+  display: grid;
+  gap: 16px;
+}
+
+.metaPanel {
+  text-align: right;
+}
+
+.metaKicker {
+  margin: 0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #737881;
+}
+
+.metaValue {
+  margin: 4px 0 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #1f2937;
+}
+
+.error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: #991b1b;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 16px;
+}
+
+.filterBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.filterButton {
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #374151;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.filterActive {
+  border-color: #0f766e;
+  color: #115e59;
+  background: #ccfbf1;
+}
+
+.runList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.runButton {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.runButton:hover {
+  border-color: #94a3b8;
+}
+
+.runMain {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.runId {
+  font-size: 0.8rem;
+  color: #0f172a;
+  font-family: "Consolas", "Courier New", monospace;
+  overflow-wrap: anywhere;
+}
+
+.runTime {
+  color: #64748b;
+  font-size: 0.74rem;
+}
+
+.statusPill {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.statusCompleted {
+  color: #166534;
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
+.statusFailed {
+  color: #991b1b;
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
+.statusRunning {
+  color: #92400e;
+  background: #fef3c7;
+  border-color: #fde68a;
+}
+
+.statusQueued {
+  color: #334155;
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+  margin: 0;
+}
+
+.detailGrid dt {
+  margin: 0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6b7280;
+}
+
+.detailGrid dd {
+  margin: 4px 0 0;
+  font-weight: 600;
+  color: #111827;
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
+
+.notes {
+  grid-column: 1 / -1;
+}
+
+.empty {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+@media (max-width: 1080px) {
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+

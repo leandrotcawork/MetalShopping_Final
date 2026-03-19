@@ -1,0 +1,180 @@
+openapi: 3.1.0
+info:
+  title: "Shopping Operational API"
+  version: "v1"
+  summary: "Operational shopping price monitoring read surface"
+  description: >
+    Backend-owned Shopping API for thin clients.
+    Python worker writes snapshots to Postgres, Go reads and exposes the operational surface.
+  x-metalshopping:
+    contract_name: "shopping_v1"
+    contract_status: "draft"
+    bounded_context: "shopping"
+    owner_team: "product_core"
+servers:
+  - url: https://api.metalshopping.local
+paths:
+  /api/v1/shopping/summary:
+    get:
+      operationId: getShoppingSummary
+      summary: "Get shopping operational summary"
+      responses:
+        "200":
+          description: "Summary returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/shopping_summary_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Tenant context required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+  /api/v1/shopping/runs:
+    get:
+      operationId: listShoppingRuns
+      summary: "List shopping runs"
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [queued, running, completed, failed]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        "200":
+          description: "Runs list returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/shopping_run_list_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Tenant context required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+  /api/v1/shopping/runs/{run_id}:
+    get:
+      operationId: getShoppingRun
+      summary: "Get shopping run detail"
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: "Run detail returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/shopping_run_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Tenant context required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "404":
+          description: "Run not found"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+  /api/v1/shopping/products/{product_id}/latest:
+    get:
+      operationId: getShoppingProductLatest
+      summary: "Get latest observed shopping price snapshot for a product"
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: "Latest product snapshot returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/shopping_product_latest_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Tenant context required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "404":
+          description: "Snapshot not found"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+components:
+  schemas: {}

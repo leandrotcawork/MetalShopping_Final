@@ -141,7 +141,10 @@ The legacy frontend package split is directionally good and should be reused sel
 
 The next real implementation slices should follow:
 
-1. finalize Home Level 1 acceptance with real endpoint and real page data
-2. freeze Shopping read/write contracts and worker-to-postgres flow
-3. implement Shopping page binding using generated SDK and backend-owned reads
-4. freeze Analytics read contracts based on real screen needs before implementation
+1. freeze Shopping read/write contracts and worker-to-postgres flow
+2. implement Shopping page binding using generated SDK and backend-owned reads
+3. freeze Analytics read contracts based on real screen needs before implementation
+
+Home Level 1 acceptance is closed and recorded in:
+
+- `docs/HOME_LEVEL1_ACCEPTANCE.md`

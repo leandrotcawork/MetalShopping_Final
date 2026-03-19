@@ -254,6 +254,34 @@
   box-shadow: var(--ms-login-shadow-focus);
 }
 
+.ms-account-locked {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-radius: var(--ms-login-radius-alert);
+  border: 1px solid var(--ms-login-border-soft);
+  background: #fff;
+}
+
+.ms-account-locked-text {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ms-login-text-body);
+}
+
+.ms-account-locked-text strong {
+  color: var(--ms-login-text-strong);
+  font-weight: 700;
+}
+
+.ms-switch-account {
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .ms-row {
   display: flex;
   align-items: center;

@@ -4,10 +4,15 @@ import type {
   CommonErrorV1,
   HomeSummaryV1,
   ProductsPortfolioListV1,
+  ShoppingProductLatestV1,
+  ShoppingRunListV1,
+  ShoppingRunV1,
+  ShoppingSummaryV1,
 } from "@metalshopping/sdk-types";
 import {
   AuthSessionApiClient,
   HomeApiClient,
+  ShoppingApiClient,
 } from "@metalshopping/sdk-types";
 import { AuthSessionConfiguration } from "@metalshopping/sdk-types";
 import { HomeConfiguration } from "@metalshopping/sdk-types";
@@ -17,6 +22,7 @@ import {
   type GeneratedProductsPortfolioSortKey,
 } from "@metalshopping/sdk-types";
 import { ProductsConfiguration } from "@metalshopping/sdk-types";
+import { ShoppingConfiguration } from "@metalshopping/sdk-types";
 
 export type QueryParamValue = string | number | boolean | null | undefined;
 
@@ -64,9 +70,23 @@ export type ListProductsPortfolioQueryParams = {
   offset?: number;
 };
 
+export type ShoppingRunStatus = "queued" | "running" | "completed" | "failed";
+
+export type ListShoppingRunsQueryParams = {
+  status?: ShoppingRunStatus;
+  limit?: number;
+  offset?: number;
+};
+
 export type ServerCoreSdk = {
   home: {
     getSummary(): Promise<HomeSummaryV1>;
+  };
+  shopping: {
+    getSummary(): Promise<ShoppingSummaryV1>;
+    listRuns(query?: ListShoppingRunsQueryParams): Promise<ShoppingRunListV1>;
+    getRun(runId: string): Promise<ShoppingRunV1>;
+    getProductLatest(productId: string): Promise<ShoppingProductLatestV1>;
   };
   authSession: {
     buildStartLoginUrl(query?: StartAuthSessionLoginQueryParams): Promise<string>;
@@ -144,6 +164,19 @@ function assertNumber(value: unknown, fieldName: string): asserts value is numbe
   }
 }
 
+function normalizeDateTime(value: unknown, fieldName: string): string {
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) {
+      throw new Error(`[sdk-runtime] ${fieldName} must be a valid date`);
+    }
+    return value.toISOString();
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    return value;
+  }
+  throw new Error(`[sdk-runtime] ${fieldName} must be a non-empty string`);
+}
+
 function parseAuthSessionState(raw: unknown): AuthSessionStateV1 {
   if (!isRecord(raw)) {
     throw new Error("[sdk-runtime] AuthSessionStateV1 response must be an object");
@@ -152,13 +185,37 @@ function parseAuthSessionState(raw: unknown): AuthSessionStateV1 {
   assertString(raw.tenant_id, "AuthSessionStateV1.tenant_id");
   assertString(raw.display_name, "AuthSessionStateV1.display_name");
   assertString(raw.email, "AuthSessionStateV1.email");
-  assertString(raw.issued_at, "AuthSessionStateV1.issued_at");
-  assertString(raw.expires_at, "AuthSessionStateV1.expires_at");
-  assertString(raw.idle_timeout_expires_at, "AuthSessionStateV1.idle_timeout_expires_at");
-  assertString(raw.absolute_timeout_expires_at, "AuthSessionStateV1.absolute_timeout_expires_at");
   assertStringArray(raw.roles, "AuthSessionStateV1.roles");
   assertStringArray(raw.capabilities, "AuthSessionStateV1.capabilities");
-  return raw as AuthSessionStateV1;
+
+  const issuedAt = normalizeDateTime(raw.issued_at, "AuthSessionStateV1.issued_at");
+  const expiresAt = normalizeDateTime(raw.expires_at, "AuthSessionStateV1.expires_at");
+  const idleTimeoutExpiresAt = normalizeDateTime(
+    raw.idle_timeout_expires_at,
+    "AuthSessionStateV1.idle_timeout_expires_at",
+  );
+  const absoluteTimeoutExpiresAt = normalizeDateTime(
+    raw.absolute_timeout_expires_at,
+    "AuthSessionStateV1.absolute_timeout_expires_at",
+  );
+
+  if (raw.session_id !== undefined && raw.session_id !== null) {
+    assertString(raw.session_id, "AuthSessionStateV1.session_id");
+  }
+
+  return {
+    user_id: raw.user_id,
+    tenant_id: raw.tenant_id,
+    display_name: raw.display_name,
+    email: raw.email,
+    roles: raw.roles,
+    capabilities: raw.capabilities,
+    issued_at: issuedAt,
+    expires_at: expiresAt,
+    idle_timeout_expires_at: idleTimeoutExpiresAt,
+    absolute_timeout_expires_at: absoluteTimeoutExpiresAt,
+    session_id: raw.session_id ?? undefined,
+  };
 }
 
 function parseLogoutResponse(raw: unknown): AuthSessionLogoutResponseV1 {
@@ -197,8 +254,117 @@ function parseHomeSummary(raw: unknown): HomeSummaryV1 {
   assertNumber(raw.activeProductCount, "HomeSummaryV1.activeProductCount");
   assertNumber(raw.pricedProductCount, "HomeSummaryV1.pricedProductCount");
   assertNumber(raw.inventoryTrackedCount, "HomeSummaryV1.inventoryTrackedCount");
-  assertString(raw.lastUpdated, "HomeSummaryV1.lastUpdated");
-  return raw as HomeSummaryV1;
+  const lastUpdated = normalizeDateTime(raw.lastUpdated, "HomeSummaryV1.lastUpdated");
+  return {
+    productCount: raw.productCount,
+    activeProductCount: raw.activeProductCount,
+    pricedProductCount: raw.pricedProductCount,
+    inventoryTrackedCount: raw.inventoryTrackedCount,
+    lastUpdated,
+  };
+}
+
+function parseShoppingRun(raw: unknown): ShoppingRunV1 {
+  if (!isRecord(raw)) {
+    throw new Error("[sdk-runtime] ShoppingRunV1 response must be an object");
+  }
+  assertString(raw.runId, "ShoppingRunV1.runId");
+  assertString(raw.status, "ShoppingRunV1.status");
+  const startedAt = normalizeDateTime(raw.startedAt, "ShoppingRunV1.startedAt");
+  let finishedAt: string | null | undefined;
+  if (raw.finishedAt !== undefined) {
+    if (raw.finishedAt === null) {
+      finishedAt = null;
+    } else {
+      finishedAt = normalizeDateTime(raw.finishedAt, "ShoppingRunV1.finishedAt");
+    }
+  }
+  assertNumber(raw.processedItems, "ShoppingRunV1.processedItems");
+  assertNumber(raw.totalItems, "ShoppingRunV1.totalItems");
+
+  const notes = raw.notes;
+  if (notes !== undefined && notes !== null && typeof notes !== "string") {
+    throw new Error("[sdk-runtime] ShoppingRunV1.notes must be a string when provided");
+  }
+
+  return {
+    runId: raw.runId,
+    status: raw.status as ShoppingRunV1["status"],
+    startedAt,
+    finishedAt,
+    processedItems: raw.processedItems,
+    totalItems: raw.totalItems,
+    notes: notes ?? undefined,
+  };
+}
+
+function parseShoppingRunList(raw: unknown): ShoppingRunListV1 {
+  if (!isRecord(raw)) {
+    throw new Error("[sdk-runtime] ShoppingRunListV1 response must be an object");
+  }
+  if (!Array.isArray(raw.rows)) {
+    throw new Error("[sdk-runtime] ShoppingRunListV1.rows must be an array");
+  }
+  if (!isRecord(raw.paging)) {
+    throw new Error("[sdk-runtime] ShoppingRunListV1.paging must be an object");
+  }
+  const paging = raw.paging;
+  assertNumber(paging.offset, "ShoppingRunListV1.paging.offset");
+  assertNumber(paging.limit, "ShoppingRunListV1.paging.limit");
+  assertNumber(paging.returned, "ShoppingRunListV1.paging.returned");
+  assertNumber(paging.total, "ShoppingRunListV1.paging.total");
+
+  return {
+    rows: raw.rows.map(parseShoppingRun),
+    paging: {
+      offset: paging.offset,
+      limit: paging.limit,
+      returned: paging.returned,
+      total: paging.total,
+    },
+  };
+}
+
+function parseShoppingSummary(raw: unknown): ShoppingSummaryV1 {
+  if (!isRecord(raw)) {
+    throw new Error("[sdk-runtime] ShoppingSummaryV1 response must be an object");
+  }
+  assertNumber(raw.totalRuns, "ShoppingSummaryV1.totalRuns");
+  assertNumber(raw.runningRuns, "ShoppingSummaryV1.runningRuns");
+  assertNumber(raw.completedRuns, "ShoppingSummaryV1.completedRuns");
+  assertNumber(raw.failedRuns, "ShoppingSummaryV1.failedRuns");
+  const lastRunAt = normalizeDateTime(raw.lastRunAt, "ShoppingSummaryV1.lastRunAt");
+
+  return {
+    totalRuns: raw.totalRuns,
+    runningRuns: raw.runningRuns,
+    completedRuns: raw.completedRuns,
+    failedRuns: raw.failedRuns,
+    lastRunAt,
+  };
+}
+
+function parseShoppingProductLatest(raw: unknown): ShoppingProductLatestV1 {
+  if (!isRecord(raw)) {
+    throw new Error("[sdk-runtime] ShoppingProductLatestV1 response must be an object");
+  }
+  assertString(raw.productId, "ShoppingProductLatestV1.productId");
+  assertString(raw.runId, "ShoppingProductLatestV1.runId");
+  const observedAt = normalizeDateTime(raw.observedAt, "ShoppingProductLatestV1.observedAt");
+  assertString(raw.sellerName, "ShoppingProductLatestV1.sellerName");
+  assertString(raw.channel, "ShoppingProductLatestV1.channel");
+  assertNumber(raw.observedPrice, "ShoppingProductLatestV1.observedPrice");
+  assertString(raw.currency, "ShoppingProductLatestV1.currency");
+
+  return {
+    productId: raw.productId,
+    runId: raw.runId,
+    observedAt,
+    sellerName: raw.sellerName,
+    channel: raw.channel,
+    observedPrice: raw.observedPrice,
+    currency: raw.currency,
+  };
 }
 
 async function parseCommonError(response: Response) {
@@ -334,12 +500,44 @@ export function createServerCoreSdk(client: GeneratedHttpClient): ServerCoreSdk 
       credentials: "include",
     }),
   );
+  const shoppingApi = new ShoppingApiClient(
+    new ShoppingConfiguration({
+      basePath: client.baseUrl,
+      middleware,
+      headers: client.defaultHeaders,
+      credentials: "include",
+    }),
+  );
 
   return {
     home: {
       async getSummary() {
         const raw = await runGeneratedCall(() => homeApi.getHomeSummary());
         return parseHomeSummary(raw);
+      },
+    },
+    shopping: {
+      async getSummary() {
+        const raw = await runGeneratedCall(() => shoppingApi.getShoppingSummary());
+        return parseShoppingSummary(raw);
+      },
+      async listRuns(query = {}) {
+        const raw = await runGeneratedCall(() =>
+          shoppingApi.listShoppingRuns({
+            status: query.status,
+            limit: query.limit,
+            offset: query.offset,
+          }),
+        );
+        return parseShoppingRunList(raw);
+      },
+      async getRun(runId) {
+        const raw = await runGeneratedCall(() => shoppingApi.getShoppingRun({ runId }));
+        return parseShoppingRun(raw);
+      },
+      async getProductLatest(productId) {
+        const raw = await runGeneratedCall(() => shoppingApi.getShoppingProductLatest({ productId }));
+        return parseShoppingProductLatest(raw);
       },
     },
     authSession: {

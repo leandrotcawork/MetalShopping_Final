@@ -45,6 +45,12 @@ This is mandatory for make-it-work-first execution.
 - `GET /api/v1/shopping/runs`
 - `GET /api/v1/shopping/runs/{run_id}`
 - `GET /api/v1/shopping/products/{product_id}/latest`
+- OpenAPI: `contracts/api/openapi/shopping_v1.openapi.yaml`
+- JSON Schemas:
+  - `contracts/api/jsonschema/shopping_summary_v1.schema.json`
+  - `contracts/api/jsonschema/shopping_run_list_v1.schema.json`
+  - `contracts/api/jsonschema/shopping_run_v1.schema.json`
+  - `contracts/api/jsonschema/shopping_product_latest_v1.schema.json`
 
 ### Backend data sources to create/freeze
 
@@ -60,7 +66,7 @@ This is mandatory for make-it-work-first execution.
 
 ### Current status
 
-- pending contract freeze
+- implemented (Level 1)
 
 ## 3. Analytics
 

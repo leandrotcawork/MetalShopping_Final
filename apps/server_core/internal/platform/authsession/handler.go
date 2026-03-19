@@ -91,7 +91,7 @@ func (h *Handler) handleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ClearLoginStateCookie(w, h.config)
-	http.Redirect(w, r, returnTo, http.StatusFound)
+	http.Redirect(w, r, h.resolvePostLoginRedirectTarget(returnTo), http.StatusFound)
 }
 
 func (h *Handler) handleMe(w http.ResponseWriter, r *http.Request) {
@@ -296,4 +296,12 @@ func (h *Handler) issueCSRFCookie(w http.ResponseWriter, sessionID string, tenan
 	}
 	SetCSRFCookie(w, h.config, token, expiresAt)
 	return nil
+}
+
+func (h *Handler) resolvePostLoginRedirectTarget(returnTo string) string {
+	baseURL := strings.TrimSpace(h.config.PostLoginRedirectBaseURL)
+	if baseURL == "" {
+		return returnTo
+	}
+	return strings.TrimRight(baseURL, "/") + returnTo
 }

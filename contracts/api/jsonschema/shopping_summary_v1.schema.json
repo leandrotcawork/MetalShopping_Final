@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.metalshopping.local/api/shopping_summary_v1.schema.json",
+  "title": "ShoppingSummaryV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "totalRuns",
+    "runningRuns",
+    "completedRuns",
+    "failedRuns",
+    "lastRunAt"
+  ],
+  "properties": {
+    "totalRuns": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "runningRuns": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "completedRuns": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "failedRuns": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "lastRunAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

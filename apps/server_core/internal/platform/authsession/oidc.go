@@ -48,6 +48,9 @@ func (c *OIDCClient) AuthorizationURL(state string, codeVerifier string) string 
 	values.Set("state", state)
 	values.Set("code_challenge", codeChallenge)
 	values.Set("code_challenge_method", "S256")
+	if c.config.ForceLoginPrompt {
+		values.Set("prompt", "login")
+	}
 	return c.config.AuthorizationEndpoint + "?" + values.Encode()
 }
 

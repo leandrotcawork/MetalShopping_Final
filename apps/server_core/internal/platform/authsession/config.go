@@ -3,6 +3,7 @@ package authsession
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -10,47 +11,54 @@ import (
 )
 
 type Config struct {
-	AuthorizationEndpoint string
-	TokenEndpoint         string
-	ClientID              string
-	ClientSecret          string
-	RedirectURI           string
-	Scopes                []string
-	DefaultReturnTo       string
-	SessionCookieName     string
-	StateCookieName       string
-	CSRFCookieName        string
-	CSRFHeaderName        string
-	CSRFHMACSecret        string
-	CookieDomain          string
-	CookiePath            string
-	CookieSecure          bool
-	CookieSameSite        http.SameSite
-	LoginStateTTL         time.Duration
-	CSRFTTL               time.Duration
-	HTTPTimeout           time.Duration
+	AuthorizationEndpoint    string
+	TokenEndpoint            string
+	ClientID                 string
+	ClientSecret             string
+	RedirectURI              string
+	Scopes                   []string
+	ForceLoginPrompt         bool
+	DefaultReturnTo          string
+	PostLoginRedirectBaseURL string
+	SessionCookieName        string
+	StateCookieName          string
+	CSRFCookieName           string
+	CSRFHeaderName           string
+	CSRFHMACSecret           string
+	CookieDomain             string
+	CookiePath               string
+	CookieSecure             bool
+	CookieSameSite           http.SameSite
+	LoginStateTTL            time.Duration
+	CSRFTTL                  time.Duration
+	HTTPTimeout              time.Duration
 }
 
 func ConfigFromEnv(environment string) (Config, error) {
 	config := Config{
-		AuthorizationEndpoint: strings.TrimSpace(os.Getenv("MS_AUTH_OIDC_AUTHORIZATION_URL")),
-		TokenEndpoint:         strings.TrimSpace(os.Getenv("MS_AUTH_OIDC_TOKEN_URL")),
-		ClientID:              strings.TrimSpace(os.Getenv("MS_AUTH_OIDC_CLIENT_ID")),
-		ClientSecret:          strings.TrimSpace(os.Getenv("MS_AUTH_OIDC_CLIENT_SECRET")),
-		RedirectURI:           strings.TrimSpace(os.Getenv("MS_AUTH_OIDC_REDIRECT_URI")),
-		CookieDomain:          strings.TrimSpace(os.Getenv("MS_AUTH_WEB_COOKIE_DOMAIN")),
-		CookiePath:            firstNonEmpty(strings.TrimSpace(os.Getenv("MS_AUTH_WEB_COOKIE_PATH")), "/"),
-		SessionCookieName:     firstNonEmpty(strings.TrimSpace(os.Getenv("MS_AUTH_WEB_SESSION_COOKIE_NAME")), "ms_web_session"),
-		StateCookieName:       firstNonEmpty(strings.TrimSpace(os.Getenv("MS_AUTH_WEB_STATE_COOKIE_NAME")), "ms_web_login_state"),
-		CSRFCookieName:        firstNonEmpty(strings.TrimSpace(os.Getenv("MS_AUTH_WEB_CSRF_COOKIE_NAME")), "ms_web_csrf"),
-		CSRFHeaderName:        firstNonEmpty(strings.TrimSpace(os.Getenv("MS_AUTH_WEB_CSRF_HEADER_NAME")), "X-CSRF-Token"),
-		CSRFHMACSecret:        strings.TrimSpace(os.Getenv("MS_AUTH_WEB_CSRF_HMAC_SECRET")),
-		DefaultReturnTo:       firstNonEmpty(strings.TrimSpace(os.Getenv("MS_AUTH_WEB_DEFAULT_RETURN_TO")), "/products"),
-		CookieSecure:          strings.ToLower(strings.TrimSpace(environment)) != "local",
-		CookieSameSite:        parseSameSite(os.Getenv("MS_AUTH_WEB_COOKIE_SAMESITE")),
-		LoginStateTTL:         parseDurationMinutesEnv("MS_AUTH_WEB_LOGIN_STATE_TTL_MINUTES", 10),
-		CSRFTTL:               parseDurationMinutesEnv("MS_AUTH_WEB_CSRF_TTL_MINUTES", 30),
-		HTTPTimeout:           parseDurationSecondsEnv("MS_AUTH_OIDC_HTTP_TIMEOUT_SECONDS", 10),
+		AuthorizationEndpoint:    strings.TrimSpace(os.Getenv("MS_AUTH_OIDC_AUTHORIZATION_URL")),
+		TokenEndpoint:            strings.TrimSpace(os.Getenv("MS_AUTH_OIDC_TOKEN_URL")),
+		ClientID:                 strings.TrimSpace(os.Getenv("MS_AUTH_OIDC_CLIENT_ID")),
+		ClientSecret:             strings.TrimSpace(os.Getenv("MS_AUTH_OIDC_CLIENT_SECRET")),
+		RedirectURI:              strings.TrimSpace(os.Getenv("MS_AUTH_OIDC_REDIRECT_URI")),
+		PostLoginRedirectBaseURL: strings.TrimSpace(os.Getenv("MS_AUTH_WEB_POST_LOGIN_BASE_URL")),
+		ForceLoginPrompt:         parseBoolEnv("MS_AUTH_OIDC_FORCE_LOGIN_PROMPT", false),
+		CookieDomain:             strings.TrimSpace(os.Getenv("MS_AUTH_WEB_COOKIE_DOMAIN")),
+		CookiePath:               firstNonEmpty(strings.TrimSpace(os.Getenv("MS_AUTH_WEB_COOKIE_PATH")), "/"),
+		SessionCookieName:        firstNonEmpty(strings.TrimSpace(os.Getenv("MS_AUTH_WEB_SESSION_COOKIE_NAME")), "ms_web_session"),
+		StateCookieName:          firstNonEmpty(strings.TrimSpace(os.Getenv("MS_AUTH_WEB_STATE_COOKIE_NAME")), "ms_web_login_state"),
+		CSRFCookieName:           firstNonEmpty(strings.TrimSpace(os.Getenv("MS_AUTH_WEB_CSRF_COOKIE_NAME")), "ms_web_csrf"),
+		CSRFHeaderName:           firstNonEmpty(strings.TrimSpace(os.Getenv("MS_AUTH_WEB_CSRF_HEADER_NAME")), "X-CSRF-Token"),
+		CSRFHMACSecret:           strings.TrimSpace(os.Getenv("MS_AUTH_WEB_CSRF_HMAC_SECRET")),
+		DefaultReturnTo:          firstNonEmpty(strings.TrimSpace(os.Getenv("MS_AUTH_WEB_DEFAULT_RETURN_TO")), "/products"),
+		CookieSecure:             strings.ToLower(strings.TrimSpace(environment)) != "local",
+		CookieSameSite:           parseSameSite(os.Getenv("MS_AUTH_WEB_COOKIE_SAMESITE")),
+		LoginStateTTL:            parseDurationMinutesEnv("MS_AUTH_WEB_LOGIN_STATE_TTL_MINUTES", 10),
+		CSRFTTL:                  parseDurationMinutesEnv("MS_AUTH_WEB_CSRF_TTL_MINUTES", 30),
+		HTTPTimeout:              parseDurationSecondsEnv("MS_AUTH_OIDC_HTTP_TIMEOUT_SECONDS", 10),
+	}
+	if config.PostLoginRedirectBaseURL == "" && strings.EqualFold(strings.TrimSpace(environment), "local") {
+		config.PostLoginRedirectBaseURL = "http://127.0.0.1:5173"
 	}
 
 	rawScopes := strings.TrimSpace(os.Getenv("MS_AUTH_OIDC_SCOPES"))
@@ -78,6 +86,18 @@ func (c Config) Validate() error {
 	}
 	if strings.TrimSpace(c.RedirectURI) == "" {
 		return fmt.Errorf("%w: redirect uri is required", ErrOIDCConfigIncomplete)
+	}
+	if strings.TrimSpace(c.PostLoginRedirectBaseURL) != "" {
+		parsed, err := url.Parse(c.PostLoginRedirectBaseURL)
+		if err != nil || !parsed.IsAbs() || parsed.Host == "" {
+			return fmt.Errorf("%w: post login redirect base url must be an absolute URL", ErrOIDCConfigIncomplete)
+		}
+		if parsed.Scheme != "http" && parsed.Scheme != "https" {
+			return fmt.Errorf("%w: post login redirect base url must use http or https", ErrOIDCConfigIncomplete)
+		}
+		if parsed.RawQuery != "" || parsed.Fragment != "" {
+			return fmt.Errorf("%w: post login redirect base url must not include query or fragment", ErrOIDCConfigIncomplete)
+		}
 	}
 	if strings.TrimSpace(c.CSRFCookieName) == "" {
 		return fmt.Errorf("%w: csrf cookie name is required", ErrOIDCConfigIncomplete)
@@ -145,4 +165,19 @@ func parseDurationSecondsEnv(key string, fallbackSeconds int) time.Duration {
 		return time.Duration(fallbackSeconds) * time.Second
 	}
 	return time.Duration(parsed) * time.Second
+}
+
+func parseBoolEnv(key string, fallback bool) bool {
+	value := strings.TrimSpace(strings.ToLower(os.Getenv(key)))
+	if value == "" {
+		return fallback
+	}
+	switch value {
+	case "1", "true", "yes", "on":
+		return true
+	case "0", "false", "no", "off":
+		return false
+	default:
+		return fallback
+	}
 }
