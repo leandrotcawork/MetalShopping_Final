@@ -14,6 +14,35 @@ info:
 servers:
   - url: https://api.metalshopping.local
 paths:
+  /api/v1/shopping/bootstrap:
+    get:
+      operationId: getShoppingBootstrap
+      summary: "Get shopping workflow bootstrap data"
+      responses:
+        "200":
+          description: "Bootstrap returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/shopping_bootstrap_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Tenant context required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
   /api/v1/shopping/summary:
     get:
       operationId: getShoppingSummary
@@ -44,6 +73,46 @@ paths:
               schema:
                 $ref: "../jsonschema/common_error_v1.schema.json"
   /api/v1/shopping/runs:
+    post:
+      operationId: createShoppingRunRequest
+      summary: "Create a shopping run request (queued for worker execution)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "../jsonschema/shopping_create_run_request_v1.schema.json"
+      responses:
+        "201":
+          description: "Run request created"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/shopping_create_run_response_v1.schema.json"
+        "400":
+          description: "Validation failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Tenant context required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
     get:
       operationId: listShoppingRuns
       summary: "List shopping runs"
@@ -166,6 +235,47 @@ paths:
                 $ref: "../jsonschema/common_error_v1.schema.json"
         "404":
           description: "Snapshot not found"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+  /api/v1/shopping/run-requests/{run_request_id}:
+    get:
+      operationId: getShoppingRunRequest
+      summary: "Get shopping run request status"
+      parameters:
+        - name: run_request_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Run request returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/shopping_run_request_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Tenant context required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "404":
+          description: "Run request not found"
           content:
             application/json:
               schema:

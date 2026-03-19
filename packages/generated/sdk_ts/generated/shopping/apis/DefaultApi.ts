@@ -17,8 +17,12 @@ import * as runtime from '../runtime';
 import type {
   CommonErrorV1,
   CommonErrorV11,
+  ShoppingBootstrapV1,
+  ShoppingCreateRunRequestV1,
+  ShoppingCreateRunResponseV1,
   ShoppingProductLatestV1,
   ShoppingRunListV1,
+  ShoppingRunRequestV1,
   ShoppingRunV11,
   ShoppingSummaryV1,
 } from '../models/index';
@@ -27,15 +31,27 @@ import {
     CommonErrorV1ToJSON,
     CommonErrorV11FromJSON,
     CommonErrorV11ToJSON,
+    ShoppingBootstrapV1FromJSON,
+    ShoppingBootstrapV1ToJSON,
+    ShoppingCreateRunRequestV1FromJSON,
+    ShoppingCreateRunRequestV1ToJSON,
+    ShoppingCreateRunResponseV1FromJSON,
+    ShoppingCreateRunResponseV1ToJSON,
     ShoppingProductLatestV1FromJSON,
     ShoppingProductLatestV1ToJSON,
     ShoppingRunListV1FromJSON,
     ShoppingRunListV1ToJSON,
+    ShoppingRunRequestV1FromJSON,
+    ShoppingRunRequestV1ToJSON,
     ShoppingRunV11FromJSON,
     ShoppingRunV11ToJSON,
     ShoppingSummaryV1FromJSON,
     ShoppingSummaryV1ToJSON,
 } from '../models/index';
+
+export interface CreateShoppingRunRequestRequest {
+    shoppingCreateRunRequestV1: ShoppingCreateRunRequestV1;
+}
 
 export interface GetShoppingProductLatestRequest {
     productId: string;
@@ -43,6 +59,10 @@ export interface GetShoppingProductLatestRequest {
 
 export interface GetShoppingRunRequest {
     runId: string;
+}
+
+export interface GetShoppingRunRequestRequest {
+    runRequestId: string;
 }
 
 export interface ListShoppingRunsRequest {
@@ -55,6 +75,90 @@ export interface ListShoppingRunsRequest {
  * 
  */
 export class DefaultApi extends runtime.BaseAPI {
+
+    /**
+     * Creates request options for createShoppingRunRequest without sending the request
+     */
+    async createShoppingRunRequestRequestOpts(requestParameters: CreateShoppingRunRequestRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['shoppingCreateRunRequestV1'] == null) {
+            throw new runtime.RequiredError(
+                'shoppingCreateRunRequestV1',
+                'Required parameter "shoppingCreateRunRequestV1" was null or undefined when calling createShoppingRunRequest().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/shopping/runs`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ShoppingCreateRunRequestV1ToJSON(requestParameters['shoppingCreateRunRequestV1']),
+        };
+    }
+
+    /**
+     * Create a shopping run request (queued for worker execution)
+     */
+    async createShoppingRunRequestRaw(requestParameters: CreateShoppingRunRequestRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ShoppingCreateRunResponseV1>> {
+        const requestOptions = await this.createShoppingRunRequestRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ShoppingCreateRunResponseV1FromJSON(jsonValue));
+    }
+
+    /**
+     * Create a shopping run request (queued for worker execution)
+     */
+    async createShoppingRunRequest(requestParameters: CreateShoppingRunRequestRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ShoppingCreateRunResponseV1> {
+        const response = await this.createShoppingRunRequestRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getShoppingBootstrap without sending the request
+     */
+    async getShoppingBootstrapRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/shopping/bootstrap`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Get shopping workflow bootstrap data
+     */
+    async getShoppingBootstrapRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ShoppingBootstrapV1>> {
+        const requestOptions = await this.getShoppingBootstrapRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ShoppingBootstrapV1FromJSON(jsonValue));
+    }
+
+    /**
+     * Get shopping workflow bootstrap data
+     */
+    async getShoppingBootstrap(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ShoppingBootstrapV1> {
+        const response = await this.getShoppingBootstrapRaw(initOverrides);
+        return await response.value();
+    }
 
     /**
      * Creates request options for getShoppingProductLatest without sending the request
@@ -143,6 +247,51 @@ export class DefaultApi extends runtime.BaseAPI {
      */
     async getShoppingRun(requestParameters: GetShoppingRunRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ShoppingRunV11> {
         const response = await this.getShoppingRunRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getShoppingRunRequest without sending the request
+     */
+    async getShoppingRunRequestRequestOpts(requestParameters: GetShoppingRunRequestRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['runRequestId'] == null) {
+            throw new runtime.RequiredError(
+                'runRequestId',
+                'Required parameter "runRequestId" was null or undefined when calling getShoppingRunRequest().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/shopping/run-requests/{run_request_id}`;
+        urlPath = urlPath.replace(`{${"run_request_id"}}`, encodeURIComponent(String(requestParameters['runRequestId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Get shopping run request status
+     */
+    async getShoppingRunRequestRaw(requestParameters: GetShoppingRunRequestRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ShoppingRunRequestV1>> {
+        const requestOptions = await this.getShoppingRunRequestRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ShoppingRunRequestV1FromJSON(jsonValue));
+    }
+
+    /**
+     * Get shopping run request status
+     */
+    async getShoppingRunRequest(requestParameters: GetShoppingRunRequestRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ShoppingRunRequestV1> {
+        const response = await this.getShoppingRunRequestRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

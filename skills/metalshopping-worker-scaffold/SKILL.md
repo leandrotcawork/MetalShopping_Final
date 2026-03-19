@@ -49,7 +49,8 @@ If Go can do it → Go. Workers exist only for what Go cannot.
    Every write transaction must set the tenant session context:
    ```python
    cur.execute("BEGIN")
-   cur.execute("SELECT set_config('app.current_tenant_id', %s, true)", (tenant_id,))
+  # RLS uses current_tenant_id() -> current_setting('app.tenant_id')
+  cur.execute("SELECT set_config('app.tenant_id', %s, true)", (tenant_id,))
    # ... inserts use current_tenant_id() function
    cur.execute("COMMIT")
    ```

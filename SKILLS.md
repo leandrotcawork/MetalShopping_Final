@@ -2,25 +2,12 @@
 
 ## Status update
 
-Active orchestrator for feature implementation:
-
-- `metalshopping-module-implementation`
-
-## Mandatory entry point for any new feature
-
-Every implementation session must start with:
-
-`Use the skill metalshopping-module-implementation.`
-
-Never start a feature without this skill as the active entry point.
+No dedicated orchestrator skill is active.
+Use the specialist skills directly based on the feature step.
 
 ## Active skill map
 
-### Orchestrator
-
-- `metalshopping-module-implementation`
-
-### Specialists (called by the orchestrator in order)
+### Specialists (use in implementation order)
 
 1. `metalshopping-openapi-contracts` - Step 1: OpenAPI contract
 2. `metalshopping-module-scaffold` - Step 2: Go module (domain, ports, adapters, handler)

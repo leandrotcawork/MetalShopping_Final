@@ -2,15 +2,21 @@
 
 ## Decision
 
-The next implementation area is Analytics readiness under the make-it-work-first execution mode.
+The next implementation area is Shopping Price Level 2 under the make-it-work-first execution mode.
 
 ## Why
 
 - login hardening and boundary guards are implemented and stable
 - Home Level 1 is closed with explicit acceptance evidence in docs
 - Shopping Level 1 is implemented and formally closed
-- the next operational surface in the frozen order is `Analytics`
+- Analytics readiness depends on Shopping snapshots being produced by a real worker core, not just a scaffold
 - the team should keep deterministic module throughput with `OpenAPI -> Go handler -> generated SDK -> React page`
+- the Shopping Level 2 ADR set is now frozen as the binding pre-coding gate
+
+Binding references:
+
+- `docs/SHOPPING_PRICE_EXECUTION_ADR_MAP.md`
+- ADR-0017 .. ADR-0024
 
 ## Constraints
 

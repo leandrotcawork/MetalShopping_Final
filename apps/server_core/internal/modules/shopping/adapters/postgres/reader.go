@@ -9,20 +9,59 @@ import (
 	"time"
 
 	"metalshopping/server_core/internal/modules/shopping/ports"
+	suppliersapp "metalshopping/server_core/internal/modules/suppliers/application"
 	pgdb "metalshopping/server_core/internal/platform/db/postgres"
 )
 
 var (
 	ErrRunNotFound           = errors.New("shopping run not found")
 	ErrProductLatestNotFound = errors.New("shopping product latest not found")
+	ErrRunRequestNotFound    = errors.New("shopping run request not found")
 )
 
 type Reader struct {
-	db *sql.DB
+	db               *sql.DB
+	suppliersService *suppliersapp.Service
 }
 
-func NewReader(db *sql.DB) *Reader {
-	return &Reader{db: db}
+func NewReader(db *sql.DB, suppliersService *suppliersapp.Service) *Reader {
+	return &Reader{
+		db:               db,
+		suppliersService: suppliersService,
+	}
+}
+
+func (r *Reader) GetBootstrap(ctx context.Context, tenantID string) (ports.Bootstrap, error) {
+	suppliers := []ports.BootstrapSupplier{}
+	if r.suppliersService != nil {
+		directory, err := r.suppliersService.ListDirectory(ctx, tenantID, true)
+		if err != nil {
+			return ports.Bootstrap{}, fmt.Errorf("list suppliers bootstrap directory: %w", err)
+		}
+		suppliers = make([]ports.BootstrapSupplier, 0, len(directory))
+		for _, item := range directory {
+			suppliers = append(suppliers, ports.BootstrapSupplier{
+				SupplierCode:  item.SupplierCode,
+				SupplierLabel: item.SupplierLabel,
+				ExecutionKind: item.ExecutionKind,
+				LookupPolicy:  item.LookupPolicy,
+				Enabled:       item.Enabled,
+			})
+		}
+	}
+
+	return ports.Bootstrap{
+		InputModes:     []string{"xlsx", "catalog"},
+		RunStatuses:    []string{"queued", "running", "completed", "failed"},
+		SupportsManual: true,
+		AdvancedDefaults: ports.AdvancedDefaults{
+			TimeoutSeconds:   60,
+			HTTPWorkers:      10,
+			PlaywrightWorker: 7,
+			TopN:             5,
+		},
+		Suppliers: suppliers,
+	}, nil
 }
 
 func (r *Reader) GetSummary(ctx context.Context, tenantID string) (ports.Summary, error) {
@@ -222,6 +261,90 @@ LIMIT 1
 		return ports.ProductLatest{}, fmt.Errorf("commit shopping product latest read: %w", err)
 	}
 	return item, nil
+}
+
+func (r *Reader) GetRunRequest(ctx context.Context, tenantID, runRequestID string) (ports.RunRequest, error) {
+	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return ports.RunRequest{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	const query = `
+SELECT
+  run_request_id,
+  request_status,
+  input_mode,
+  requested_at,
+  requested_by,
+  claimed_at,
+  started_at,
+  finished_at,
+  worker_id,
+  run_id,
+  error_message
+FROM shopping_price_run_requests
+WHERE tenant_id = current_tenant_id()
+  AND run_request_id = $1
+LIMIT 1
+`
+
+	var result ports.RunRequest
+	var claimedAt sql.NullTime
+	var startedAt sql.NullTime
+	var finishedAt sql.NullTime
+	var workerID sql.NullString
+	var runID sql.NullString
+	var errorMessage sql.NullString
+
+	if err := tx.QueryRowContext(ctx, query, runRequestID).Scan(
+		&result.RunRequestID,
+		&result.Status,
+		&result.InputMode,
+		&result.RequestedAt,
+		&result.RequestedBy,
+		&claimedAt,
+		&startedAt,
+		&finishedAt,
+		&workerID,
+		&runID,
+		&errorMessage,
+	); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ports.RunRequest{}, ErrRunRequestNotFound
+		}
+		return ports.RunRequest{}, fmt.Errorf("query shopping run request: %w", err)
+	}
+	result.RequestedAt = result.RequestedAt.UTC()
+	if claimedAt.Valid {
+		value := claimedAt.Time.UTC()
+		result.ClaimedAt = &value
+	}
+	if startedAt.Valid {
+		value := startedAt.Time.UTC()
+		result.StartedAt = &value
+	}
+	if finishedAt.Valid {
+		value := finishedAt.Time.UTC()
+		result.FinishedAt = &value
+	}
+	if workerID.Valid {
+		value := workerID.String
+		result.WorkerID = &value
+	}
+	if runID.Valid {
+		value := runID.String
+		result.RunID = &value
+	}
+	if errorMessage.Valid {
+		value := errorMessage.String
+		result.ErrorMessage = &value
+	}
+
+	if err := tx.Commit(); err != nil {
+		return ports.RunRequest{}, fmt.Errorf("commit shopping run request read: %w", err)
+	}
+	return result, nil
 }
 
 type scanner interface {

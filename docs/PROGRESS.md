@@ -106,12 +106,13 @@
 - Shopping API contract surface was frozen in draft (`contracts/api/openapi/shopping_v1.openapi.yaml`) with summary, runs list/detail, and latest-by-product schemas
 - Shopping Level 1 advanced with server_core read endpoints wired, sdk-runtime facade methods available, and `apps/web` route `/shopping` now bound to real API data instead of placeholder
 - integration worker scaffold for Shopping Price added in `apps/integration_worker/shopping_price_worker.py` (worker writes Postgres, Go reads Postgres)
-- root `SKILLS.md` now freezes `metalshopping-module-implementation` as the only feature entry point and maps specialist skills by ordered step
+- root `SKILLS.md` maps specialist skills by ordered step without a dedicated orchestrator skill
 - Shopping Level 1 acceptance was formally closed with evidence in `docs/SHOPPING_LEVEL1_ACCEPTANCE.md`
 
 ## Next
 
 - keep ADR set complete and stable
+- freeze and follow the Shopping Price Level 2 ADR set (ADR-0017 .. ADR-0024) before implementation work starts
 - keep CI workflow scope aligned with future structural package boundaries and new quality gates
 - apply pricing migrations and database-backed governance defaults in runtime
 - validate pricing write/list/current and outbox publication through smoke tests

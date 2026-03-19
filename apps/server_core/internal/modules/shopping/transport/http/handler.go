@@ -25,10 +25,55 @@ func NewHandler(service *application.Service) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("/api/v1/shopping/bootstrap", h.handleBootstrap)
 	mux.HandleFunc("/api/v1/shopping/summary", h.handleSummary)
 	mux.HandleFunc("/api/v1/shopping/runs", h.handleRunsList)
 	mux.HandleFunc("/api/v1/shopping/runs/", h.handleRunByID)
 	mux.HandleFunc("/api/v1/shopping/products/", h.handleProductLatest)
+	mux.HandleFunc("/api/v1/shopping/run-requests/", h.handleRunRequestByID)
+}
+
+func (h *Handler) handleBootstrap(w http.ResponseWriter, r *http.Request) {
+	startedAt := time.Now()
+	traceID := requestTraceID(r)
+	statusCode := http.StatusOK
+	reqResult := "success"
+	defer logRequest("shopping.get_bootstrap", traceID, &statusCode, &reqResult, startedAt)
+
+	if r.Method != http.MethodGet {
+		statusCode = http.StatusMethodNotAllowed
+		reqResult = "method_not_allowed"
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	tenantID, ok := authenticatedTenantID(w, r)
+	if !ok {
+		statusCode = http.StatusUnauthorized
+		reqResult = "auth_or_tenant_error"
+		return
+	}
+
+	bootstrap, err := h.service.GetBootstrap(r.Context(), tenantID)
+	if err != nil {
+		statusCode = http.StatusInternalServerError
+		reqResult = "internal_error"
+		writeShoppingError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to load shopping bootstrap", traceID)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"inputModes":         bootstrap.InputModes,
+		"runStatuses":        bootstrap.RunStatuses,
+		"supportsManualUrls": bootstrap.SupportsManual,
+		"advancedDefaults": map[string]any{
+			"timeoutSeconds":    bootstrap.AdvancedDefaults.TimeoutSeconds,
+			"httpWorkers":       bootstrap.AdvancedDefaults.HTTPWorkers,
+			"playwrightWorkers": bootstrap.AdvancedDefaults.PlaywrightWorker,
+			"topN":              bootstrap.AdvancedDefaults.TopN,
+		},
+		"suppliers": mapSuppliers(bootstrap.Suppliers),
+	})
 }
 
 func (h *Handler) handleSummary(w http.ResponseWriter, r *http.Request) {
@@ -77,11 +122,16 @@ func (h *Handler) handleSummary(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) handleRunsList(w http.ResponseWriter, r *http.Request) {
 	startedAt := time.Now()
 	traceID := requestTraceID(r)
-	statusCode := http.StatusOK
+	statusCode := http.StatusCreated
 	reqResult := "success"
-	defer logRequest("shopping.list_runs", traceID, &statusCode, &reqResult, startedAt)
+	action := "shopping.create_run_request"
+	if r.Method == http.MethodGet {
+		statusCode = http.StatusOK
+		action = "shopping.list_runs"
+	}
+	defer logRequest(action, traceID, &statusCode, &reqResult, startedAt)
 
-	if r.Method != http.MethodGet {
+	if r.Method != http.MethodGet && r.Method != http.MethodPost {
 		statusCode = http.StatusMethodNotAllowed
 		reqResult = "method_not_allowed"
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -92,6 +142,62 @@ func (h *Handler) handleRunsList(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		statusCode = http.StatusUnauthorized
 		reqResult = "auth_or_tenant_error"
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		var requestBody shoppingCreateRunRequestBody
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&requestBody); err != nil {
+			statusCode = http.StatusBadRequest
+			reqResult = "validation_error"
+			writeShoppingError(w, http.StatusBadRequest, "SHOPPING_RUN_REQUEST_INVALID", "Invalid shopping run request payload", traceID)
+			return
+		}
+
+		principal, principalOK := platformauth.PrincipalFromContext(r.Context())
+		if !principalOK {
+			statusCode = http.StatusUnauthorized
+			reqResult = "auth_or_tenant_error"
+			writeShoppingError(w, http.StatusUnauthorized, "AUTH_UNAUTHORIZED", "Authentication required", traceID)
+			return
+		}
+		requestedBy := strings.TrimSpace(principal.Email)
+		if requestedBy == "" {
+			requestedBy = strings.TrimSpace(principal.SubjectID)
+		}
+		if requestedBy == "" {
+			requestedBy = "unknown"
+		}
+
+		created, err := h.service.CreateRunRequest(r.Context(), tenantID, ports.CreateRunRequestInput{
+			InputMode:         requestBody.InputMode,
+			CatalogProductIDs: requestBody.CatalogProductIDs,
+			XLSXFilePath:      requestBody.XLSXFilePath,
+			SupplierCodes:     requestBody.SupplierCodes,
+			Advanced: ports.AdvancedDefaults{
+				TimeoutSeconds:   requestBody.Advanced.TimeoutSeconds,
+				HTTPWorkers:      requestBody.Advanced.HTTPWorkers,
+				PlaywrightWorker: requestBody.Advanced.PlaywrightWorkers,
+				TopN:             requestBody.Advanced.TopN,
+			},
+			Notes:       requestBody.Notes,
+			RequestedBy: requestedBy,
+		})
+		if err != nil {
+			statusCode = http.StatusBadRequest
+			reqResult = "validation_error"
+			writeShoppingError(w, http.StatusBadRequest, "SHOPPING_RUN_REQUEST_INVALID", err.Error(), traceID)
+			return
+		}
+		writeJSON(w, http.StatusCreated, map[string]any{
+			"runRequestId": created.RunRequestID,
+			"status":       created.Status,
+			"inputMode":    created.InputMode,
+			"requestedAt":  created.RequestedAt.Format(time.RFC3339),
+			"requestedBy":  created.RequestedBy,
+		})
 		return
 	}
 
@@ -125,6 +231,20 @@ func (h *Handler) handleRunsList(w http.ResponseWriter, r *http.Request) {
 			"total":    runList.Total,
 		},
 	})
+}
+
+type shoppingCreateRunRequestBody struct {
+	InputMode         string   `json:"inputMode"`
+	CatalogProductIDs []string `json:"catalogProductIds"`
+	XLSXFilePath      string   `json:"xlsxFilePath"`
+	SupplierCodes     []string `json:"supplierCodes"`
+	Advanced          struct {
+		TimeoutSeconds    int64 `json:"timeoutSeconds"`
+		HTTPWorkers       int64 `json:"httpWorkers"`
+		PlaywrightWorkers int64 `json:"playwrightWorkers"`
+		TopN              int64 `json:"topN"`
+	} `json:"advanced"`
+	Notes string `json:"notes"`
 }
 
 func (h *Handler) handleRunByID(w http.ResponseWriter, r *http.Request) {
@@ -171,6 +291,85 @@ func (h *Handler) handleRunByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, mapRun(run))
+}
+
+func (h *Handler) handleRunRequestByID(w http.ResponseWriter, r *http.Request) {
+	startedAt := time.Now()
+	traceID := requestTraceID(r)
+	statusCode := http.StatusOK
+	reqResult := "success"
+	defer logRequest("shopping.get_run_request", traceID, &statusCode, &reqResult, startedAt)
+
+	if r.Method != http.MethodGet {
+		statusCode = http.StatusMethodNotAllowed
+		reqResult = "method_not_allowed"
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	tenantID, ok := authenticatedTenantID(w, r)
+	if !ok {
+		statusCode = http.StatusUnauthorized
+		reqResult = "auth_or_tenant_error"
+		return
+	}
+
+	runRequestID := strings.TrimPrefix(r.URL.Path, "/api/v1/shopping/run-requests/")
+	runRequestID = strings.TrimSpace(runRequestID)
+	if runRequestID == "" || strings.Contains(runRequestID, "/") {
+		statusCode = http.StatusBadRequest
+		reqResult = "validation_error"
+		writeShoppingError(w, http.StatusBadRequest, "SHOPPING_RUN_REQUEST_INVALID", "Missing run_request_id", traceID)
+		return
+	}
+
+	runRequest, err := h.service.GetRunRequest(r.Context(), tenantID, runRequestID)
+	if err != nil {
+		if errors.Is(err, postgres.ErrRunRequestNotFound) {
+			statusCode = http.StatusNotFound
+			reqResult = "not_found"
+			writeShoppingError(w, http.StatusNotFound, "SHOPPING_RUN_REQUEST_NOT_FOUND", "Run request not found", traceID)
+			return
+		}
+		statusCode = http.StatusInternalServerError
+		reqResult = "internal_error"
+		writeShoppingError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to load shopping run request", traceID)
+		return
+	}
+
+	payload := map[string]any{
+		"runRequestId": runRequest.RunRequestID,
+		"status":       runRequest.Status,
+		"inputMode":    runRequest.InputMode,
+		"requestedAt":  runRequest.RequestedAt.Format(time.RFC3339),
+		"requestedBy":  runRequest.RequestedBy,
+		"claimedAt":    nil,
+		"startedAt":    nil,
+		"finishedAt":   nil,
+		"workerId":     nil,
+		"runId":        nil,
+		"errorMessage": nil,
+	}
+	if runRequest.ClaimedAt != nil {
+		payload["claimedAt"] = runRequest.ClaimedAt.UTC().Format(time.RFC3339)
+	}
+	if runRequest.StartedAt != nil {
+		payload["startedAt"] = runRequest.StartedAt.UTC().Format(time.RFC3339)
+	}
+	if runRequest.FinishedAt != nil {
+		payload["finishedAt"] = runRequest.FinishedAt.UTC().Format(time.RFC3339)
+	}
+	if runRequest.WorkerID != nil {
+		payload["workerId"] = *runRequest.WorkerID
+	}
+	if runRequest.RunID != nil {
+		payload["runId"] = *runRequest.RunID
+	}
+	if runRequest.ErrorMessage != nil {
+		payload["errorMessage"] = *runRequest.ErrorMessage
+	}
+
+	writeJSON(w, http.StatusOK, payload)
 }
 
 func (h *Handler) handleProductLatest(w http.ResponseWriter, r *http.Request) {
@@ -241,6 +440,20 @@ func mapRun(run ports.Run) map[string]any {
 		"totalItems":     run.TotalItems,
 		"notes":          run.Notes,
 	}
+}
+
+func mapSuppliers(items []ports.BootstrapSupplier) []map[string]any {
+	result := make([]map[string]any, 0, len(items))
+	for _, item := range items {
+		result = append(result, map[string]any{
+			"supplierCode":  item.SupplierCode,
+			"supplierLabel": item.SupplierLabel,
+			"executionKind": item.ExecutionKind,
+			"lookupPolicy":  item.LookupPolicy,
+			"enabled":       item.Enabled,
+		})
+	}
+	return result
 }
 
 func extractProductLatestPathParam(path string) (string, bool) {

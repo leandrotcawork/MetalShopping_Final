@@ -1,4 +1,4 @@
-# Module Implementation Checklist
+﻿# Module Implementation Checklist
 
 ## Contract (Step 1)
 - [ ] `contracts/api/openapi/<module>_v1.openapi.yaml` exists
@@ -7,20 +7,20 @@
 - [ ] contract finalized before Go code started
 
 ## Go module structure (Step 2)
-- [ ] `domain/model.go` — types with validation methods
-- [ ] `domain/errors.go` — sentinel errors
-- [ ] `ports/` — interface definitions only, no implementation
-- [ ] `adapters/postgres/` — implements port using `pgdb.BeginTenantTx`
-- [ ] `application/service.go` — no HTTP, no direct DB access
-- [ ] `transport/http/handler.go` — no DB, no direct business logic
+- [ ] `domain/model.go` - types with validation methods
+- [ ] `domain/errors.go` - sentinel errors
+- [ ] `ports/` - interface definitions only, no implementation
+- [ ] `adapters/postgres/` - implements port using `pgdb.BeginTenantTx`
+- [ ] `application/service.go` - no HTTP, no direct DB access
+- [ ] `transport/http/handler.go` - no DB, no direct business logic
 
-## Tenancy (critical — every query)
+## Tenancy (critical - every query)
 - [ ] every Postgres adapter uses `pgdb.BeginTenantTx`
 - [ ] every query uses `current_tenant_id()` in WHERE clause
 - [ ] `tx.Commit()` called on every transaction path
 - [ ] `defer tx.Rollback()` present on every transaction
 
-## Auth and tenancy in handlers (critical — every handler)
+## Auth and tenancy in handlers (critical - every handler)
 - [ ] `platformauth.PrincipalFromContext` checked before operation
 - [ ] `tenancy_runtime.TenantFromContext` checked before operation
 - [ ] structured log defer pattern present
@@ -38,7 +38,7 @@
 - [ ] follows same wiring pattern as existing modules
 - [ ] no business logic added to composition file
 
-## Python worker (if applicable — Step 3)
+## Python worker (if applicable - Step 3)
 - [ ] worker in `apps/integration_worker/`
 - [ ] every write sets `app.current_tenant_id` via `set_config`
 - [ ] all inserts use `ON CONFLICT ... DO UPDATE`

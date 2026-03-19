@@ -31,8 +31,12 @@ export const schemaIds = {
   "pricing_set_product_price_request_v1.schema": "https://contracts.metalshopping.local/schema/pricing/set_product_price_request/v1",
   "products_portfolio_item_v1.schema": "https://metalshopping.dev/contracts/api/jsonschema/products_portfolio_item_v1.schema.json",
   "products_portfolio_list_v1.schema": "https://metalshopping.dev/contracts/api/jsonschema/products_portfolio_list_v1.schema.json",
+  "shopping_bootstrap_v1.schema": "https://schemas.metalshopping.local/api/shopping_bootstrap_v1.schema.json",
+  "shopping_create_run_request_v1.schema": "https://schemas.metalshopping.local/api/shopping_create_run_request_v1.schema.json",
+  "shopping_create_run_response_v1.schema": "https://schemas.metalshopping.local/api/shopping_create_run_response_v1.schema.json",
   "shopping_product_latest_v1.schema": "https://schemas.metalshopping.local/api/shopping_product_latest_v1.schema.json",
   "shopping_run_list_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_list_v1.schema.json",
+  "shopping_run_request_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_request_v1.schema.json",
   "shopping_run_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_v1.schema.json",
   "shopping_summary_v1.schema": "https://schemas.metalshopping.local/api/shopping_summary_v1.schema.json"
 } as const;
@@ -345,6 +349,47 @@ export type ProductsPortfolioListV1 = {
   };
 };
 
+export type ShoppingBootstrapV1 = {
+  inputModes: Array<"xlsx" | "catalog">;
+  runStatuses: Array<"queued" | "running" | "completed" | "failed">;
+  supportsManualUrls: boolean;
+  advancedDefaults: {
+    timeoutSeconds: number;
+    httpWorkers: number;
+    playwrightWorkers: number;
+    topN: number;
+  };
+  suppliers: Array<{
+    supplierCode: string;
+    supplierLabel: string;
+    executionKind: "HTTP" | "PLAYWRIGHT";
+    lookupPolicy: "EAN_FIRST" | "REFERENCE_FIRST";
+    enabled: boolean;
+  }>;
+};
+
+export type ShoppingCreateRunRequestV1 = {
+  inputMode: "xlsx" | "catalog";
+  catalogProductIds?: Array<string>;
+  xlsxFilePath?: string;
+  supplierCodes?: Array<string>;
+  advanced?: {
+    timeoutSeconds?: number;
+    httpWorkers?: number;
+    playwrightWorkers?: number;
+    topN?: number;
+  };
+  notes?: string;
+};
+
+export type ShoppingCreateRunResponseV1 = {
+  runRequestId: string;
+  status: "queued" | "claimed" | "running" | "completed" | "failed" | "cancelled";
+  inputMode: "xlsx" | "catalog";
+  requestedAt: string;
+  requestedBy: string;
+};
+
 export type ShoppingProductLatestV1 = {
   productId: string;
   runId: string;
@@ -363,6 +408,20 @@ export type ShoppingRunListV1 = {
     returned: number;
     total: number;
   };
+};
+
+export type ShoppingRunRequestV1 = {
+  runRequestId: string;
+  status: "queued" | "claimed" | "running" | "completed" | "failed" | "cancelled";
+  inputMode: "xlsx" | "catalog";
+  requestedAt: string;
+  requestedBy: string;
+  claimedAt?: string | null;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+  workerId?: string | null;
+  runId?: string | null;
+  errorMessage?: string | null;
 };
 
 export type ShoppingRunV1 = {

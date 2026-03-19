@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.metalshopping.local/api/shopping_create_run_request_v1.schema.json",
+  "title": "ShoppingCreateRunRequestV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["inputMode"],
+  "properties": {
+    "inputMode": {
+      "type": "string",
+      "enum": ["xlsx", "catalog"]
+    },
+    "catalogProductIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      }
+    },
+    "xlsxFilePath": {
+      "type": "string",
+      "minLength": 1
+    },
+    "supplierCodes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "advanced": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "timeoutSeconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "httpWorkers": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "playwrightWorkers": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "topN": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "inputMode": {
+            "const": "catalog"
+          }
+        },
+        "required": ["inputMode"]
+      },
+      "then": {
+        "required": ["catalogProductIds"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "inputMode": {
+            "const": "xlsx"
+          }
+        },
+        "required": ["inputMode"]
+      },
+      "then": {
+        "required": ["xlsxFilePath"]
+      }
+    }
+  ]
+}
+

@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.metalshopping.local/api/shopping_run_request_v1.schema.json",
+  "title": "ShoppingRunRequestV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "runRequestId",
+    "status",
+    "inputMode",
+    "requestedAt",
+    "requestedBy"
+  ],
+  "properties": {
+    "runRequestId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": ["queued", "claimed", "running", "completed", "failed", "cancelled"]
+    },
+    "inputMode": {
+      "type": "string",
+      "enum": ["xlsx", "catalog"]
+    },
+    "requestedAt": {
+      "type": "string",
+      "minLength": 1
+    },
+    "requestedBy": {
+      "type": "string",
+      "minLength": 1
+    },
+    "claimedAt": {
+      "type": ["string", "null"]
+    },
+    "startedAt": {
+      "type": ["string", "null"]
+    },
+    "finishedAt": {
+      "type": ["string", "null"]
+    },
+    "workerId": {
+      "type": ["string", "null"]
+    },
+    "runId": {
+      "type": ["string", "null"]
+    },
+    "errorMessage": {
+      "type": ["string", "null"]
+    }
+  }
+}
+

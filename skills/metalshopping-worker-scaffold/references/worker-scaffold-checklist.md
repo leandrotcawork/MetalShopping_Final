@@ -7,7 +7,7 @@
 - [ ] existing worker checked before creating a new file
 
 ## While implementing
-- [ ] every write transaction sets `app.current_tenant_id` via `set_config`
+- [ ] every write transaction sets `app.tenant_id` via `set_config`
 - [ ] all inserts use `ON CONFLICT ... DO UPDATE` (idempotent)
 - [ ] `log()` called at start, end, and on error with tenant_id and run_id
 - [ ] `MS_DATABASE_URL` and other env vars fail-fast if missing

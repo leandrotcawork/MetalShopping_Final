@@ -4,6 +4,10 @@ import type {
   CommonErrorV1,
   HomeSummaryV1,
   ProductsPortfolioListV1,
+  ShoppingBootstrapV1,
+  ShoppingCreateRunRequestV1,
+  ShoppingCreateRunResponseV1,
+  ShoppingRunRequestV1,
   ShoppingProductLatestV1,
   ShoppingRunListV1,
   ShoppingRunV1,
@@ -83,6 +87,9 @@ export type ServerCoreSdk = {
     getSummary(): Promise<HomeSummaryV1>;
   };
   shopping: {
+    getBootstrap(): Promise<ShoppingBootstrapV1>;
+    createRunRequest(payload: ShoppingCreateRunRequestV1): Promise<ShoppingCreateRunResponseV1>;
+    getRunRequest(runRequestId: string): Promise<ShoppingRunRequestV1>;
     getSummary(): Promise<ShoppingSummaryV1>;
     listRuns(query?: ListShoppingRunsQueryParams): Promise<ShoppingRunListV1>;
     getRun(runId: string): Promise<ShoppingRunV1>;
@@ -344,6 +351,92 @@ function parseShoppingSummary(raw: unknown): ShoppingSummaryV1 {
   };
 }
 
+function parseShoppingBootstrap(raw: unknown): ShoppingBootstrapV1 {
+  if (!isRecord(raw)) {
+    throw new Error("[sdk-runtime] ShoppingBootstrapV1 response must be an object");
+  }
+  if (!Array.isArray(raw.inputModes) || raw.inputModes.some((item) => item !== "xlsx" && item !== "catalog")) {
+    throw new Error("[sdk-runtime] ShoppingBootstrapV1.inputModes must be an array with xlsx/catalog");
+  }
+  if (
+    !Array.isArray(raw.runStatuses) ||
+    raw.runStatuses.some((item) => !["queued", "running", "completed", "failed"].includes(String(item)))
+  ) {
+    throw new Error("[sdk-runtime] ShoppingBootstrapV1.runStatuses must be a valid status array");
+  }
+  if (typeof raw.supportsManualUrls !== "boolean") {
+    throw new Error("[sdk-runtime] ShoppingBootstrapV1.supportsManualUrls must be boolean");
+  }
+  if (!isRecord(raw.advancedDefaults)) {
+    throw new Error("[sdk-runtime] ShoppingBootstrapV1.advancedDefaults must be an object");
+  }
+  const defaults = raw.advancedDefaults;
+  assertNumber(defaults.timeoutSeconds, "ShoppingBootstrapV1.advancedDefaults.timeoutSeconds");
+  assertNumber(defaults.httpWorkers, "ShoppingBootstrapV1.advancedDefaults.httpWorkers");
+  assertNumber(defaults.playwrightWorkers, "ShoppingBootstrapV1.advancedDefaults.playwrightWorkers");
+  assertNumber(defaults.topN, "ShoppingBootstrapV1.advancedDefaults.topN");
+  if (!Array.isArray(raw.suppliers)) {
+    throw new Error("[sdk-runtime] ShoppingBootstrapV1.suppliers must be an array");
+  }
+  return raw as ShoppingBootstrapV1;
+}
+
+function parseShoppingCreateRunResponse(raw: unknown): ShoppingCreateRunResponseV1 {
+  if (!isRecord(raw)) {
+    throw new Error("[sdk-runtime] ShoppingCreateRunResponseV1 response must be an object");
+  }
+  assertString(raw.runRequestId, "ShoppingCreateRunResponseV1.runRequestId");
+  assertString(raw.status, "ShoppingCreateRunResponseV1.status");
+  assertString(raw.inputMode, "ShoppingCreateRunResponseV1.inputMode");
+  const requestedAt = normalizeDateTime(raw.requestedAt, "ShoppingCreateRunResponseV1.requestedAt");
+  assertString(raw.requestedBy, "ShoppingCreateRunResponseV1.requestedBy");
+  return {
+    runRequestId: raw.runRequestId,
+    status: raw.status as ShoppingCreateRunResponseV1["status"],
+    inputMode: raw.inputMode as ShoppingCreateRunResponseV1["inputMode"],
+    requestedAt,
+    requestedBy: raw.requestedBy,
+  };
+}
+
+function parseShoppingRunRequest(raw: unknown): ShoppingRunRequestV1 {
+  if (!isRecord(raw)) {
+    throw new Error("[sdk-runtime] ShoppingRunRequestV1 response must be an object");
+  }
+  assertString(raw.runRequestId, "ShoppingRunRequestV1.runRequestId");
+  assertString(raw.status, "ShoppingRunRequestV1.status");
+  assertString(raw.inputMode, "ShoppingRunRequestV1.inputMode");
+  const requestedAt = normalizeDateTime(raw.requestedAt, "ShoppingRunRequestV1.requestedAt");
+  assertString(raw.requestedBy, "ShoppingRunRequestV1.requestedBy");
+  const claimedAt = raw.claimedAt === null || raw.claimedAt === undefined ? null : normalizeDateTime(raw.claimedAt, "ShoppingRunRequestV1.claimedAt");
+  const startedAt = raw.startedAt === null || raw.startedAt === undefined ? null : normalizeDateTime(raw.startedAt, "ShoppingRunRequestV1.startedAt");
+  const finishedAt = raw.finishedAt === null || raw.finishedAt === undefined ? null : normalizeDateTime(raw.finishedAt, "ShoppingRunRequestV1.finishedAt");
+
+  if (raw.workerId !== undefined && raw.workerId !== null) {
+    assertString(raw.workerId, "ShoppingRunRequestV1.workerId");
+  }
+  if (raw.runId !== undefined && raw.runId !== null) {
+    assertString(raw.runId, "ShoppingRunRequestV1.runId");
+  }
+  if (raw.errorMessage !== undefined && raw.errorMessage !== null) {
+    assertString(raw.errorMessage, "ShoppingRunRequestV1.errorMessage");
+  }
+
+  return {
+    runRequestId: raw.runRequestId,
+    status: raw.status as ShoppingRunRequestV1["status"],
+    inputMode: raw.inputMode as ShoppingRunRequestV1["inputMode"],
+    requestedAt,
+    requestedBy: raw.requestedBy,
+    claimedAt: claimedAt === null ? null : claimedAt,
+    startedAt: startedAt === null ? null : startedAt,
+    finishedAt: finishedAt === null ? null : finishedAt,
+    workerId: raw.workerId ?? null,
+    runId: raw.runId ?? null,
+    errorMessage: raw.errorMessage ?? null,
+  };
+}
+
 function parseShoppingProductLatest(raw: unknown): ShoppingProductLatestV1 {
   if (!isRecord(raw)) {
     throw new Error("[sdk-runtime] ShoppingProductLatestV1 response must be an object");
@@ -517,6 +610,26 @@ export function createServerCoreSdk(client: GeneratedHttpClient): ServerCoreSdk 
       },
     },
     shopping: {
+      async getBootstrap() {
+        const raw = await runGeneratedCall(() => shoppingApi.getShoppingBootstrap());
+        return parseShoppingBootstrap(raw);
+      },
+      async createRunRequest(payload) {
+        const raw = await runGeneratedCall(() =>
+          shoppingApi.createShoppingRunRequest({
+            shoppingCreateRunRequestV1: payload,
+          }),
+        );
+        return parseShoppingCreateRunResponse(raw);
+      },
+      async getRunRequest(runRequestId) {
+        const raw = await runGeneratedCall(() =>
+          shoppingApi.getShoppingRunRequest({
+            runRequestId,
+          }),
+        );
+        return parseShoppingRunRequest(raw);
+      },
       async getSummary() {
         const raw = await runGeneratedCall(() => shoppingApi.getShoppingSummary());
         return parseShoppingSummary(raw);

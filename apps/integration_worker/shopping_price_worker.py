@@ -1,21 +1,21 @@
-"""Shopping Price worker scaffold (Level 1).
+"""Shopping Price worker (ADR-0018 Phase 1).
 
 Worker responsibility:
-- ingest shopping run snapshots from an input JSON
-- write to Postgres tables owned by shopping read surface
-- keep idempotent upserts (safe to re-run)
-
-This worker does not expose HTTP endpoints.
-Go server_core reads from Postgres and exposes API.
+- queue mode: claim shopping run requests from Postgres and process lifecycle
+- legacy mode: ingest shopping run snapshots from an input JSON
+- write read-model rows consumed by server_core APIs
+- keep idempotent upserts to avoid duplicate run items on retry
 """
 
 from __future__ import annotations
 
 import json
 import os
+import socket
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from hashlib import sha1
 from typing import Any
 from uuid import uuid4
 
@@ -30,6 +30,15 @@ class RunItem:
     observed_price: float
     currency_code: str
     observed_at: str
+
+
+@dataclass(frozen=True)
+class RunRequest:
+    run_request_id: str
+    tenant_id: str
+    input_mode: str
+    input_payload: dict[str, Any]
+    requested_by: str
 
 
 def utc_now_iso() -> str:
@@ -69,6 +78,39 @@ def parse_items(raw_items: Any) -> list[RunItem]:
     return parsed
 
 
+def parse_catalog_product_ids(payload: dict[str, Any]) -> list[str]:
+    value = payload.get("catalogProductIds")
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise ValueError("catalogProductIds must be an array when provided")
+    parsed: list[str] = []
+    for entry in value:
+        text = str(entry).strip()
+        if text != "":
+            parsed.append(text)
+    return parsed
+
+
+def parse_xlsx_file_path(payload: dict[str, Any]) -> str:
+    value = payload.get("xlsxFilePath")
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def deterministic_run_item_id(
+    tenant_id: str,
+    run_id: str,
+    product_id: str,
+    seller_name: str,
+    channel: str,
+) -> str:
+    material = f"{tenant_id}|{run_id}|{product_id}|{seller_name}|{channel}"
+    digest = sha1(material.encode("utf-8")).hexdigest()
+    return f"{digest[0:8]}-{digest[8:12]}-{digest[12:16]}-{digest[16:20]}-{digest[20:32]}"
+
+
 def upsert_run(
     conn: psycopg.Connection,
     tenant_id: str,
@@ -84,7 +126,8 @@ def upsert_run(
 
     with conn.cursor() as cur:
         cur.execute("BEGIN")
-        cur.execute("SELECT set_config('app.current_tenant_id', %s, true)", (tenant_id,))
+        # RLS uses current_tenant_id() -> current_setting('app.tenant_id')
+        cur.execute("SELECT set_config('app.tenant_id', %s, true)", (tenant_id,))
 
         cur.execute(
             """
@@ -104,7 +147,13 @@ def upsert_run(
         )
 
         for item in items:
-            run_item_id = str(uuid4())
+            run_item_id = deterministic_run_item_id(
+                tenant_id=tenant_id,
+                run_id=run_id,
+                product_id=item.product_id,
+                seller_name=item.seller_name,
+                channel=item.channel,
+            )
             cur.execute(
                 """
                 INSERT INTO shopping_price_run_items (
@@ -115,7 +164,11 @@ def upsert_run(
                   %s, current_tenant_id(), %s, %s, %s, %s,
                   %s, %s, %s
                 )
-                ON CONFLICT (run_item_id) DO NOTHING
+                ON CONFLICT (run_item_id) DO UPDATE SET
+                  observed_price = EXCLUDED.observed_price,
+                  currency_code = EXCLUDED.currency_code,
+                  observed_at = EXCLUDED.observed_at,
+                  updated_at = NOW()
                 """,
                 (
                     run_item_id,
@@ -165,45 +218,379 @@ def upsert_run(
     return len(items)
 
 
+def claim_next_request(
+    conn: psycopg.Connection,
+    tenant_id: str,
+    worker_id: str,
+) -> RunRequest | None:
+    with conn.cursor() as cur:
+        cur.execute("BEGIN")
+        cur.execute("SELECT set_config('app.tenant_id', %s, true)", (tenant_id,))
+        cur.execute(
+            """
+            SELECT run_request_id, tenant_id, input_mode, input_payload_json, requested_by
+            FROM shopping_price_run_requests
+            WHERE tenant_id = current_tenant_id()
+              AND request_status = 'queued'
+            ORDER BY requested_at ASC
+            FOR UPDATE SKIP LOCKED
+            LIMIT 1
+            """
+        )
+        row = cur.fetchone()
+        if row is None:
+            cur.execute("COMMIT")
+            return None
+
+        run_request_id = str(row[0])
+        cur.execute(
+            """
+            UPDATE shopping_price_run_requests
+            SET request_status = 'claimed',
+                claimed_at = NOW(),
+                worker_id = %s,
+                updated_at = NOW()
+            WHERE run_request_id = %s
+            """,
+            (worker_id, run_request_id),
+        )
+        cur.execute("COMMIT")
+
+    payload = row[3]
+    if not isinstance(payload, dict):
+        raise ValueError("input_payload_json must be a JSON object")
+    return RunRequest(
+        run_request_id=run_request_id,
+        tenant_id=str(row[1]),
+        input_mode=str(row[2]),
+        input_payload=payload,
+        requested_by=str(row[4]),
+    )
+
+
+def mark_request_running(
+    conn: psycopg.Connection,
+    tenant_id: str,
+    run_request_id: str,
+    run_id: str,
+) -> None:
+    with conn.cursor() as cur:
+        cur.execute("BEGIN")
+        cur.execute("SELECT set_config('app.tenant_id', %s, true)", (tenant_id,))
+        cur.execute(
+            """
+            UPDATE shopping_price_run_requests
+            SET request_status = 'running',
+                started_at = NOW(),
+                run_id = %s,
+                updated_at = NOW()
+            WHERE tenant_id = current_tenant_id()
+              AND run_request_id = %s
+            """,
+            (run_id, run_request_id),
+        )
+        cur.execute("COMMIT")
+
+
+def mark_request_completed(
+    conn: psycopg.Connection,
+    tenant_id: str,
+    run_request_id: str,
+) -> None:
+    with conn.cursor() as cur:
+        cur.execute("BEGIN")
+        cur.execute("SELECT set_config('app.tenant_id', %s, true)", (tenant_id,))
+        cur.execute(
+            """
+            UPDATE shopping_price_run_requests
+            SET request_status = 'completed',
+                finished_at = NOW(),
+                updated_at = NOW()
+            WHERE tenant_id = current_tenant_id()
+              AND run_request_id = %s
+            """,
+            (run_request_id,),
+        )
+        cur.execute("COMMIT")
+
+
+def mark_request_failed(
+    conn: psycopg.Connection,
+    tenant_id: str,
+    run_request_id: str,
+    error_message: str,
+) -> None:
+    with conn.cursor() as cur:
+        cur.execute("BEGIN")
+        cur.execute("SELECT set_config('app.tenant_id', %s, true)", (tenant_id,))
+        cur.execute(
+            """
+            UPDATE shopping_price_run_requests
+            SET request_status = 'failed',
+                finished_at = NOW(),
+                error_message = %s,
+                updated_at = NOW()
+            WHERE tenant_id = current_tenant_id()
+              AND run_request_id = %s
+            """,
+            (error_message[:500], run_request_id),
+        )
+        cur.execute("COMMIT")
+
+
+def query_catalog_items(
+    conn: psycopg.Connection,
+    tenant_id: str,
+    product_ids: list[str],
+) -> list[RunItem]:
+    if len(product_ids) == 0:
+        return []
+    with conn.cursor() as cur:
+        cur.execute("BEGIN")
+        cur.execute("SELECT set_config('app.tenant_id', %s, true)", (tenant_id,))
+        cur.execute(
+            """
+            SELECT
+              p.product_id,
+              COALESCE(pr.price_amount, 0)::double precision AS observed_price,
+              COALESCE(pr.currency_code, 'BRL') AS currency_code
+            FROM catalog_products p
+            LEFT JOIN pricing_product_prices pr
+              ON pr.tenant_id = current_tenant_id()
+             AND pr.product_id = p.product_id
+             AND pr.effective_to IS NULL
+            WHERE p.tenant_id = current_tenant_id()
+              AND p.product_id = ANY(%s::text[])
+            ORDER BY p.product_id
+            """,
+            (product_ids,),
+        )
+        rows = cur.fetchall()
+        cur.execute("COMMIT")
+
+    now_iso = utc_now_iso()
+    return [
+        RunItem(
+            product_id=str(row[0]),
+            seller_name="catalog_reference",
+            channel="CATALOG",
+            observed_price=float(row[1]),
+            currency_code=str(row[2]).upper(),
+            observed_at=now_iso,
+        )
+        for row in rows
+    ]
+
+
+def query_xlsx_fallback_items(
+    conn: psycopg.Connection,
+    tenant_id: str,
+    limit: int,
+) -> list[RunItem]:
+    with conn.cursor() as cur:
+        cur.execute("BEGIN")
+        cur.execute("SELECT set_config('app.tenant_id', %s, true)", (tenant_id,))
+        cur.execute(
+            """
+            SELECT
+              p.product_id,
+              COALESCE(pr.price_amount, 0)::double precision AS observed_price,
+              COALESCE(pr.currency_code, 'BRL') AS currency_code
+            FROM catalog_products p
+            LEFT JOIN pricing_product_prices pr
+              ON pr.tenant_id = current_tenant_id()
+             AND pr.product_id = p.product_id
+             AND pr.effective_to IS NULL
+            WHERE p.tenant_id = current_tenant_id()
+            ORDER BY p.updated_at DESC
+            LIMIT %s
+            """,
+            (limit,),
+        )
+        rows = cur.fetchall()
+        cur.execute("COMMIT")
+
+    now_iso = utc_now_iso()
+    return [
+        RunItem(
+            product_id=str(row[0]),
+            seller_name="xlsx_reference",
+            channel="XLSX",
+            observed_price=float(row[1]),
+            currency_code=str(row[2]).upper(),
+            observed_at=now_iso,
+        )
+        for row in rows
+    ]
+
+
+def process_claimed_request(
+    conn: psycopg.Connection,
+    run_request: RunRequest,
+    xlsx_fallback_limit: int,
+) -> tuple[str, int]:
+    run_id = str(uuid4())
+    mark_request_running(conn, run_request.tenant_id, run_request.run_request_id, run_id)
+
+    notes = f"requested_by={run_request.requested_by}; input_mode={run_request.input_mode}"
+    if run_request.input_mode == "catalog":
+        product_ids = parse_catalog_product_ids(run_request.input_payload)
+        if len(product_ids) == 0:
+            raise ValueError("catalog mode requires at least one catalogProductIds entry")
+        items = query_catalog_items(conn, run_request.tenant_id, product_ids)
+    elif run_request.input_mode == "xlsx":
+        xlsx_file_path = parse_xlsx_file_path(run_request.input_payload)
+        items = query_xlsx_fallback_items(conn, run_request.tenant_id, xlsx_fallback_limit)
+        notes = f"{notes}; xlsx_path={xlsx_file_path or 'not_provided'}; mode=xlsx_fallback"
+    else:
+        raise ValueError(f"unsupported input_mode: {run_request.input_mode}")
+
+    upsert_run(
+        conn=conn,
+        tenant_id=run_request.tenant_id,
+        run_id=run_id,
+        run_status="completed",
+        started_at=utc_now_iso(),
+        finished_at=utc_now_iso(),
+        notes=notes,
+        items=items,
+    )
+    mark_request_completed(conn, run_request.tenant_id, run_request.run_request_id)
+    return run_id, len(items)
+
+
+def run_queue_once(
+    conn: psycopg.Connection,
+    tenant_id: str,
+    worker_id: str,
+    xlsx_fallback_limit: int,
+) -> bool:
+    run_request = claim_next_request(conn, tenant_id, worker_id)
+    if run_request is None:
+        log("shopping_queue_idle", tenant_id=tenant_id, worker_id=worker_id)
+        return False
+
+    log(
+        "shopping_queue_claimed",
+        tenant_id=run_request.tenant_id,
+        worker_id=worker_id,
+        run_request_id=run_request.run_request_id,
+        input_mode=run_request.input_mode,
+    )
+    try:
+        run_id, rows_written = process_claimed_request(conn, run_request, xlsx_fallback_limit)
+    except Exception as exc:
+        mark_request_failed(conn, run_request.tenant_id, run_request.run_request_id, str(exc))
+        log(
+            "shopping_queue_failed",
+            tenant_id=run_request.tenant_id,
+            worker_id=worker_id,
+            run_request_id=run_request.run_request_id,
+            error=str(exc),
+        )
+        return True
+
+    log(
+        "shopping_queue_completed",
+        tenant_id=run_request.tenant_id,
+        worker_id=worker_id,
+        run_request_id=run_request.run_request_id,
+        run_id=run_id,
+        rows_written=rows_written,
+    )
+    return True
+
+
 def main() -> int:
     database_url = os.getenv("MS_DATABASE_URL", "").strip()
     input_path = os.getenv("MS_SHOPPING_INPUT_PATH", "").strip()
+    tenant_id = os.getenv("MS_TENANT_ID", "").strip()
+    worker_id = os.getenv("MS_WORKER_ID", "").strip() or f"{socket.gethostname()}-{os.getpid()}"
+    xlsx_fallback_limit_raw = os.getenv("MS_SHOPPING_XLSX_FALLBACK_LIMIT", "").strip() or "50"
+    max_queue_claims_raw = os.getenv("MS_SHOPPING_MAX_QUEUE_CLAIMS", "").strip() or "1"
 
-    if database_url == "" or input_path == "":
-        print(
-            "Missing required env vars: MS_DATABASE_URL and MS_SHOPPING_INPUT_PATH",
-            file=sys.stderr,
-        )
+    if database_url == "":
+        print("Missing required env var: MS_DATABASE_URL", file=sys.stderr)
+        return 2
+    try:
+        xlsx_fallback_limit = max(1, int(xlsx_fallback_limit_raw))
+        max_queue_claims = max(1, int(max_queue_claims_raw))
+    except ValueError:
+        print("MS_SHOPPING_XLSX_FALLBACK_LIMIT and MS_SHOPPING_MAX_QUEUE_CLAIMS must be integers", file=sys.stderr)
         return 2
 
-    payload = load_input(input_path)
+    if input_path != "":
+        payload = load_input(input_path)
 
-    tenant_id = str(payload["tenant_id"])
-    run_id = str(payload.get("run_id") or uuid4())
-    run_status = str(payload.get("run_status") or "completed")
-    started_at = str(payload.get("started_at") or utc_now_iso())
-    finished_at = payload.get("finished_at")
-    notes = str(payload.get("notes") or "")
-    items = parse_items(payload.get("items", []))
+        tenant_id = str(payload["tenant_id"])
+        run_id = str(payload.get("run_id") or uuid4())
+        run_status = str(payload.get("run_status") or "completed")
+        started_at = str(payload.get("started_at") or utc_now_iso())
+        finished_at = payload.get("finished_at")
+        notes = str(payload.get("notes") or "")
+        items = parse_items(payload.get("items", []))
 
-    log("shopping_worker_start", tenant_id=tenant_id, run_id=run_id, items=len(items))
+        log("shopping_worker_start", tenant_id=tenant_id, run_id=run_id, items=len(items), mode="legacy_input")
+        try:
+            with psycopg.connect(database_url) as conn:
+                rows_written = upsert_run(
+                    conn=conn,
+                    tenant_id=tenant_id,
+                    run_id=run_id,
+                    run_status=run_status,
+                    started_at=started_at,
+                    finished_at=finished_at,
+                    notes=notes,
+                    items=items,
+                )
+        except Exception as exc:  # pragma: no cover - worker boundary log
+            log("shopping_worker_error", tenant_id=tenant_id, run_id=run_id, error=str(exc), mode="legacy_input")
+            return 1
+
+        log("shopping_worker_end", tenant_id=tenant_id, run_id=run_id, rows_written=rows_written, mode="legacy_input")
+        return 0
+
+    if tenant_id == "":
+        print("Missing required env var for queue mode: MS_TENANT_ID", file=sys.stderr)
+        return 2
+
+    log(
+        "shopping_worker_start",
+        tenant_id=tenant_id,
+        worker_id=worker_id,
+        mode="queue",
+        max_queue_claims=max_queue_claims,
+    )
+    handled = 0
     try:
         with psycopg.connect(database_url) as conn:
-            rows_written = upsert_run(
-                conn=conn,
-                tenant_id=tenant_id,
-                run_id=run_id,
-                run_status=run_status,
-                started_at=started_at,
-                finished_at=finished_at,
-                notes=notes,
-                items=items,
-            )
+            for _ in range(max_queue_claims):
+                did_handle = run_queue_once(
+                    conn=conn,
+                    tenant_id=tenant_id,
+                    worker_id=worker_id,
+                    xlsx_fallback_limit=xlsx_fallback_limit,
+                )
+                if not did_handle:
+                    break
+                handled += 1
     except Exception as exc:  # pragma: no cover - worker boundary log
-        log("shopping_worker_error", tenant_id=tenant_id, run_id=run_id, error=str(exc))
+        log(
+            "shopping_worker_error",
+            tenant_id=tenant_id,
+            worker_id=worker_id,
+            mode="queue",
+            error=str(exc),
+        )
         return 1
 
-    log("shopping_worker_end", tenant_id=tenant_id, run_id=run_id, rows_written=rows_written)
+    log(
+        "shopping_worker_end",
+        tenant_id=tenant_id,
+        worker_id=worker_id,
+        mode="queue",
+        handled=handled,
+    )
     return 0
 
 

@@ -2,7 +2,7 @@
 
 Worker dedicado a conectores externos, crawlers, import/export e normalizacao de dados de integracao.
 
-## Shopping Price worker (Level 1 scaffold)
+## Shopping Price worker (ADR-0018 queue orchestration)
 
 Arquivo:
 
@@ -10,6 +10,7 @@ Arquivo:
 
 Regra de operacao:
 
+- queue mode: claim em `shopping_price_run_requests` (`queued -> claimed -> running -> completed/failed`)
 - worker escreve no Postgres (`shopping_price_runs`, `shopping_price_run_items`, `shopping_price_latest_snapshot`)
 - `server_core` apenas le e expoe API
 - sem chamada HTTP do worker para o backend
@@ -17,7 +18,11 @@ Regra de operacao:
 Variaveis de ambiente:
 
 - `MS_DATABASE_URL`: DSN do Postgres
-- `MS_SHOPPING_INPUT_PATH`: caminho de arquivo JSON de entrada
+- `MS_TENANT_ID`: tenant alvo no modo fila (obrigatorio sem `MS_SHOPPING_INPUT_PATH`)
+- `MS_WORKER_ID`: identificador do worker (opcional)
+- `MS_SHOPPING_MAX_QUEUE_CLAIMS`: quantidade maxima de requests por execucao (opcional, default `1`)
+- `MS_SHOPPING_XLSX_FALLBACK_LIMIT`: limite de itens no fallback de `xlsx` (opcional, default `50`)
+- `MS_SHOPPING_INPUT_PATH`: caminho de arquivo JSON de entrada (modo legado)
 
 Formato minimo do JSON:
 
@@ -42,10 +47,19 @@ Formato minimo do JSON:
 }
 ```
 
-Execucao:
+Execucao (modo fila ADR-0018):
 
 ```powershell
 python -m pip install -r apps\integration_worker\requirements.txt
+$env:MS_DATABASE_URL="postgres://..."
+$env:MS_TENANT_ID="tenant_default"
+$env:MS_SHOPPING_MAX_QUEUE_CLAIMS="5"
+python apps\integration_worker\shopping_price_worker.py
+```
+
+Execucao (modo legado via JSON):
+
+```powershell
 $env:MS_DATABASE_URL="postgres://..."
 $env:MS_SHOPPING_INPUT_PATH="C:\temp\shopping_input.json"
 python apps\integration_worker\shopping_price_worker.py

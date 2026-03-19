@@ -29,7 +29,7 @@ function HomeRoute() {
 function ShoppingRoute() {
   const { sdk } = useAppRuntime();
 
-  return <ShoppingPage api={sdk.shopping} />;
+  return <ShoppingPage shoppingApi={sdk.shopping} productsApi={sdk.products} />;
 }
 
 function PlaceholderRoute(props: { title: string; subtitle: string }) {

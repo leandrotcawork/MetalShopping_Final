@@ -1,5 +1,6 @@
 export { AppFrame } from "./AppFrame";
 export { Button } from "./Button";
+export { Checkbox } from "./Checkbox";
 export { FilterDropdown } from "./FilterDropdown";
 export { MetricCard } from "./MetricCard";
 export { MetricChip } from "./MetricChip";

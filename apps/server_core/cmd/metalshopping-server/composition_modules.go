@@ -27,6 +27,8 @@ import (
 	shoppingpg "metalshopping/server_core/internal/modules/shopping/adapters/postgres"
 	shoppingapp "metalshopping/server_core/internal/modules/shopping/application"
 	shoppinghttp "metalshopping/server_core/internal/modules/shopping/transport/http"
+	supplierspg "metalshopping/server_core/internal/modules/suppliers/adapters/postgres"
+	suppliersapp "metalshopping/server_core/internal/modules/suppliers/application"
 	"metalshopping/server_core/internal/platform/messaging/outbox"
 )
 
@@ -50,7 +52,10 @@ func composeModules(ctx context.Context, runtime runtimeComposition, governance 
 	inventoryRepo := inventorypg.NewRepository(runtime.db, outboxStore)
 	pricingRepo := pricingpg.NewRepository(runtime.db, outboxStore)
 	homeSummaryReader := homepg.NewSummaryReader(runtime.db)
-	shoppingReader := shoppingpg.NewReader(runtime.db)
+	suppliersDirectoryReader := supplierspg.NewDirectoryReader(runtime.db)
+	suppliersService := suppliersapp.NewService(suppliersDirectoryReader)
+	shoppingReader := shoppingpg.NewReader(runtime.db, suppliersService)
+	shoppingWriter := shoppingpg.NewWriter(runtime.db)
 
 	iamAuthorizer := iamapp.NewStaticAuthorizer()
 	iamAuthorization := iamapp.NewAuthorizationService(iamRepo, iamAuthorizer)
@@ -75,7 +80,7 @@ func composeModules(ctx context.Context, runtime runtimeComposition, governance 
 	pricingHandler := pricinghttp.NewHandler(pricingService, iamAuthorization)
 	homeService := homeapp.NewService(homeSummaryReader)
 	homeHandler := homehttp.NewHandler(homeService)
-	shoppingService := shoppingapp.NewService(shoppingReader)
+	shoppingService := shoppingapp.NewService(shoppingReader, shoppingWriter)
 	shoppingHandler := shoppinghttp.NewHandler(shoppingService)
 
 	return moduleComposition{

@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.metalshopping.local/api/shopping_bootstrap_v1.schema.json",
+  "title": "ShoppingBootstrapV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "inputModes",
+    "runStatuses",
+    "supportsManualUrls",
+    "advancedDefaults",
+    "suppliers"
+  ],
+  "properties": {
+    "inputModes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["xlsx", "catalog"]
+      },
+      "minItems": 2
+    },
+    "runStatuses": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["queued", "running", "completed", "failed"]
+      },
+      "minItems": 4
+    },
+    "supportsManualUrls": {
+      "type": "boolean"
+    },
+    "advancedDefaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["timeoutSeconds", "httpWorkers", "playwrightWorkers", "topN"],
+      "properties": {
+        "timeoutSeconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "httpWorkers": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "playwrightWorkers": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "topN": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "suppliers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["supplierCode", "supplierLabel", "executionKind", "lookupPolicy", "enabled"],
+        "properties": {
+          "supplierCode": {
+            "type": "string",
+            "minLength": 1
+          },
+          "supplierLabel": {
+            "type": "string",
+            "minLength": 1
+          },
+          "executionKind": {
+            "type": "string",
+            "enum": ["HTTP", "PLAYWRIGHT"]
+          },
+          "lookupPolicy": {
+            "type": "string",
+            "enum": ["EAN_FIRST", "REFERENCE_FIRST"]
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}
