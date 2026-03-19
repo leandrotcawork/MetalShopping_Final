@@ -238,6 +238,7 @@ SELECT
 FROM shopping_price_latest_snapshot
 WHERE tenant_id = current_tenant_id()
   AND product_id = $1
+ORDER BY observed_at DESC, updated_at DESC
 LIMIT 1
 `
 	var item ports.ProductLatest

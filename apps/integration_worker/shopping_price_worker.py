@@ -25,11 +25,18 @@ import psycopg
 @dataclass(frozen=True)
 class RunItem:
     product_id: str
+    supplier_code: str
+    item_status: str
     seller_name: str
     channel: str
     observed_price: float
     currency_code: str
     observed_at: str
+    product_url: str | None = None
+    http_status: int | None = None
+    elapsed_s: float | None = None
+    chosen_seller_json: dict[str, Any] | None = None
+    notes: str | None = None
 
 
 @dataclass(frozen=True)
@@ -68,11 +75,18 @@ def parse_items(raw_items: Any) -> list[RunItem]:
         parsed.append(
             RunItem(
                 product_id=str(item["product_id"]),
+                supplier_code=str(item.get("supplier_code") or "DEFAULT").strip().upper(),
+                item_status=str(item.get("item_status") or "OK").strip().upper(),
                 seller_name=str(item["seller_name"]),
                 channel=str(item["channel"]),
                 observed_price=float(item["observed_price"]),
                 currency_code=str(item["currency_code"]).upper(),
                 observed_at=str(item["observed_at"]),
+                product_url=str(item["product_url"]).strip() if "product_url" in item and item["product_url"] is not None else None,
+                http_status=int(item["http_status"]) if "http_status" in item and item["http_status"] is not None else None,
+                elapsed_s=float(item["elapsed_s"]) if "elapsed_s" in item and item["elapsed_s"] is not None else None,
+                chosen_seller_json=item.get("chosen_seller_json") if isinstance(item.get("chosen_seller_json"), dict) else None,
+                notes=str(item["notes"]).strip() if "notes" in item and item["notes"] is not None else None,
             )
         )
     return parsed
@@ -99,14 +113,27 @@ def parse_xlsx_file_path(payload: dict[str, Any]) -> str:
     return str(value).strip()
 
 
+def parse_supplier_codes(payload: dict[str, Any]) -> list[str]:
+    value = payload.get("supplierCodes")
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise ValueError("supplierCodes must be an array when provided")
+    parsed: list[str] = []
+    for entry in value:
+        code = str(entry).strip().upper()
+        if code != "":
+            parsed.append(code)
+    return parsed
+
+
 def deterministic_run_item_id(
     tenant_id: str,
     run_id: str,
     product_id: str,
-    seller_name: str,
-    channel: str,
+    supplier_code: str,
 ) -> str:
-    material = f"{tenant_id}|{run_id}|{product_id}|{seller_name}|{channel}"
+    material = f"{tenant_id}|{run_id}|{product_id}|{supplier_code}"
     digest = sha1(material.encode("utf-8")).hexdigest()
     return f"{digest[0:8]}-{digest[8:12]}-{digest[12:16]}-{digest[16:20]}-{digest[20:32]}"
 
@@ -151,23 +178,33 @@ def upsert_run(
                 tenant_id=tenant_id,
                 run_id=run_id,
                 product_id=item.product_id,
-                seller_name=item.seller_name,
-                channel=item.channel,
+                supplier_code=item.supplier_code,
             )
+            chosen_seller_json = item.chosen_seller_json or {}
             cur.execute(
                 """
                 INSERT INTO shopping_price_run_items (
                   run_item_id, tenant_id, run_id, product_id, seller_name, channel,
-                  observed_price, currency_code, observed_at
+                  supplier_code, item_status, observed_price, currency_code, observed_at,
+                  product_url, http_status, elapsed_s, chosen_seller_json, notes
                 )
                 VALUES (
                   %s, current_tenant_id(), %s, %s, %s, %s,
-                  %s, %s, %s
+                  %s, %s, %s, %s, %s,
+                  %s, %s, %s, %s::jsonb, %s
                 )
-                ON CONFLICT (run_item_id) DO UPDATE SET
+                ON CONFLICT (tenant_id, run_id, product_id, supplier_code) DO UPDATE SET
+                  seller_name = EXCLUDED.seller_name,
+                  channel = EXCLUDED.channel,
+                  item_status = EXCLUDED.item_status,
                   observed_price = EXCLUDED.observed_price,
                   currency_code = EXCLUDED.currency_code,
                   observed_at = EXCLUDED.observed_at,
+                  product_url = EXCLUDED.product_url,
+                  http_status = EXCLUDED.http_status,
+                  elapsed_s = EXCLUDED.elapsed_s,
+                  chosen_seller_json = EXCLUDED.chosen_seller_json,
+                  notes = EXCLUDED.notes,
                   updated_at = NOW()
                 """,
                 (
@@ -176,30 +213,45 @@ def upsert_run(
                     item.product_id,
                     item.seller_name,
                     item.channel,
+                    item.supplier_code,
+                    item.item_status,
                     item.observed_price,
                     item.currency_code,
                     item.observed_at,
+                    item.product_url,
+                    item.http_status,
+                    item.elapsed_s,
+                    json.dumps(chosen_seller_json),
+                    item.notes,
                 ),
             )
 
-            snapshot_id = f"{tenant_id}:{item.product_id}"
+            snapshot_id = f"{tenant_id}:{item.product_id}:{item.supplier_code}"
             cur.execute(
                 """
                 INSERT INTO shopping_price_latest_snapshot (
                   snapshot_id, tenant_id, product_id, run_id, seller_name, channel,
-                  observed_price, currency_code, observed_at
+                  supplier_code, item_status, observed_price, currency_code, observed_at,
+                  product_url, http_status, elapsed_s, chosen_seller_json, notes
                 )
                 VALUES (
                   %s, current_tenant_id(), %s, %s, %s, %s,
-                  %s, %s, %s
+                  %s, %s, %s, %s, %s,
+                  %s, %s, %s, %s::jsonb, %s
                 )
-                ON CONFLICT (tenant_id, product_id) DO UPDATE SET
+                ON CONFLICT (tenant_id, product_id, supplier_code) DO UPDATE SET
                   run_id = EXCLUDED.run_id,
                   seller_name = EXCLUDED.seller_name,
                   channel = EXCLUDED.channel,
+                  item_status = EXCLUDED.item_status,
                   observed_price = EXCLUDED.observed_price,
                   currency_code = EXCLUDED.currency_code,
                   observed_at = EXCLUDED.observed_at,
+                  product_url = EXCLUDED.product_url,
+                  http_status = EXCLUDED.http_status,
+                  elapsed_s = EXCLUDED.elapsed_s,
+                  chosen_seller_json = EXCLUDED.chosen_seller_json,
+                  notes = EXCLUDED.notes,
                   updated_at = NOW()
                 """,
                 (
@@ -208,9 +260,16 @@ def upsert_run(
                     run_id,
                     item.seller_name,
                     item.channel,
+                    item.supplier_code,
+                    item.item_status,
                     item.observed_price,
                     item.currency_code,
                     item.observed_at,
+                    item.product_url,
+                    item.http_status,
+                    item.elapsed_s,
+                    json.dumps(chosen_seller_json),
+                    item.notes,
                 ),
             )
 
@@ -342,6 +401,7 @@ def query_catalog_items(
     conn: psycopg.Connection,
     tenant_id: str,
     product_ids: list[str],
+    supplier_codes: list[str],
 ) -> list[RunItem]:
     if len(product_ids) == 0:
         return []
@@ -368,24 +428,34 @@ def query_catalog_items(
         rows = cur.fetchall()
         cur.execute("COMMIT")
 
+    effective_suppliers = supplier_codes if len(supplier_codes) > 0 else ["DEFAULT"]
     now_iso = utc_now_iso()
-    return [
-        RunItem(
-            product_id=str(row[0]),
-            seller_name="catalog_reference",
-            channel="CATALOG",
-            observed_price=float(row[1]),
-            currency_code=str(row[2]).upper(),
-            observed_at=now_iso,
-        )
-        for row in rows
-    ]
+    items: list[RunItem] = []
+    for row in rows:
+        product_id = str(row[0])
+        observed_price = float(row[1])
+        currency_code = str(row[2]).upper()
+        for supplier_code in effective_suppliers:
+            items.append(
+                RunItem(
+                    product_id=product_id,
+                    supplier_code=supplier_code,
+                    item_status="OK",
+                    seller_name="catalog_reference",
+                    channel="CATALOG",
+                    observed_price=observed_price,
+                    currency_code=currency_code,
+                    observed_at=now_iso,
+                )
+            )
+    return items
 
 
 def query_xlsx_fallback_items(
     conn: psycopg.Connection,
     tenant_id: str,
     limit: int,
+    supplier_codes: list[str],
 ) -> list[RunItem]:
     with conn.cursor() as cur:
         cur.execute("BEGIN")
@@ -410,18 +480,27 @@ def query_xlsx_fallback_items(
         rows = cur.fetchall()
         cur.execute("COMMIT")
 
+    effective_suppliers = supplier_codes if len(supplier_codes) > 0 else ["DEFAULT"]
     now_iso = utc_now_iso()
-    return [
-        RunItem(
-            product_id=str(row[0]),
-            seller_name="xlsx_reference",
-            channel="XLSX",
-            observed_price=float(row[1]),
-            currency_code=str(row[2]).upper(),
-            observed_at=now_iso,
-        )
-        for row in rows
-    ]
+    items: list[RunItem] = []
+    for row in rows:
+        product_id = str(row[0])
+        observed_price = float(row[1])
+        currency_code = str(row[2]).upper()
+        for supplier_code in effective_suppliers:
+            items.append(
+                RunItem(
+                    product_id=product_id,
+                    supplier_code=supplier_code,
+                    item_status="OK",
+                    seller_name="xlsx_reference",
+                    channel="XLSX",
+                    observed_price=observed_price,
+                    currency_code=currency_code,
+                    observed_at=now_iso,
+                )
+            )
+    return items
 
 
 def process_claimed_request(
@@ -433,14 +512,15 @@ def process_claimed_request(
     mark_request_running(conn, run_request.tenant_id, run_request.run_request_id, run_id)
 
     notes = f"requested_by={run_request.requested_by}; input_mode={run_request.input_mode}"
+    supplier_codes = parse_supplier_codes(run_request.input_payload)
     if run_request.input_mode == "catalog":
         product_ids = parse_catalog_product_ids(run_request.input_payload)
         if len(product_ids) == 0:
             raise ValueError("catalog mode requires at least one catalogProductIds entry")
-        items = query_catalog_items(conn, run_request.tenant_id, product_ids)
+        items = query_catalog_items(conn, run_request.tenant_id, product_ids, supplier_codes)
     elif run_request.input_mode == "xlsx":
         xlsx_file_path = parse_xlsx_file_path(run_request.input_payload)
-        items = query_xlsx_fallback_items(conn, run_request.tenant_id, xlsx_fallback_limit)
+        items = query_xlsx_fallback_items(conn, run_request.tenant_id, xlsx_fallback_limit, supplier_codes)
         notes = f"{notes}; xlsx_path={xlsx_file_path or 'not_provided'}; mode=xlsx_fallback"
     else:
         raise ValueError(f"unsupported input_mode: {run_request.input_mode}")
