@@ -59,6 +59,24 @@ Optional debug fields are allowed, but must not leak sensitive data:
 - `chosen_seller_json`
 - `product_url`
 
+## Contracts (touchpoints)
+
+- Data model (tenant-scoped + RLS):
+  - `apps/server_core/migrations/0023_shopping_price_observation_model_v1.sql`
+  - plus the read surface baseline in `apps/server_core/migrations/0020_shopping_price_read_surfaces.sql`
+- OpenAPI: `contracts/api/openapi/shopping_v1.openapi.yaml`
+  - `GET /api/v1/shopping/runs` and `GET /api/v1/shopping/runs/{run_id}` (progress + counts)
+  - `GET /api/v1/shopping/products/{product_id}/latest` (latest snapshot)
+- JSON Schemas (v1): `contracts/api/jsonschema/shopping_run_v1.schema.json`, `shopping_run_list_v1.schema.json`, `shopping_product_latest_v1.schema.json`
+- Events: none required in v1 (worker writes tables; server reads)
+- Governance: none required in v1
+
+## Implementation checklist
+
+- Worker upserts must be idempotent (`ON CONFLICT ... DO UPDATE`) and tenant-scoped (ADR-0022).
+- Never log sensitive discovery/debug payloads; keep logs structured and redacted when needed.
+- Prefer latest snapshots for UI reads; treat per-run observations as operational detail.
+
 ## Consequences
 
 - The UI can show per-supplier results and meaningful status counts.
@@ -72,4 +90,3 @@ Optional debug fields are allowed, but must not leak sensitive data:
 - Go read/write module changes: `metalshopping-module-scaffold`
 - Worker upsert model and output tables: `metalshopping-worker-scaffold`
 - Platform tenancy review (RLS, keys): `metalshopping-platform-packages` and `metalshopping-observability-security`
-

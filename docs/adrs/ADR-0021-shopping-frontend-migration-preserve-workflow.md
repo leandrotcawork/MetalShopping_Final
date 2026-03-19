@@ -40,6 +40,29 @@ Workflow UX is frozen as:
 - Step 2: Configuration (supplier selection, execution params)
 - Step 3: Execution (progress, result, history)
 
+## Legacy mapping (frozen)
+
+The migrated surface must preserve the legacy workflow intent and operational density:
+
+- Tabs/steps remain visible and explicit (Upload, Configurar, Executar).
+- Catalog selection mode stays available and is not replaced by "XLSX import as canonical data".
+- Filters remain workflow-friendly (dense, multi-filter, quick clear/reset) and use existing shared widgets.
+- Manual URL workflow remains possible, but persists through backend-owned tables and contracts (ADR-0024), not page-local state.
+
+## Contracts (touchpoints)
+
+- OpenAPI: `contracts/api/openapi/shopping_v1.openapi.yaml`
+- JSON Schemas: `contracts/api/jsonschema/shopping_*.schema.json`
+- Governance: none required for Level 1/2 baseline unless a runtime gate is introduced later
+- Events: none required in v1; future async upgrades follow ADR-0018 Phase 2
+
+## Implementation checklist (Step 5)
+
+- Run `metalshopping-frontend-migration-guardrails` first: preserve/refactor/reject classification against the legacy surface.
+- Use `metalshopping-page-delivery` to bind the page to `@metalshopping/platform-sdk` only.
+- If a widget appears in 3+ places, promote it to `packages/ui`; otherwise keep it feature-local.
+- Do not introduce manual DTOs, page-local transport parsing, or direct `fetch()` in pages/components.
+
 ## Consequences
 
 - We can match the legacy surface visually without importing its architectural debt.
@@ -52,4 +75,3 @@ Workflow UX is frozen as:
 - Legacy study + preserve/refactor/reject classification: `metalshopping-frontend-migration-guardrails`
 - Page delivery with platform SDK: `metalshopping-page-delivery`
 - SDK boundary verification: `metalshopping-sdk-generation`
-

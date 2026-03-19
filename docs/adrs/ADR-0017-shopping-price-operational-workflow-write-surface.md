@@ -45,6 +45,25 @@ Worker execution remains strictly:
 
 `worker writes -> Postgres -> server_core reads -> API -> thin clients`
 
+## Contracts (touchpoints)
+
+- OpenAPI: `contracts/api/openapi/shopping_v1.openapi.yaml`
+  - `GET /api/v1/shopping/bootstrap`
+  - `GET /api/v1/shopping/summary`
+  - `POST /api/v1/shopping/runs` (run request creation, queued)
+  - `GET /api/v1/shopping/run-requests/{run_request_id}` (status)
+- JSON Schemas (v1): `contracts/api/jsonschema/shopping_bootstrap_v1.schema.json`, `shopping_summary_v1.schema.json`, `shopping_create_run_request_v1.schema.json`, `shopping_create_run_response_v1.schema.json`, `shopping_run_request_v1.schema.json`
+- Events: none in Phase 1; Phase 2 may add `shopping.run_requested.v1` per ADR-0018
+- Governance: none required unless a feature-flag gate is introduced later
+
+## Implementation checklist (Level 2)
+
+- Contract-first changes: `metalshopping-openapi-contracts`
+- Go write/read surfaces: `metalshopping-module-scaffold` (principal + tenant checks, tenant-scoped DB access)
+- Worker execution: `metalshopping-worker-patterns` + `metalshopping-worker-scaffold`
+- SDK refresh after contract change: `metalshopping-sdk-generation`
+- UI binding with legacy workflow preserved: `metalshopping-frontend-migration-guardrails` + `metalshopping-page-delivery`
+
 ## Consequences
 
 - The UI can preserve the legacy workflow patterns without reintroducing legacy coupling.
@@ -60,4 +79,3 @@ Worker execution remains strictly:
 - Worker execution model: `metalshopping-worker-patterns` and `metalshopping-worker-scaffold`
 - SDK refresh: `metalshopping-sdk-generation`
 - Page binding (legacy visual, thin-client): `metalshopping-frontend-migration-guardrails` and `metalshopping-page-delivery`
-

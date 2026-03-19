@@ -37,6 +37,22 @@ Worker rules:
 - may read these signals before execution to choose the best request plan
 - must upsert updates idempotently
 
+## Contracts (touchpoints)
+
+- Data model (tenant-scoped + RLS): `apps/server_core/migrations/0024_shopping_supplier_product_signals.sql`
+- OpenAPI: `contracts/api/openapi/shopping_v1.openapi.yaml`
+  - `GET /api/v1/shopping/supplier-signals`
+  - `PUT /api/v1/shopping/supplier-signals` (upsert)
+- JSON Schemas (v1): `contracts/api/jsonschema/shopping_supplier_signal_list_v1.schema.json`, `shopping_supplier_signal_v1.schema.json`, `shopping_upsert_supplier_signal_request_v1.schema.json`
+- Events: none required in v1
+- Governance: none required in v1
+
+## Implementation checklist
+
+- UI edits must write through the Shopping API, not localStorage.
+- Worker must treat manual overrides as authoritative unless marked stale/invalid by checks.
+- Logs must avoid leaking URLs with sensitive query params.
+
 ## Consequences
 
 - The "Configurar URLs" legacy capability has a clean backend-owned home.
@@ -50,4 +66,3 @@ Worker rules:
 - Contract authoring for manual URL management surfaces: `metalshopping-openapi-contracts`
 - Worker persistence pattern: `metalshopping-worker-scaffold`
 - Security review (sensitive data in URLs/logs): `metalshopping-observability-security`
-

@@ -40,6 +40,25 @@ Worker runtime rule:
 - prefer manifests stored in Postgres when available and enabled
 - allow code registry fallback only for bootstrap-local development until the manifest table is seeded
 
+## Contracts (touchpoints)
+
+- Data model (tenant-scoped + RLS):
+  - `apps/server_core/migrations/0022_suppliers_directory_and_driver_manifests.sql`
+- OpenAPI (v1 baseline):
+  - Suppliers may be returned embedded in `GET /api/v1/shopping/bootstrap` for workflow selection.
+  - Dedicated management surfaces (create/update/activate manifest) may later be added as either:
+    - an extension of `shopping_v1` (operational-only, minimal), or
+    - a separate `contracts/api/openapi/suppliers_v1.openapi.yaml` (recommended when procurement/integrations start consuming it).
+- JSON Schemas: only required when exposing suppliers/manifests through an OpenAPI surface.
+- Governance: none required initially; enablement is tenant-owned data (`enabled`).
+- Events: optional future; not required for v1 execution.
+
+## Implementation checklist
+
+- Keep Shopping UI free of hardcoded supplier lists.
+- Seed a minimal directory + a first manifest version for bootstrap-local environments.
+- Ensure worker reads the directory/manifests under tenant context (ADR-0022).
+
 ## Consequences
 
 - Shopping "Configurar" can be driven by real backend-owned supplier state.
@@ -53,4 +72,3 @@ Worker runtime rule:
 - Suppliers module scaffold: `metalshopping-module-scaffold`
 - Worker integration with manifests: `metalshopping-worker-patterns` and `metalshopping-worker-scaffold`
 - Observability and security review: `metalshopping-observability-security`
-

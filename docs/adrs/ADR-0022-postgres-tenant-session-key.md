@@ -28,6 +28,17 @@ Rules:
 - all worker write transactions must execute `set_config('app.tenant_id', <tenant>, true)` before writing
 - no alternative keys (for example `app.current_tenant_id`) are allowed
 
+## Contracts (touchpoints)
+
+- Platform runtime contract: `current_tenant_id()` reads `app.tenant_id`
+- No OpenAPI/event/governance contracts are affected directly by this ADR.
+
+## Implementation checklist
+
+- Go adapters: always enter DB through `pgdb.BeginTenantTx`.
+- Python workers: always set `set_config('app.tenant_id', <tenant>, true)` before any read/write.
+- Any script/scaffold that sets a different key must be treated as drift and corrected.
+
 ## Consequences
 
 - RLS isolation is consistent across Go and Python.
@@ -39,4 +50,3 @@ Rules:
 - ADR governance and sync: `metalshopping-adr-updates`
 - Platform package review: `metalshopping-platform-packages`
 - Worker scaffolding rules: `metalshopping-worker-scaffold`
-
