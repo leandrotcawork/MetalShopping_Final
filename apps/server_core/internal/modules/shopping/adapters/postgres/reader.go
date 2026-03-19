@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -276,6 +277,7 @@ SELECT
   run_request_id,
   request_status,
   input_mode,
+  input_payload_json,
   requested_at,
   requested_by,
   claimed_at,
@@ -291,6 +293,7 @@ LIMIT 1
 `
 
 	var result ports.RunRequest
+	var payloadRaw string
 	var claimedAt sql.NullTime
 	var startedAt sql.NullTime
 	var finishedAt sql.NullTime
@@ -302,6 +305,7 @@ LIMIT 1
 		&result.RunRequestID,
 		&result.Status,
 		&result.InputMode,
+		&payloadRaw,
 		&result.RequestedAt,
 		&result.RequestedBy,
 		&claimedAt,
@@ -342,10 +346,54 @@ LIMIT 1
 		result.ErrorMessage = &value
 	}
 
+	if strings.TrimSpace(payloadRaw) != "" {
+		payload := map[string]any{}
+		if err := json.Unmarshal([]byte(payloadRaw), &payload); err != nil {
+			return ports.RunRequest{}, fmt.Errorf("unmarshal shopping run request payload: %w", err)
+		}
+		result.CatalogProductIDs = extractStringArray(payload["catalogProductIds"])
+		result.XLSXScopeIDs = extractStringArray(payload["xlsxScopeIdentifiers"])
+		result.ResolvedCatalogProductIDs = extractStringArray(payload["resolvedCatalogProductIds"])
+		result.UnresolvedScopeIDs = extractStringArray(payload["unresolvedScopeIdentifiers"])
+		result.AmbiguousScopeIDs = extractStringArray(payload["ambiguousScopeIdentifiers"])
+		if value := strings.TrimSpace(extractString(payload["xlsxFilePath"])); value != "" {
+			result.XLSXFilePath = &value
+		}
+	}
+
 	if err := tx.Commit(); err != nil {
 		return ports.RunRequest{}, fmt.Errorf("commit shopping run request read: %w", err)
 	}
 	return result, nil
+}
+
+func extractString(value any) string {
+	switch typed := value.(type) {
+	case string:
+		return typed
+	default:
+		return ""
+	}
+}
+
+func extractStringArray(value any) []string {
+	rawValues, ok := value.([]any)
+	if !ok {
+		return []string{}
+	}
+	result := make([]string, 0, len(rawValues))
+	for _, item := range rawValues {
+		text, ok := item.(string)
+		if !ok {
+			continue
+		}
+		text = strings.TrimSpace(text)
+		if text == "" {
+			continue
+		}
+		result = append(result, text)
+	}
+	return result
 }
 
 type scanner interface {

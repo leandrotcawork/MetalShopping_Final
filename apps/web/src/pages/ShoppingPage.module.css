@@ -159,6 +159,30 @@
   margin-top: 8px;
 }
 
+.fieldLabel {
+  display: grid;
+  gap: 6px;
+  color: var(--neutral-700);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.fieldLabel input,
+.fieldLabel textarea {
+  width: 100%;
+  border: 1px solid var(--neutral-200);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--neutral-900);
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.fieldLabel textarea {
+  min-height: 94px;
+  resize: vertical;
+}
+
 .catalogFilters {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

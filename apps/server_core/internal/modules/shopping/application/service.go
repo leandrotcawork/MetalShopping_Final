@@ -67,5 +67,15 @@ func (s *Service) CreateRunRequest(ctx context.Context, tenantID string, input p
 	}
 	input.SupplierCodes = filteredSuppliers
 
+	filteredScopeIDs := make([]string, 0, len(input.XLSXScopeIDs))
+	for _, scopeID := range input.XLSXScopeIDs {
+		scopeID = strings.TrimSpace(scopeID)
+		if scopeID == "" {
+			continue
+		}
+		filteredScopeIDs = append(filteredScopeIDs, scopeID)
+	}
+	input.XLSXScopeIDs = filteredScopeIDs
+
 	return s.writer.CreateRunRequest(ctx, strings.TrimSpace(tenantID), input)
 }

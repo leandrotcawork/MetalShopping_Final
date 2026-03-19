@@ -372,6 +372,7 @@ export type ShoppingCreateRunRequestV1 = {
   inputMode: "xlsx" | "catalog";
   catalogProductIds?: Array<string>;
   xlsxFilePath?: string;
+  xlsxScopeIdentifiers?: Array<string>;
   supplierCodes?: Array<string>;
   advanced?: {
     timeoutSeconds?: number;
@@ -422,6 +423,12 @@ export type ShoppingRunRequestV1 = {
   workerId?: string | null;
   runId?: string | null;
   errorMessage?: string | null;
+  catalogProductIds?: Array<string>;
+  xlsxFilePath?: string | null;
+  xlsxScopeIdentifiers?: Array<string>;
+  resolvedCatalogProductIds?: Array<string>;
+  unresolvedScopeIdentifiers?: Array<string>;
+  ambiguousScopeIdentifiers?: Array<string>;
 };
 
 export type ShoppingRunV1 = {

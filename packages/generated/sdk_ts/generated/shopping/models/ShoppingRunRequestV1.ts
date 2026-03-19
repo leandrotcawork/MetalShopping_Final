@@ -85,6 +85,42 @@ export interface ShoppingRunRequestV1 {
      * @memberof ShoppingRunRequestV1
      */
     errorMessage?: string | null;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof ShoppingRunRequestV1
+     */
+    catalogProductIds?: Array<string>;
+    /**
+     * 
+     * @type {string}
+     * @memberof ShoppingRunRequestV1
+     */
+    xlsxFilePath?: string | null;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof ShoppingRunRequestV1
+     */
+    xlsxScopeIdentifiers?: Array<string>;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof ShoppingRunRequestV1
+     */
+    resolvedCatalogProductIds?: Array<string>;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof ShoppingRunRequestV1
+     */
+    unresolvedScopeIdentifiers?: Array<string>;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof ShoppingRunRequestV1
+     */
+    ambiguousScopeIdentifiers?: Array<string>;
 }
 
 
@@ -144,6 +180,12 @@ export function ShoppingRunRequestV1FromJSONTyped(json: any, ignoreDiscriminator
         'workerId': json['workerId'] == null ? undefined : json['workerId'],
         'runId': json['runId'] == null ? undefined : json['runId'],
         'errorMessage': json['errorMessage'] == null ? undefined : json['errorMessage'],
+        'catalogProductIds': json['catalogProductIds'] == null ? undefined : json['catalogProductIds'],
+        'xlsxFilePath': json['xlsxFilePath'] == null ? undefined : json['xlsxFilePath'],
+        'xlsxScopeIdentifiers': json['xlsxScopeIdentifiers'] == null ? undefined : json['xlsxScopeIdentifiers'],
+        'resolvedCatalogProductIds': json['resolvedCatalogProductIds'] == null ? undefined : json['resolvedCatalogProductIds'],
+        'unresolvedScopeIdentifiers': json['unresolvedScopeIdentifiers'] == null ? undefined : json['unresolvedScopeIdentifiers'],
+        'ambiguousScopeIdentifiers': json['ambiguousScopeIdentifiers'] == null ? undefined : json['ambiguousScopeIdentifiers'],
     };
 }
 
@@ -169,6 +211,12 @@ export function ShoppingRunRequestV1ToJSONTyped(value?: ShoppingRunRequestV1 | n
         'workerId': value['workerId'],
         'runId': value['runId'],
         'errorMessage': value['errorMessage'],
+        'catalogProductIds': value['catalogProductIds'],
+        'xlsxFilePath': value['xlsxFilePath'],
+        'xlsxScopeIdentifiers': value['xlsxScopeIdentifiers'],
+        'resolvedCatalogProductIds': value['resolvedCatalogProductIds'],
+        'unresolvedScopeIdentifiers': value['unresolvedScopeIdentifiers'],
+        'ambiguousScopeIdentifiers': value['ambiguousScopeIdentifiers'],
     };
 }
 

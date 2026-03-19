@@ -50,6 +50,12 @@ export interface ShoppingCreateRunRequestV1 {
      * @type {Array<string>}
      * @memberof ShoppingCreateRunRequestV1
      */
+    xlsxScopeIdentifiers?: Array<string>;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof ShoppingCreateRunRequestV1
+     */
     supplierCodes?: Array<string>;
     /**
      * 
@@ -97,6 +103,7 @@ export function ShoppingCreateRunRequestV1FromJSONTyped(json: any, ignoreDiscrim
         'inputMode': json['inputMode'],
         'catalogProductIds': json['catalogProductIds'] == null ? undefined : json['catalogProductIds'],
         'xlsxFilePath': json['xlsxFilePath'] == null ? undefined : json['xlsxFilePath'],
+        'xlsxScopeIdentifiers': json['xlsxScopeIdentifiers'] == null ? undefined : json['xlsxScopeIdentifiers'],
         'supplierCodes': json['supplierCodes'] == null ? undefined : json['supplierCodes'],
         'advanced': json['advanced'] == null ? undefined : ShoppingCreateRunRequestV1AdvancedFromJSON(json['advanced']),
         'notes': json['notes'] == null ? undefined : json['notes'],
@@ -117,6 +124,7 @@ export function ShoppingCreateRunRequestV1ToJSONTyped(value?: ShoppingCreateRunR
         'inputMode': value['inputMode'],
         'catalogProductIds': value['catalogProductIds'],
         'xlsxFilePath': value['xlsxFilePath'],
+        'xlsxScopeIdentifiers': value['xlsxScopeIdentifiers'],
         'supplierCodes': value['supplierCodes'],
         'advanced': ShoppingCreateRunRequestV1AdvancedToJSON(value['advanced']),
         'notes': value['notes'],

@@ -103,6 +103,7 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
   const [createdRunRequestId, setCreatedRunRequestId] = useState<string | null>(null);
   const [runRequest, setRunRequest] = useState<ShoppingRunRequestV1 | null>(null);
   const [xlsxFilePath, setXlsxFilePath] = useState("");
+  const [xlsxScopeText, setXlsxScopeText] = useState("");
   const [supplierCodes, setSupplierCodes] = useState<string[]>([]);
   const [advancedTimeout, setAdvancedTimeout] = useState(60);
   const [advancedHttpWorkers, setAdvancedHttpWorkers] = useState(10);
@@ -361,6 +362,17 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
       payload.catalogProductIds = selectedProductIds;
     } else {
       payload.xlsxFilePath = xlsxFilePath.trim() || undefined;
+      const xlsxScopeIdentifiers = Array.from(
+        new Set(
+          xlsxScopeText
+            .split(/[\n,;]+/g)
+            .map((item) => item.trim())
+            .filter((item) => item.length > 0),
+        ),
+      );
+      if (xlsxScopeIdentifiers.length > 0) {
+        payload.xlsxScopeIdentifiers = xlsxScopeIdentifiers;
+      }
     }
 
     setCreatingRun(true);
@@ -432,13 +444,21 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                 <span>A importacao real permanece no worker e backend.</span>
                 <input type="file" className={styles.hiddenInput} />
               </label>
-              <label>
+              <label className={styles.fieldLabel}>
                 Caminho do arquivo XLSX (backend)
                 <input
                   type="text"
                   value={xlsxFilePath}
                   onChange={(event) => setXlsxFilePath(event.target.value)}
                   placeholder="ex: C:\\imports\\shopping\\atual.xlsx"
+                />
+              </label>
+              <label className={styles.fieldLabel}>
+                Identificadores de escopo (um por linha: SKU/EAN/Referencia)
+                <textarea
+                  value={xlsxScopeText}
+                  onChange={(event) => setXlsxScopeText(event.target.value)}
+                  placeholder={"ex:\n7891234567890\nREF-001\nSKU-XYZ"}
                 />
               </label>
             </div>

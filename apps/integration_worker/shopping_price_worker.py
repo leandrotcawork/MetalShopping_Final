@@ -520,8 +520,23 @@ def process_claimed_request(
         items = query_catalog_items(conn, run_request.tenant_id, product_ids, supplier_codes)
     elif run_request.input_mode == "xlsx":
         xlsx_file_path = parse_xlsx_file_path(run_request.input_payload)
-        items = query_xlsx_fallback_items(conn, run_request.tenant_id, xlsx_fallback_limit, supplier_codes)
-        notes = f"{notes}; xlsx_path={xlsx_file_path or 'not_provided'}; mode=xlsx_fallback"
+        product_ids = parse_catalog_product_ids(run_request.input_payload)
+        unresolved_scope = parse_catalog_product_ids(
+            {"catalogProductIds": run_request.input_payload.get("unresolvedScopeIdentifiers")}
+        )
+        ambiguous_scope = parse_catalog_product_ids(
+            {"catalogProductIds": run_request.input_payload.get("ambiguousScopeIdentifiers")}
+        )
+        if len(product_ids) > 0:
+            items = query_catalog_items(conn, run_request.tenant_id, product_ids, supplier_codes)
+            notes = (
+                f"{notes}; xlsx_path={xlsx_file_path or 'not_provided'}; "
+                f"mode=xlsx_resolved; resolved={len(product_ids)}; "
+                f"unresolved={len(unresolved_scope)}; ambiguous={len(ambiguous_scope)}"
+            )
+        else:
+            items = query_xlsx_fallback_items(conn, run_request.tenant_id, xlsx_fallback_limit, supplier_codes)
+            notes = f"{notes}; xlsx_path={xlsx_file_path or 'not_provided'}; mode=xlsx_fallback"
     else:
         raise ValueError(f"unsupported input_mode: {run_request.input_mode}")
 

@@ -421,6 +421,24 @@ function parseShoppingRunRequest(raw: unknown): ShoppingRunRequestV1 {
   if (raw.errorMessage !== undefined && raw.errorMessage !== null) {
     assertString(raw.errorMessage, "ShoppingRunRequestV1.errorMessage");
   }
+  if (raw.catalogProductIds !== undefined) {
+    assertStringArray(raw.catalogProductIds, "ShoppingRunRequestV1.catalogProductIds");
+  }
+  if (raw.xlsxScopeIdentifiers !== undefined) {
+    assertStringArray(raw.xlsxScopeIdentifiers, "ShoppingRunRequestV1.xlsxScopeIdentifiers");
+  }
+  if (raw.resolvedCatalogProductIds !== undefined) {
+    assertStringArray(raw.resolvedCatalogProductIds, "ShoppingRunRequestV1.resolvedCatalogProductIds");
+  }
+  if (raw.unresolvedScopeIdentifiers !== undefined) {
+    assertStringArray(raw.unresolvedScopeIdentifiers, "ShoppingRunRequestV1.unresolvedScopeIdentifiers");
+  }
+  if (raw.ambiguousScopeIdentifiers !== undefined) {
+    assertStringArray(raw.ambiguousScopeIdentifiers, "ShoppingRunRequestV1.ambiguousScopeIdentifiers");
+  }
+  if (raw.xlsxFilePath !== undefined && raw.xlsxFilePath !== null) {
+    assertString(raw.xlsxFilePath, "ShoppingRunRequestV1.xlsxFilePath");
+  }
 
   return {
     runRequestId: raw.runRequestId,
@@ -434,6 +452,12 @@ function parseShoppingRunRequest(raw: unknown): ShoppingRunRequestV1 {
     workerId: raw.workerId ?? null,
     runId: raw.runId ?? null,
     errorMessage: raw.errorMessage ?? null,
+    catalogProductIds: (raw.catalogProductIds as string[] | undefined) ?? [],
+    xlsxFilePath: (raw.xlsxFilePath as string | null | undefined) ?? null,
+    xlsxScopeIdentifiers: (raw.xlsxScopeIdentifiers as string[] | undefined) ?? [],
+    resolvedCatalogProductIds: (raw.resolvedCatalogProductIds as string[] | undefined) ?? [],
+    unresolvedScopeIdentifiers: (raw.unresolvedScopeIdentifiers as string[] | undefined) ?? [],
+    ambiguousScopeIdentifiers: (raw.ambiguousScopeIdentifiers as string[] | undefined) ?? [],
   };
 }
 

@@ -49,7 +49,44 @@
     },
     "errorMessage": {
       "type": ["string", "null"]
+    },
+    "catalogProductIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "xlsxFilePath": {
+      "type": ["string", "null"]
+    },
+    "xlsxScopeIdentifiers": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "resolvedCatalogProductIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "unresolvedScopeIdentifiers": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "ambiguousScopeIdentifiers": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     }
   }
 }
-

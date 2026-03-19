@@ -82,6 +82,7 @@ type CreateRunRequestInput struct {
 	InputMode         string
 	CatalogProductIDs []string
 	XLSXFilePath      string
+	XLSXScopeIDs      []string
 	SupplierCodes     []string
 	Advanced          AdvancedDefaults
 	Notes             string
@@ -100,6 +101,13 @@ type RunRequest struct {
 	WorkerID     *string
 	RunID        *string
 	ErrorMessage *string
+
+	CatalogProductIDs         []string
+	XLSXFilePath              *string
+	XLSXScopeIDs              []string
+	ResolvedCatalogProductIDs []string
+	UnresolvedScopeIDs        []string
+	AmbiguousScopeIDs         []string
 }
 
 type Writer interface {

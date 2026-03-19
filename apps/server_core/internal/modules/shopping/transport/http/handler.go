@@ -175,6 +175,7 @@ func (h *Handler) handleRunsList(w http.ResponseWriter, r *http.Request) {
 			InputMode:         requestBody.InputMode,
 			CatalogProductIDs: requestBody.CatalogProductIDs,
 			XLSXFilePath:      requestBody.XLSXFilePath,
+			XLSXScopeIDs:      requestBody.XLSXScopeIdentifiers,
 			SupplierCodes:     requestBody.SupplierCodes,
 			Advanced: ports.AdvancedDefaults{
 				TimeoutSeconds:   requestBody.Advanced.TimeoutSeconds,
@@ -234,11 +235,12 @@ func (h *Handler) handleRunsList(w http.ResponseWriter, r *http.Request) {
 }
 
 type shoppingCreateRunRequestBody struct {
-	InputMode         string   `json:"inputMode"`
-	CatalogProductIDs []string `json:"catalogProductIds"`
-	XLSXFilePath      string   `json:"xlsxFilePath"`
-	SupplierCodes     []string `json:"supplierCodes"`
-	Advanced          struct {
+	InputMode            string   `json:"inputMode"`
+	CatalogProductIDs    []string `json:"catalogProductIds"`
+	XLSXFilePath         string   `json:"xlsxFilePath"`
+	XLSXScopeIdentifiers []string `json:"xlsxScopeIdentifiers"`
+	SupplierCodes        []string `json:"supplierCodes"`
+	Advanced             struct {
 		TimeoutSeconds    int64 `json:"timeoutSeconds"`
 		HTTPWorkers       int64 `json:"httpWorkers"`
 		PlaywrightWorkers int64 `json:"playwrightWorkers"`
@@ -338,17 +340,22 @@ func (h *Handler) handleRunRequestByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	payload := map[string]any{
-		"runRequestId": runRequest.RunRequestID,
-		"status":       runRequest.Status,
-		"inputMode":    runRequest.InputMode,
-		"requestedAt":  runRequest.RequestedAt.Format(time.RFC3339),
-		"requestedBy":  runRequest.RequestedBy,
-		"claimedAt":    nil,
-		"startedAt":    nil,
-		"finishedAt":   nil,
-		"workerId":     nil,
-		"runId":        nil,
-		"errorMessage": nil,
+		"runRequestId":               runRequest.RunRequestID,
+		"status":                     runRequest.Status,
+		"inputMode":                  runRequest.InputMode,
+		"requestedAt":                runRequest.RequestedAt.Format(time.RFC3339),
+		"requestedBy":                runRequest.RequestedBy,
+		"catalogProductIds":          runRequest.CatalogProductIDs,
+		"xlsxScopeIdentifiers":       runRequest.XLSXScopeIDs,
+		"resolvedCatalogProductIds":  runRequest.ResolvedCatalogProductIDs,
+		"unresolvedScopeIdentifiers": runRequest.UnresolvedScopeIDs,
+		"ambiguousScopeIdentifiers":  runRequest.AmbiguousScopeIDs,
+		"claimedAt":                  nil,
+		"startedAt":                  nil,
+		"finishedAt":                 nil,
+		"workerId":                   nil,
+		"runId":                      nil,
+		"errorMessage":               nil,
 	}
 	if runRequest.ClaimedAt != nil {
 		payload["claimedAt"] = runRequest.ClaimedAt.UTC().Format(time.RFC3339)
@@ -367,6 +374,11 @@ func (h *Handler) handleRunRequestByID(w http.ResponseWriter, r *http.Request) {
 	}
 	if runRequest.ErrorMessage != nil {
 		payload["errorMessage"] = *runRequest.ErrorMessage
+	}
+	if runRequest.XLSXFilePath != nil {
+		payload["xlsxFilePath"] = *runRequest.XLSXFilePath
+	} else {
+		payload["xlsxFilePath"] = nil
 	}
 
 	writeJSON(w, http.StatusOK, payload)
