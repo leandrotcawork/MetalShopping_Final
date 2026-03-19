@@ -44,7 +44,7 @@ Use the specialist skills directly based on the feature step.
 
 ### Python worker
 
-- always execute `set_config('app.current_tenant_id', ...)` before writes
+- always execute `set_config('app.tenant_id', ...)` before writes
 - never call `server_core` HTTP endpoints directly
 - never write without tenant context
 

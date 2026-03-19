@@ -51,7 +51,7 @@ Does the feature need scraping, Playwright, or Python-only libs?
 1. Contract before code - always
 2. Postgres adapter always uses `pgdb.BeginTenantTx` + `current_tenant_id()`
 3. Handler always checks `PrincipalFromContext` and `TenantFromContext`
-4. Worker sets `app.current_tenant_id` before every write transaction
+4. Worker sets `app.tenant_id` before every write transaction
 5. Worker never calls server_core HTTP endpoints
 6. React page never uses `fetch()` directly - always platform-sdk
 7. Module always registered in `composition_modules.go`

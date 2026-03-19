@@ -40,7 +40,7 @@
 
 ## Python worker (if applicable - Step 3)
 - [ ] worker in `apps/integration_worker/`
-- [ ] every write sets `app.current_tenant_id` via `set_config`
+- [ ] every write sets `app.tenant_id` via `set_config`
 - [ ] all inserts use `ON CONFLICT ... DO UPDATE`
 - [ ] logs at start, end, and on error
 - [ ] no HTTP calls from worker to server_core

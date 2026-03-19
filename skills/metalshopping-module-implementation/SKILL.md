@@ -28,7 +28,7 @@ Use this skill to orchestrate a full feature delivery with the frozen MetalShopp
 7. Register the module in:
    `apps/server_core/cmd/metalshopping-server/composition_modules.go`.
 8. If scraping or Python-only libraries are needed, use `metalshopping-worker-scaffold`:
-   set `app.current_tenant_id`, use idempotent upserts, never call server_core HTTP.
+   set `app.tenant_id`, use idempotent upserts, never call server_core HTTP.
 9. Generate SDK artifacts with `metalshopping-sdk-generation`:
    run `./scripts/generate_contract_artifacts.ps1`.
 10. Implement the page with `metalshopping-page-delivery`:
@@ -51,7 +51,7 @@ Step 3 is optional. All other steps are mandatory and ordered.
 - never omit `current_tenant_id()` from tenant-scoped queries
 - never skip principal or tenant context checks in handlers
 - never call server_core HTTP from workers
-- never write worker data without setting `app.current_tenant_id`
+- never write worker data without setting `app.tenant_id`
 - never use direct `fetch()` in pages/components
 - never hand-edit `packages/generated/`
 - never leave the module unregistered in composition
