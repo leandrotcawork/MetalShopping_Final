@@ -108,6 +108,7 @@
 - integration worker scaffold for Shopping Price added in `apps/integration_worker/shopping_price_worker.py` (worker writes Postgres, Go reads Postgres)
 - root `SKILLS.md` maps specialist skills by ordered step without a dedicated orchestrator skill
 - Shopping Level 1 acceptance was formally closed with evidence in `docs/SHOPPING_LEVEL1_ACCEPTANCE.md`
+- ADR-0021 frontend migration closure recorded with legacy workflow preserved and thin-client boundaries enforced (`docs/SHOPPING_ADR021_ACCEPTANCE.md`)
 
 ## Next
 
