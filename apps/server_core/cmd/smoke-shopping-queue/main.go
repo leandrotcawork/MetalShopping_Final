@@ -276,24 +276,24 @@ INSERT INTO shopping_price_runs (
 		runItemID := newUUID()
 		_, err := tx.Exec(ctx, `
 INSERT INTO shopping_price_run_items (
-  run_item_id, tenant_id, run_id, product_id, seller_name, channel,
+  run_item_id, tenant_id, run_id, product_id, supplier_code, seller_name, channel,
   observed_price, currency_code, observed_at
 ) VALUES (
-  $1, current_tenant_id(), $2, $3, $4, $5, $6, $7, $8
+  $1, current_tenant_id(), $2, $3, $4, $5, $6, $7, $8, $9
 ) ON CONFLICT (run_item_id) DO NOTHING
-`, runItemID, runID, item.ProductID, item.SellerName, item.Channel, item.ObservedPrice, item.CurrencyCode, startedAt)
+`, runItemID, runID, item.ProductID, "DEFAULT", item.SellerName, item.Channel, item.ObservedPrice, item.CurrencyCode, startedAt)
 		if err != nil {
 			return 0, err
 		}
 
-		snapshotID := fmt.Sprintf("%s:%s", tenantID, item.ProductID)
+		snapshotID := fmt.Sprintf("%s:%s:%s", tenantID, item.ProductID, "DEFAULT")
 		_, err = tx.Exec(ctx, `
 INSERT INTO shopping_price_latest_snapshot (
-  snapshot_id, tenant_id, product_id, run_id, seller_name, channel,
+  snapshot_id, tenant_id, product_id, supplier_code, run_id, seller_name, channel,
   observed_price, currency_code, observed_at
 ) VALUES (
-  $1, current_tenant_id(), $2, $3, $4, $5, $6, $7, $8
-) ON CONFLICT (tenant_id, product_id) DO UPDATE SET
+  $1, current_tenant_id(), $2, $3, $4, $5, $6, $7, $8, $9
+) ON CONFLICT (tenant_id, product_id, supplier_code) DO UPDATE SET
   run_id = EXCLUDED.run_id,
   seller_name = EXCLUDED.seller_name,
   channel = EXCLUDED.channel,
@@ -301,7 +301,7 @@ INSERT INTO shopping_price_latest_snapshot (
   currency_code = EXCLUDED.currency_code,
   observed_at = EXCLUDED.observed_at,
   updated_at = NOW()
-`, snapshotID, item.ProductID, runID, item.SellerName, item.Channel, item.ObservedPrice, item.CurrencyCode, startedAt)
+`, snapshotID, item.ProductID, "DEFAULT", runID, item.SellerName, item.Channel, item.ObservedPrice, item.CurrencyCode, startedAt)
 		if err != nil {
 			return 0, err
 		}
