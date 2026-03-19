@@ -19,7 +19,7 @@ Regra de operacao:
 Variaveis de ambiente:
 
 - `MS_DATABASE_URL`: DSN do Postgres
-- `MS_TENANT_ID`: tenant alvo no modo fila (obrigatorio sem `MS_SHOPPING_INPUT_PATH`)
+- `MS_TENANT_ID`: tenant alvo no modo fila e no modo evento (obrigatorio sem `MS_SHOPPING_INPUT_PATH`)
 - `MS_SHOPPING_WORKER_MODE`: `queue` (default) ou `event`
 - `MS_WORKER_ID`: identificador do worker (opcional)
 - `MS_SHOPPING_MAX_QUEUE_CLAIMS`: quantidade maxima de requests por execucao (opcional, default `1`)
@@ -66,7 +66,6 @@ python -m pip install -r apps\integration_worker\requirements.txt
 $env:MS_DATABASE_URL="postgres://..."
 $env:MS_SHOPPING_WORKER_MODE="event"
 $env:MS_SHOPPING_MAX_QUEUE_CLAIMS="10"
-# opcional: filtrar por tenant especifico
 $env:MS_TENANT_ID="tenant_default"
 python apps\integration_worker\shopping_price_worker.py
 ```

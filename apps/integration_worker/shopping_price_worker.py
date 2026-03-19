@@ -458,47 +458,33 @@ def fetch_published_run_requested_events(
     limit: int,
     tenant_id_filter: str | None,
 ) -> list[PublishedRunRequestedEvent]:
+    if not tenant_id_filter:
+        raise ValueError("tenant_id is required for event mode (RLS enforced)")
+
     with conn.cursor() as cur:
-        if tenant_id_filter:
-            cur.execute(
-                """
-                SELECT
-                  e.event_id,
-                  e.tenant_id,
-                  e.payload_json ->> 'run_request_id' AS run_request_id
-                FROM outbox_events e
-                JOIN shopping_price_run_requests r
-                  ON r.tenant_id = e.tenant_id
-                 AND r.run_request_id = (e.payload_json ->> 'run_request_id')
-                 AND r.request_status = 'queued'
-                WHERE e.event_name = 'shopping.run_requested'
-                  AND e.status = 'published'
-                  AND e.tenant_id = %s
-                ORDER BY e.created_at ASC
-                LIMIT %s
-                """,
-                (tenant_id_filter, limit),
-            )
-        else:
-            cur.execute(
-                """
-                SELECT
-                  e.event_id,
-                  e.tenant_id,
-                  e.payload_json ->> 'run_request_id' AS run_request_id
-                FROM outbox_events e
-                JOIN shopping_price_run_requests r
-                  ON r.tenant_id = e.tenant_id
-                 AND r.run_request_id = (e.payload_json ->> 'run_request_id')
-                 AND r.request_status = 'queued'
-                WHERE e.event_name = 'shopping.run_requested'
-                  AND e.status = 'published'
-                ORDER BY e.created_at ASC
-                LIMIT %s
-                """,
-                (limit,),
-            )
+        cur.execute("BEGIN")
+        cur.execute("SELECT set_config('app.tenant_id', %s, true)", (tenant_id_filter,))
+        cur.execute(
+            """
+            SELECT
+              e.event_id,
+              e.tenant_id,
+              e.payload_json ->> 'run_request_id' AS run_request_id
+            FROM outbox_events e
+            JOIN shopping_price_run_requests r
+              ON r.tenant_id = e.tenant_id
+             AND r.run_request_id = (e.payload_json ->> 'run_request_id')
+             AND r.request_status = 'queued'
+            WHERE e.event_name = 'shopping.run_requested'
+              AND e.status = 'published'
+              AND e.tenant_id = current_tenant_id()
+            ORDER BY e.created_at ASC
+            LIMIT %s
+            """,
+            (limit,),
+        )
         rows = cur.fetchall()
+        cur.execute("COMMIT")
 
     events: list[PublishedRunRequestedEvent] = []
     for row in rows:
@@ -852,6 +838,8 @@ def run_event_once(
     xlsx_fallback_limit: int,
     tenant_id_filter: str | None,
 ) -> bool:
+    if not tenant_id_filter:
+        raise ValueError("tenant_id is required for event mode")
     events = fetch_published_run_requested_events(conn, limit=1, tenant_id_filter=tenant_id_filter)
     if len(events) == 0:
         log("shopping_event_idle", worker_id=worker_id, tenant_id=tenant_id_filter or "all")
@@ -960,6 +948,9 @@ def main() -> int:
     if mode == "queue" and tenant_id == "":
         print("Missing required env var for queue mode: MS_TENANT_ID", file=sys.stderr)
         return 2
+    if mode == "event" and tenant_id == "":
+        print("Missing required env var for event mode: MS_TENANT_ID", file=sys.stderr)
+        return 2
 
     log(
         "shopping_worker_start",
@@ -984,7 +975,7 @@ def main() -> int:
                         conn=conn,
                         worker_id=worker_id,
                         xlsx_fallback_limit=xlsx_fallback_limit,
-                        tenant_id_filter=tenant_id or None,
+                        tenant_id_filter=tenant_id,
                     )
                 if not did_handle:
                     break
