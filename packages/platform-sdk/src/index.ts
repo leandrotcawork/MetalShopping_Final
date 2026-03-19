@@ -10,8 +10,11 @@ import type {
   ShoppingRunRequestV1,
   ShoppingProductLatestV1,
   ShoppingRunListV1,
+  ShoppingSupplierSignalListV1,
+  ShoppingSupplierSignalV1,
   ShoppingRunV1,
   ShoppingSummaryV1,
+  ShoppingUpsertSupplierSignalRequestV1,
 } from "@metalshopping/sdk-types";
 import {
   AuthSessionApiClient,
@@ -82,6 +85,13 @@ export type ListShoppingRunsQueryParams = {
   offset?: number;
 };
 
+export type ListShoppingSupplierSignalsQueryParams = {
+  supplierCode?: string;
+  productId?: string;
+  limit?: number;
+  offset?: number;
+};
+
 export type ServerCoreSdk = {
   home: {
     getSummary(): Promise<HomeSummaryV1>;
@@ -94,6 +104,8 @@ export type ServerCoreSdk = {
     listRuns(query?: ListShoppingRunsQueryParams): Promise<ShoppingRunListV1>;
     getRun(runId: string): Promise<ShoppingRunV1>;
     getProductLatest(productId: string): Promise<ShoppingProductLatestV1>;
+    listSupplierSignals(query?: ListShoppingSupplierSignalsQueryParams): Promise<ShoppingSupplierSignalListV1>;
+    upsertSupplierSignal(payload: ShoppingUpsertSupplierSignalRequestV1): Promise<ShoppingSupplierSignalV1>;
   };
   authSession: {
     buildStartLoginUrl(query?: StartAuthSessionLoginQueryParams): Promise<string>;
@@ -484,6 +496,75 @@ function parseShoppingProductLatest(raw: unknown): ShoppingProductLatestV1 {
   };
 }
 
+function parseShoppingSupplierSignal(raw: unknown): ShoppingSupplierSignalV1 {
+  if (!isRecord(raw)) {
+    throw new Error("[sdk-runtime] ShoppingSupplierSignalV1 response must be an object");
+  }
+  assertString(raw.productId, "ShoppingSupplierSignalV1.productId");
+  assertString(raw.supplierCode, "ShoppingSupplierSignalV1.supplierCode");
+  assertString(raw.urlStatus, "ShoppingSupplierSignalV1.urlStatus");
+  assertString(raw.lookupMode, "ShoppingSupplierSignalV1.lookupMode");
+  assertString(raw.lookupModeSource, "ShoppingSupplierSignalV1.lookupModeSource");
+  if (typeof raw.manualOverride !== "boolean") {
+    throw new Error("[sdk-runtime] ShoppingSupplierSignalV1.manualOverride must be boolean");
+  }
+  const updatedAt = normalizeDateTime(raw.updatedAt, "ShoppingSupplierSignalV1.updatedAt");
+  if (raw.productUrl !== undefined && raw.productUrl !== null) {
+    assertString(raw.productUrl, "ShoppingSupplierSignalV1.productUrl");
+  }
+  const productUrl = (raw.productUrl as string | null | undefined) ?? null;
+  const lastCheckedAt = raw.lastCheckedAt === null || raw.lastCheckedAt === undefined ? null : normalizeDateTime(raw.lastCheckedAt, "ShoppingSupplierSignalV1.lastCheckedAt");
+  const lastSuccessAt = raw.lastSuccessAt === null || raw.lastSuccessAt === undefined ? null : normalizeDateTime(raw.lastSuccessAt, "ShoppingSupplierSignalV1.lastSuccessAt");
+  if (raw.lastHttpStatus !== undefined && raw.lastHttpStatus !== null) {
+    assertNumber(raw.lastHttpStatus, "ShoppingSupplierSignalV1.lastHttpStatus");
+  }
+  if (raw.lastErrorMessage !== undefined && raw.lastErrorMessage !== null) {
+    assertString(raw.lastErrorMessage, "ShoppingSupplierSignalV1.lastErrorMessage");
+  }
+
+  return {
+    productId: raw.productId,
+    supplierCode: raw.supplierCode,
+    productUrl: productUrl === null ? null : productUrl,
+    urlStatus: raw.urlStatus as ShoppingSupplierSignalV1["urlStatus"],
+    lookupMode: raw.lookupMode as ShoppingSupplierSignalV1["lookupMode"],
+    lookupModeSource: raw.lookupModeSource as ShoppingSupplierSignalV1["lookupModeSource"],
+    manualOverride: raw.manualOverride,
+    lastCheckedAt: lastCheckedAt === null ? null : lastCheckedAt,
+    lastSuccessAt: lastSuccessAt === null ? null : lastSuccessAt,
+    lastHttpStatus: (raw.lastHttpStatus as number | null | undefined) ?? null,
+    lastErrorMessage: (raw.lastErrorMessage as string | null | undefined) ?? null,
+    updatedAt,
+  };
+}
+
+function parseShoppingSupplierSignalList(raw: unknown): ShoppingSupplierSignalListV1 {
+  if (!isRecord(raw)) {
+    throw new Error("[sdk-runtime] ShoppingSupplierSignalListV1 response must be an object");
+  }
+  if (!Array.isArray(raw.rows)) {
+    throw new Error("[sdk-runtime] ShoppingSupplierSignalListV1.rows must be an array");
+  }
+  const rows = raw.rows.map((item) => parseShoppingSupplierSignal(item));
+  if (!isRecord(raw.paging)) {
+    throw new Error("[sdk-runtime] ShoppingSupplierSignalListV1.paging must be an object");
+  }
+  assertNumber(raw.paging.offset, "ShoppingSupplierSignalListV1.paging.offset");
+  assertNumber(raw.paging.limit, "ShoppingSupplierSignalListV1.paging.limit");
+  assertNumber(raw.paging.returned, "ShoppingSupplierSignalListV1.paging.returned");
+  assertNumber(raw.paging.total, "ShoppingSupplierSignalListV1.paging.total");
+
+  return {
+    rows,
+    paging: {
+      offset: raw.paging.offset,
+      limit: raw.paging.limit,
+      returned: raw.paging.returned,
+      total: raw.paging.total,
+    },
+  };
+}
+
 async function parseCommonError(response: Response) {
   const raw = (await response.clone().json().catch(() => null)) as unknown;
   if (!isRecord(raw) || !isRecord(raw.error)) {
@@ -675,6 +756,25 @@ export function createServerCoreSdk(client: GeneratedHttpClient): ServerCoreSdk 
       async getProductLatest(productId) {
         const raw = await runGeneratedCall(() => shoppingApi.getShoppingProductLatest({ productId }));
         return parseShoppingProductLatest(raw);
+      },
+      async listSupplierSignals(query = {}) {
+        const raw = await runGeneratedCall(() =>
+          shoppingApi.listShoppingSupplierSignals({
+            supplierCode: query.supplierCode,
+            productId: query.productId,
+            limit: query.limit,
+            offset: query.offset,
+          }),
+        );
+        return parseShoppingSupplierSignalList(raw);
+      },
+      async upsertSupplierSignal(payload) {
+        const raw = await runGeneratedCall(() =>
+          shoppingApi.upsertShoppingSupplierSignal({
+            shoppingUpsertSupplierSignalRequestV1: payload,
+          }),
+        );
+        return parseShoppingSupplierSignal(raw);
       },
     },
     authSession: {

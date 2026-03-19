@@ -367,6 +367,87 @@ LIMIT 1
 	return result, nil
 }
 
+func (r *Reader) ListSupplierSignals(ctx context.Context, tenantID string, filter ports.SupplierSignalListFilter) (ports.SupplierSignalList, error) {
+	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return ports.SupplierSignalList{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	limit := filter.Limit
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	offset := filter.Offset
+	if offset < 0 {
+		offset = 0
+	}
+	supplierCode := strings.TrimSpace(filter.SupplierCode)
+	productID := strings.TrimSpace(filter.ProductID)
+
+	const countQuery = `
+SELECT COUNT(*)
+FROM shopping_supplier_product_signals
+WHERE tenant_id = current_tenant_id()
+  AND ($1 = '' OR supplier_code = $1)
+  AND ($2 = '' OR product_id = $2)
+`
+	var total int64
+	if err := tx.QueryRowContext(ctx, countQuery, supplierCode, productID).Scan(&total); err != nil {
+		return ports.SupplierSignalList{}, fmt.Errorf("count shopping supplier signals: %w", err)
+	}
+
+	const listQuery = `
+SELECT
+  product_id,
+  supplier_code,
+  product_url,
+  url_status,
+  lookup_mode,
+  lookup_mode_source,
+  manual_override,
+  last_checked_at,
+  last_success_at,
+  last_http_status,
+  last_error_message,
+  updated_at
+FROM shopping_supplier_product_signals
+WHERE tenant_id = current_tenant_id()
+  AND ($1 = '' OR supplier_code = $1)
+  AND ($2 = '' OR product_id = $2)
+ORDER BY updated_at DESC, supplier_code, product_id
+LIMIT $3 OFFSET $4
+`
+	rows, err := tx.QueryContext(ctx, listQuery, supplierCode, productID, limit, offset)
+	if err != nil {
+		return ports.SupplierSignalList{}, fmt.Errorf("list shopping supplier signals: %w", err)
+	}
+	defer rows.Close()
+
+	items := make([]ports.SupplierSignal, 0, limit)
+	for rows.Next() {
+		item, scanErr := scanSupplierSignal(rows)
+		if scanErr != nil {
+			return ports.SupplierSignalList{}, scanErr
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return ports.SupplierSignalList{}, fmt.Errorf("iterate shopping supplier signals: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return ports.SupplierSignalList{}, fmt.Errorf("commit shopping supplier signal list read: %w", err)
+	}
+
+	return ports.SupplierSignalList{
+		Rows:   items,
+		Offset: offset,
+		Limit:  limit,
+		Total:  total,
+	}, nil
+}
+
 func extractString(value any) string {
 	switch typed := value.(type) {
 	case string:
@@ -419,5 +500,52 @@ func scanRun(s scanner) (ports.Run, error) {
 		value := finishedAt.Time.UTC()
 		item.FinishedAt = &value
 	}
+	return item, nil
+}
+
+func scanSupplierSignal(s scanner) (ports.SupplierSignal, error) {
+	var item ports.SupplierSignal
+	var productURL sql.NullString
+	var lastCheckedAt sql.NullTime
+	var lastSuccessAt sql.NullTime
+	var lastHTTPStatus sql.NullInt64
+	var lastErrorMessage sql.NullString
+	if err := s.Scan(
+		&item.ProductID,
+		&item.SupplierCode,
+		&productURL,
+		&item.URLStatus,
+		&item.LookupMode,
+		&item.LookupModeSource,
+		&item.ManualOverride,
+		&lastCheckedAt,
+		&lastSuccessAt,
+		&lastHTTPStatus,
+		&lastErrorMessage,
+		&item.UpdatedAt,
+	); err != nil {
+		return ports.SupplierSignal{}, err
+	}
+	if productURL.Valid {
+		value := productURL.String
+		item.ProductURL = &value
+	}
+	if lastCheckedAt.Valid {
+		value := lastCheckedAt.Time.UTC()
+		item.LastCheckedAt = &value
+	}
+	if lastSuccessAt.Valid {
+		value := lastSuccessAt.Time.UTC()
+		item.LastSuccessAt = &value
+	}
+	if lastHTTPStatus.Valid {
+		value := lastHTTPStatus.Int64
+		item.LastHTTPStatus = &value
+	}
+	if lastErrorMessage.Valid {
+		value := lastErrorMessage.String
+		item.LastErrorMessage = &value
+	}
+	item.UpdatedAt = item.UpdatedAt.UTC()
 	return item, nil
 }

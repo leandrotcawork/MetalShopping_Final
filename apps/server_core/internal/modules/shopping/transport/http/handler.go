@@ -31,6 +31,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/shopping/runs/", h.handleRunByID)
 	mux.HandleFunc("/api/v1/shopping/products/", h.handleProductLatest)
 	mux.HandleFunc("/api/v1/shopping/run-requests/", h.handleRunRequestByID)
+	mux.HandleFunc("/api/v1/shopping/supplier-signals", h.handleSupplierSignals)
 }
 
 func (h *Handler) handleBootstrap(w http.ResponseWriter, r *http.Request) {
@@ -249,6 +250,15 @@ type shoppingCreateRunRequestBody struct {
 	Notes string `json:"notes"`
 }
 
+type shoppingUpsertSupplierSignalBody struct {
+	ProductID      string  `json:"productId"`
+	SupplierCode   string  `json:"supplierCode"`
+	ProductURL     *string `json:"productUrl"`
+	URLStatus      *string `json:"urlStatus"`
+	LookupMode     *string `json:"lookupMode"`
+	ManualOverride *bool   `json:"manualOverride"`
+}
+
 func (h *Handler) handleRunByID(w http.ResponseWriter, r *http.Request) {
 	startedAt := time.Now()
 	traceID := requestTraceID(r)
@@ -438,6 +448,110 @@ func (h *Handler) handleProductLatest(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *Handler) handleSupplierSignals(w http.ResponseWriter, r *http.Request) {
+	startedAt := time.Now()
+	traceID := requestTraceID(r)
+	statusCode := http.StatusOK
+	reqResult := "success"
+	action := "shopping.list_supplier_signals"
+	if r.Method == http.MethodPut {
+		action = "shopping.upsert_supplier_signal"
+	}
+	defer logRequest(action, traceID, &statusCode, &reqResult, startedAt)
+
+	if r.Method != http.MethodGet && r.Method != http.MethodPut {
+		statusCode = http.StatusMethodNotAllowed
+		reqResult = "method_not_allowed"
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	tenantID, ok := authenticatedTenantID(w, r)
+	if !ok {
+		statusCode = http.StatusUnauthorized
+		reqResult = "auth_or_tenant_error"
+		return
+	}
+
+	if r.Method == http.MethodGet {
+		limit := parseQueryInt64(r, "limit", 50)
+		offset := parseQueryInt64(r, "offset", 0)
+		supplierCode := strings.TrimSpace(r.URL.Query().Get("supplier_code"))
+		productID := strings.TrimSpace(r.URL.Query().Get("product_id"))
+
+		signals, err := h.service.ListSupplierSignals(r.Context(), tenantID, ports.SupplierSignalListFilter{
+			SupplierCode: supplierCode,
+			ProductID:    productID,
+			Limit:        limit,
+			Offset:       offset,
+		})
+		if err != nil {
+			statusCode = http.StatusInternalServerError
+			reqResult = "internal_error"
+			writeShoppingError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to list shopping supplier signals", traceID)
+			return
+		}
+
+		rows := make([]map[string]any, 0, len(signals.Rows))
+		for _, item := range signals.Rows {
+			rows = append(rows, mapSupplierSignal(item))
+		}
+		writeJSON(w, http.StatusOK, map[string]any{
+			"rows": rows,
+			"paging": map[string]any{
+				"offset":   signals.Offset,
+				"limit":    signals.Limit,
+				"returned": len(rows),
+				"total":    signals.Total,
+			},
+		})
+		return
+	}
+
+	var requestBody shoppingUpsertSupplierSignalBody
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&requestBody); err != nil {
+		statusCode = http.StatusBadRequest
+		reqResult = "validation_error"
+		writeShoppingError(w, http.StatusBadRequest, "SHOPPING_SUPPLIER_SIGNAL_INVALID", "Invalid supplier signal payload", traceID)
+		return
+	}
+
+	principal, principalOK := platformauth.PrincipalFromContext(r.Context())
+	if !principalOK {
+		statusCode = http.StatusUnauthorized
+		reqResult = "auth_or_tenant_error"
+		writeShoppingError(w, http.StatusUnauthorized, "AUTH_UNAUTHORIZED", "Authentication required", traceID)
+		return
+	}
+	updatedBy := strings.TrimSpace(principal.Email)
+	if updatedBy == "" {
+		updatedBy = strings.TrimSpace(principal.SubjectID)
+	}
+	if updatedBy == "" {
+		updatedBy = "unknown"
+	}
+
+	signal, err := h.service.UpsertSupplierSignal(r.Context(), tenantID, ports.UpsertSupplierSignalInput{
+		ProductID:      requestBody.ProductID,
+		SupplierCode:   requestBody.SupplierCode,
+		ProductURL:     requestBody.ProductURL,
+		URLStatus:      requestBody.URLStatus,
+		LookupMode:     requestBody.LookupMode,
+		ManualOverride: requestBody.ManualOverride,
+		UpdatedBy:      updatedBy,
+	})
+	if err != nil {
+		statusCode = http.StatusBadRequest
+		reqResult = "validation_error"
+		writeShoppingError(w, http.StatusBadRequest, "SHOPPING_SUPPLIER_SIGNAL_INVALID", err.Error(), traceID)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, mapSupplierSignal(signal))
+}
+
 func mapRun(run ports.Run) map[string]any {
 	var finishedAt any
 	if run.FinishedAt != nil {
@@ -466,6 +580,39 @@ func mapSuppliers(items []ports.BootstrapSupplier) []map[string]any {
 		})
 	}
 	return result
+}
+
+func mapSupplierSignal(item ports.SupplierSignal) map[string]any {
+	payload := map[string]any{
+		"productId":        item.ProductID,
+		"supplierCode":     item.SupplierCode,
+		"productUrl":       nil,
+		"urlStatus":        item.URLStatus,
+		"lookupMode":       item.LookupMode,
+		"lookupModeSource": item.LookupModeSource,
+		"manualOverride":   item.ManualOverride,
+		"lastCheckedAt":    nil,
+		"lastSuccessAt":    nil,
+		"lastHttpStatus":   nil,
+		"lastErrorMessage": nil,
+		"updatedAt":        item.UpdatedAt.UTC().Format(time.RFC3339),
+	}
+	if item.ProductURL != nil {
+		payload["productUrl"] = *item.ProductURL
+	}
+	if item.LastCheckedAt != nil {
+		payload["lastCheckedAt"] = item.LastCheckedAt.UTC().Format(time.RFC3339)
+	}
+	if item.LastSuccessAt != nil {
+		payload["lastSuccessAt"] = item.LastSuccessAt.UTC().Format(time.RFC3339)
+	}
+	if item.LastHTTPStatus != nil {
+		payload["lastHttpStatus"] = *item.LastHTTPStatus
+	}
+	if item.LastErrorMessage != nil {
+		payload["lastErrorMessage"] = *item.LastErrorMessage
+	}
+	return payload
 }
 
 func extractProductLatestPathParam(path string) (string, bool) {

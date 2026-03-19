@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.metalshopping.local/api/shopping_upsert_supplier_signal_request_v1.schema.json",
+  "title": "ShoppingUpsertSupplierSignalRequestV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["productId", "supplierCode"],
+  "properties": {
+    "productId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "supplierCode": {
+      "type": "string",
+      "minLength": 1
+    },
+    "productUrl": {
+      "type": ["string", "null"]
+    },
+    "urlStatus": {
+      "type": "string",
+      "enum": ["ACTIVE", "STALE", "INVALID"]
+    },
+    "lookupMode": {
+      "type": "string",
+      "enum": ["EAN", "REFERENCE"]
+    },
+    "manualOverride": {
+      "type": "boolean"
+    }
+  }
+}

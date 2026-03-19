@@ -139,6 +139,159 @@ RETURNING run_request_id, request_status, input_mode, requested_at, requested_by
 	return result, nil
 }
 
+func (w *Writer) UpsertSupplierSignal(ctx context.Context, tenantID string, input ports.UpsertSupplierSignalInput) (ports.SupplierSignal, error) {
+	if strings.TrimSpace(input.ProductID) == "" {
+		return ports.SupplierSignal{}, fmt.Errorf("product_id is required")
+	}
+	if strings.TrimSpace(input.SupplierCode) == "" {
+		return ports.SupplierSignal{}, fmt.Errorf("supplier_code is required")
+	}
+	if strings.TrimSpace(input.UpdatedBy) == "" {
+		return ports.SupplierSignal{}, fmt.Errorf("updated_by is required")
+	}
+	if input.URLStatus != nil {
+		switch *input.URLStatus {
+		case "ACTIVE", "STALE", "INVALID":
+		default:
+			return ports.SupplierSignal{}, fmt.Errorf("invalid url_status: %s", *input.URLStatus)
+		}
+	}
+	if input.LookupMode != nil {
+		switch *input.LookupMode {
+		case "EAN", "REFERENCE":
+		default:
+			return ports.SupplierSignal{}, fmt.Errorf("invalid lookup_mode: %s", *input.LookupMode)
+		}
+	}
+
+	tx, err := pgdb.BeginTenantTx(ctx, w.db, tenantID, nil)
+	if err != nil {
+		return ports.SupplierSignal{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	const query = `
+INSERT INTO shopping_supplier_product_signals (
+  tenant_id,
+  product_id,
+  supplier_code,
+  product_url,
+  url_status,
+  lookup_mode,
+  lookup_mode_source,
+  manual_override,
+  last_checked_at,
+  last_success_at,
+  last_http_status,
+  last_error_message,
+  created_by,
+  created_at,
+  updated_at
+) VALUES (
+  current_tenant_id(),
+  $1,
+  $2,
+  $3,
+  COALESCE($4, 'STALE'),
+  COALESCE($5, 'REFERENCE'),
+  'MANUAL',
+  COALESCE($6, TRUE),
+  NOW(),
+  CASE WHEN $3 IS NULL OR $3 = '' THEN NULL ELSE NOW() END,
+  NULL,
+  NULL,
+  $7,
+  NOW(),
+  NOW()
+)
+ON CONFLICT (tenant_id, product_id, supplier_code) DO UPDATE SET
+  product_url = EXCLUDED.product_url,
+  url_status = COALESCE($4, shopping_supplier_product_signals.url_status),
+  lookup_mode = COALESCE($5, shopping_supplier_product_signals.lookup_mode),
+  lookup_mode_source = 'MANUAL',
+  manual_override = COALESCE($6, TRUE),
+  last_checked_at = NOW(),
+  last_success_at = CASE
+    WHEN EXCLUDED.product_url IS NULL OR EXCLUDED.product_url = '' THEN shopping_supplier_product_signals.last_success_at
+    ELSE NOW()
+  END,
+  updated_at = NOW()
+RETURNING
+  product_id,
+  supplier_code,
+  product_url,
+  url_status,
+  lookup_mode,
+  lookup_mode_source,
+  manual_override,
+  last_checked_at,
+  last_success_at,
+  last_http_status,
+  last_error_message,
+  updated_at
+`
+
+	var signal ports.SupplierSignal
+	var productURL sql.NullString
+	var lastCheckedAt sql.NullTime
+	var lastSuccessAt sql.NullTime
+	var lastHTTPStatus sql.NullInt64
+	var lastErrorMessage sql.NullString
+	if err := tx.QueryRowContext(
+		ctx,
+		query,
+		input.ProductID,
+		input.SupplierCode,
+		input.ProductURL,
+		input.URLStatus,
+		input.LookupMode,
+		input.ManualOverride,
+		input.UpdatedBy,
+	).Scan(
+		&signal.ProductID,
+		&signal.SupplierCode,
+		&productURL,
+		&signal.URLStatus,
+		&signal.LookupMode,
+		&signal.LookupModeSource,
+		&signal.ManualOverride,
+		&lastCheckedAt,
+		&lastSuccessAt,
+		&lastHTTPStatus,
+		&lastErrorMessage,
+		&signal.UpdatedAt,
+	); err != nil {
+		return ports.SupplierSignal{}, fmt.Errorf("upsert shopping supplier signal: %w", err)
+	}
+
+	if productURL.Valid {
+		value := productURL.String
+		signal.ProductURL = &value
+	}
+	if lastCheckedAt.Valid {
+		value := lastCheckedAt.Time.UTC()
+		signal.LastCheckedAt = &value
+	}
+	if lastSuccessAt.Valid {
+		value := lastSuccessAt.Time.UTC()
+		signal.LastSuccessAt = &value
+	}
+	if lastHTTPStatus.Valid {
+		value := lastHTTPStatus.Int64
+		signal.LastHTTPStatus = &value
+	}
+	if lastErrorMessage.Valid {
+		value := lastErrorMessage.String
+		signal.LastErrorMessage = &value
+	}
+	signal.UpdatedAt = signal.UpdatedAt.UTC()
+
+	if err := tx.Commit(); err != nil {
+		return ports.SupplierSignal{}, fmt.Errorf("commit shopping supplier signal upsert: %w", err)
+	}
+	return signal, nil
+}
+
 type scopeResolution struct {
 	ResolvedCatalogProductIDs []string
 	UnresolvedScopeIDs        []string

@@ -446,6 +446,16 @@
   font-size: 13px;
 }
 
+.advancedGrid select {
+  width: 100%;
+  border: 1px solid var(--neutral-200);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--neutral-900);
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
 .execHeader {
   display: flex;
   align-items: center;

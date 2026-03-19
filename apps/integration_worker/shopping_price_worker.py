@@ -48,6 +48,13 @@ class RunRequest:
     requested_by: str
 
 
+@dataclass(frozen=True)
+class SupplierSignal:
+    product_url: str | None
+    lookup_mode: str
+    manual_override: bool
+
+
 def utc_now_iso() -> str:
     return datetime.now(tz=timezone.utc).isoformat()
 
@@ -222,6 +229,66 @@ def upsert_run(
                     item.http_status,
                     item.elapsed_s,
                     json.dumps(chosen_seller_json),
+                    item.notes,
+                ),
+            )
+
+            inferred_lookup_mode = infer_lookup_mode(item)
+            cur.execute(
+                """
+                INSERT INTO shopping_supplier_product_signals (
+                  tenant_id, product_id, supplier_code, product_url, url_status, lookup_mode, lookup_mode_source,
+                  manual_override, last_checked_at, last_success_at, last_http_status, last_error_message,
+                  created_by, created_at, updated_at
+                )
+                VALUES (
+                  current_tenant_id(), %s, %s, %s,
+                  CASE WHEN %s IS NULL OR %s = '' THEN 'STALE' ELSE 'ACTIVE' END,
+                  %s, 'INFERRED',
+                  FALSE, %s,
+                  CASE WHEN %s IS NULL OR %s = '' THEN NULL ELSE %s END,
+                  %s, %s,
+                  'shopping_worker', NOW(), NOW()
+                )
+                ON CONFLICT (tenant_id, product_id, supplier_code) DO UPDATE SET
+                  product_url = CASE
+                    WHEN shopping_supplier_product_signals.manual_override THEN shopping_supplier_product_signals.product_url
+                    ELSE COALESCE(EXCLUDED.product_url, shopping_supplier_product_signals.product_url)
+                  END,
+                  url_status = CASE
+                    WHEN shopping_supplier_product_signals.manual_override THEN shopping_supplier_product_signals.url_status
+                    WHEN EXCLUDED.product_url IS NULL OR EXCLUDED.product_url = '' THEN 'STALE'
+                    ELSE 'ACTIVE'
+                  END,
+                  lookup_mode = CASE
+                    WHEN shopping_supplier_product_signals.manual_override THEN shopping_supplier_product_signals.lookup_mode
+                    ELSE EXCLUDED.lookup_mode
+                  END,
+                  lookup_mode_source = CASE
+                    WHEN shopping_supplier_product_signals.manual_override THEN shopping_supplier_product_signals.lookup_mode_source
+                    ELSE 'INFERRED'
+                  END,
+                  last_checked_at = EXCLUDED.last_checked_at,
+                  last_success_at = CASE
+                    WHEN EXCLUDED.product_url IS NULL OR EXCLUDED.product_url = '' THEN shopping_supplier_product_signals.last_success_at
+                    ELSE EXCLUDED.last_success_at
+                  END,
+                  last_http_status = EXCLUDED.last_http_status,
+                  last_error_message = EXCLUDED.last_error_message,
+                  updated_at = NOW()
+                """,
+                (
+                    item.product_id,
+                    item.supplier_code,
+                    item.product_url,
+                    item.product_url,
+                    item.product_url,
+                    inferred_lookup_mode,
+                    item.observed_at,
+                    item.product_url,
+                    item.product_url,
+                    item.observed_at,
+                    item.http_status,
                     item.notes,
                 ),
             )
@@ -429,6 +496,7 @@ def query_catalog_items(
         cur.execute("COMMIT")
 
     effective_suppliers = supplier_codes if len(supplier_codes) > 0 else ["DEFAULT"]
+    signal_overrides = fetch_supplier_signal_overrides(conn, tenant_id, [str(row[0]) for row in rows], effective_suppliers)
     now_iso = utc_now_iso()
     items: list[RunItem] = []
     for row in rows:
@@ -436,6 +504,7 @@ def query_catalog_items(
         observed_price = float(row[1])
         currency_code = str(row[2]).upper()
         for supplier_code in effective_suppliers:
+            signal = signal_overrides.get(signal_key(product_id, supplier_code))
             items.append(
                 RunItem(
                     product_id=product_id,
@@ -446,6 +515,7 @@ def query_catalog_items(
                     observed_price=observed_price,
                     currency_code=currency_code,
                     observed_at=now_iso,
+                    product_url=signal.product_url if signal is not None else None,
                 )
             )
     return items
@@ -481,6 +551,7 @@ def query_xlsx_fallback_items(
         cur.execute("COMMIT")
 
     effective_suppliers = supplier_codes if len(supplier_codes) > 0 else ["DEFAULT"]
+    signal_overrides = fetch_supplier_signal_overrides(conn, tenant_id, [str(row[0]) for row in rows], effective_suppliers)
     now_iso = utc_now_iso()
     items: list[RunItem] = []
     for row in rows:
@@ -488,6 +559,7 @@ def query_xlsx_fallback_items(
         observed_price = float(row[1])
         currency_code = str(row[2]).upper()
         for supplier_code in effective_suppliers:
+            signal = signal_overrides.get(signal_key(product_id, supplier_code))
             items.append(
                 RunItem(
                     product_id=product_id,
@@ -498,9 +570,65 @@ def query_xlsx_fallback_items(
                     observed_price=observed_price,
                     currency_code=currency_code,
                     observed_at=now_iso,
+                    product_url=signal.product_url if signal is not None else None,
                 )
             )
     return items
+
+
+def infer_lookup_mode(item: RunItem) -> str:
+    channel = item.channel.upper()
+    if "EAN" in channel:
+        return "EAN"
+    return "REFERENCE"
+
+
+def signal_key(product_id: str, supplier_code: str) -> str:
+    return f"{product_id}|{supplier_code.upper()}"
+
+
+def fetch_supplier_signal_overrides(
+    conn: psycopg.Connection,
+    tenant_id: str,
+    product_ids: list[str],
+    supplier_codes: list[str],
+) -> dict[str, SupplierSignal]:
+    if len(product_ids) == 0 or len(supplier_codes) == 0:
+        return {}
+    with conn.cursor() as cur:
+        cur.execute("BEGIN")
+        cur.execute("SELECT set_config('app.tenant_id', %s, true)", (tenant_id,))
+        cur.execute(
+            """
+            SELECT
+              product_id,
+              supplier_code,
+              product_url,
+              lookup_mode,
+              manual_override
+            FROM shopping_supplier_product_signals
+            WHERE tenant_id = current_tenant_id()
+              AND product_id = ANY(%s::text[])
+              AND supplier_code = ANY(%s::text[])
+            """,
+            (product_ids, supplier_codes),
+        )
+        rows = cur.fetchall()
+        cur.execute("COMMIT")
+
+    output: dict[str, SupplierSignal] = {}
+    for row in rows:
+        product_id = str(row[0])
+        supplier_code = str(row[1]).upper()
+        product_url = str(row[2]).strip() if row[2] is not None else None
+        lookup_mode = str(row[3]).upper() if row[3] is not None else "REFERENCE"
+        manual_override = bool(row[4])
+        output[signal_key(product_id, supplier_code)] = SupplierSignal(
+            product_url=product_url if product_url else None,
+            lookup_mode=lookup_mode if lookup_mode in {"EAN", "REFERENCE"} else "REFERENCE",
+            manual_override=manual_override,
+        )
+    return output
 
 
 def process_claimed_request(

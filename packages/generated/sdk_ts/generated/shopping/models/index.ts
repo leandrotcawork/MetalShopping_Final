@@ -16,3 +16,7 @@ export * from './ShoppingRunRequestV1';
 export * from './ShoppingRunV1';
 export * from './ShoppingRunV11';
 export * from './ShoppingSummaryV1';
+export * from './ShoppingSupplierSignalListV1';
+export * from './ShoppingSupplierSignalV1';
+export * from './ShoppingSupplierSignalV11';
+export * from './ShoppingUpsertSupplierSignalRequestV1';

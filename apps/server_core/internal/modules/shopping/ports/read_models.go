@@ -46,6 +46,45 @@ type RunListFilter struct {
 	Offset int64
 }
 
+type SupplierSignal struct {
+	ProductID        string
+	SupplierCode     string
+	ProductURL       *string
+	URLStatus        string
+	LookupMode       string
+	LookupModeSource string
+	ManualOverride   bool
+	LastCheckedAt    *time.Time
+	LastSuccessAt    *time.Time
+	LastHTTPStatus   *int64
+	LastErrorMessage *string
+	UpdatedAt        time.Time
+}
+
+type SupplierSignalListFilter struct {
+	SupplierCode string
+	ProductID    string
+	Limit        int64
+	Offset       int64
+}
+
+type SupplierSignalList struct {
+	Rows   []SupplierSignal
+	Offset int64
+	Limit  int64
+	Total  int64
+}
+
+type UpsertSupplierSignalInput struct {
+	ProductID      string
+	SupplierCode   string
+	ProductURL     *string
+	URLStatus      *string
+	LookupMode     *string
+	ManualOverride *bool
+	UpdatedBy      string
+}
+
 type Reader interface {
 	GetBootstrap(ctx context.Context, tenantID string) (Bootstrap, error)
 	GetSummary(ctx context.Context, tenantID string) (Summary, error)
@@ -53,6 +92,7 @@ type Reader interface {
 	GetRun(ctx context.Context, tenantID, runID string) (Run, error)
 	GetProductLatest(ctx context.Context, tenantID, productID string) (ProductLatest, error)
 	GetRunRequest(ctx context.Context, tenantID, runRequestID string) (RunRequest, error)
+	ListSupplierSignals(ctx context.Context, tenantID string, filter SupplierSignalListFilter) (SupplierSignalList, error)
 }
 
 type BootstrapSupplier struct {
@@ -112,4 +152,5 @@ type RunRequest struct {
 
 type Writer interface {
 	CreateRunRequest(ctx context.Context, tenantID string, input CreateRunRequestInput) (RunRequest, error)
+	UpsertSupplierSignal(ctx context.Context, tenantID string, input UpsertSupplierSignalInput) (SupplierSignal, error)
 }

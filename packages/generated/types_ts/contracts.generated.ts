@@ -38,7 +38,10 @@ export const schemaIds = {
   "shopping_run_list_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_list_v1.schema.json",
   "shopping_run_request_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_request_v1.schema.json",
   "shopping_run_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_v1.schema.json",
-  "shopping_summary_v1.schema": "https://schemas.metalshopping.local/api/shopping_summary_v1.schema.json"
+  "shopping_summary_v1.schema": "https://schemas.metalshopping.local/api/shopping_summary_v1.schema.json",
+  "shopping_supplier_signal_list_v1.schema": "https://schemas.metalshopping.local/api/shopping_supplier_signal_list_v1.schema.json",
+  "shopping_supplier_signal_v1.schema": "https://schemas.metalshopping.local/api/shopping_supplier_signal_v1.schema.json",
+  "shopping_upsert_supplier_signal_request_v1.schema": "https://schemas.metalshopping.local/api/shopping_upsert_supplier_signal_request_v1.schema.json"
 } as const;
 
 export type AuthSessionLogoutResponseV1 = {
@@ -447,6 +450,40 @@ export type ShoppingSummaryV1 = {
   completedRuns: number;
   failedRuns: number;
   lastRunAt: string;
+};
+
+export type ShoppingSupplierSignalListV1 = {
+  rows: Array<ShoppingSupplierSignalV1>;
+  paging: {
+    offset: number;
+    limit: number;
+    returned: number;
+    total: number;
+  };
+};
+
+export type ShoppingSupplierSignalV1 = {
+  productId: string;
+  supplierCode: string;
+  productUrl?: string | null;
+  urlStatus: "ACTIVE" | "STALE" | "INVALID";
+  lookupMode: "EAN" | "REFERENCE";
+  lookupModeSource: "INFERRED" | "MANUAL";
+  manualOverride: boolean;
+  lastCheckedAt?: string | null;
+  lastSuccessAt?: string | null;
+  lastHttpStatus?: number | null;
+  lastErrorMessage?: string | null;
+  updatedAt: string;
+};
+
+export type ShoppingUpsertSupplierSignalRequestV1 = {
+  productId: string;
+  supplierCode: string;
+  productUrl?: string | null;
+  urlStatus?: "ACTIVE" | "STALE" | "INVALID";
+  lookupMode?: "EAN" | "REFERENCE";
+  manualOverride?: boolean;
 };
 
 export const eventNames = [

@@ -21,10 +21,12 @@ OPERATION_IDS = [
     'listPricingProductPrices',
     'listProductsPortfolio',
     'listShoppingRuns',
+    'listShoppingSupplierSignals',
     'logoutAuthSession',
     'refreshAuthSession',
     'setInventoryProductPosition',
     'setPricingProductPrice',
     'startAuthSessionLogin',
     'upsertIamUserRoleAssignment',
+    'upsertShoppingSupplierSignal',
 ]

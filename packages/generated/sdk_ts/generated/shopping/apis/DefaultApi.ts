@@ -25,6 +25,9 @@ import type {
   ShoppingRunRequestV1,
   ShoppingRunV11,
   ShoppingSummaryV1,
+  ShoppingSupplierSignalListV1,
+  ShoppingSupplierSignalV11,
+  ShoppingUpsertSupplierSignalRequestV1,
 } from '../models/index';
 import {
     CommonErrorV1FromJSON,
@@ -47,6 +50,12 @@ import {
     ShoppingRunV11ToJSON,
     ShoppingSummaryV1FromJSON,
     ShoppingSummaryV1ToJSON,
+    ShoppingSupplierSignalListV1FromJSON,
+    ShoppingSupplierSignalListV1ToJSON,
+    ShoppingSupplierSignalV11FromJSON,
+    ShoppingSupplierSignalV11ToJSON,
+    ShoppingUpsertSupplierSignalRequestV1FromJSON,
+    ShoppingUpsertSupplierSignalRequestV1ToJSON,
 } from '../models/index';
 
 export interface CreateShoppingRunRequestRequest {
@@ -69,6 +78,17 @@ export interface ListShoppingRunsRequest {
     status?: ListShoppingRunsStatusEnum;
     limit?: number;
     offset?: number;
+}
+
+export interface ListShoppingSupplierSignalsRequest {
+    supplierCode?: string;
+    productId?: string;
+    limit?: number;
+    offset?: number;
+}
+
+export interface UpsertShoppingSupplierSignalRequest {
+    shoppingUpsertSupplierSignalRequestV1: ShoppingUpsertSupplierSignalRequestV1;
 }
 
 /**
@@ -378,6 +398,106 @@ export class DefaultApi extends runtime.BaseAPI {
      */
     async listShoppingRuns(requestParameters: ListShoppingRunsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ShoppingRunListV1> {
         const response = await this.listShoppingRunsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for listShoppingSupplierSignals without sending the request
+     */
+    async listShoppingSupplierSignalsRequestOpts(requestParameters: ListShoppingSupplierSignalsRequest): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        if (requestParameters['supplierCode'] != null) {
+            queryParameters['supplier_code'] = requestParameters['supplierCode'];
+        }
+
+        if (requestParameters['productId'] != null) {
+            queryParameters['product_id'] = requestParameters['productId'];
+        }
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
+
+        if (requestParameters['offset'] != null) {
+            queryParameters['offset'] = requestParameters['offset'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/shopping/supplier-signals`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * List persisted supplier product signals
+     */
+    async listShoppingSupplierSignalsRaw(requestParameters: ListShoppingSupplierSignalsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ShoppingSupplierSignalListV1>> {
+        const requestOptions = await this.listShoppingSupplierSignalsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ShoppingSupplierSignalListV1FromJSON(jsonValue));
+    }
+
+    /**
+     * List persisted supplier product signals
+     */
+    async listShoppingSupplierSignals(requestParameters: ListShoppingSupplierSignalsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ShoppingSupplierSignalListV1> {
+        const response = await this.listShoppingSupplierSignalsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for upsertShoppingSupplierSignal without sending the request
+     */
+    async upsertShoppingSupplierSignalRequestOpts(requestParameters: UpsertShoppingSupplierSignalRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['shoppingUpsertSupplierSignalRequestV1'] == null) {
+            throw new runtime.RequiredError(
+                'shoppingUpsertSupplierSignalRequestV1',
+                'Required parameter "shoppingUpsertSupplierSignalRequestV1" was null or undefined when calling upsertShoppingSupplierSignal().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/shopping/supplier-signals`;
+
+        return {
+            path: urlPath,
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ShoppingUpsertSupplierSignalRequestV1ToJSON(requestParameters['shoppingUpsertSupplierSignalRequestV1']),
+        };
+    }
+
+    /**
+     * Create or update persisted supplier product signal
+     */
+    async upsertShoppingSupplierSignalRaw(requestParameters: UpsertShoppingSupplierSignalRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ShoppingSupplierSignalV11>> {
+        const requestOptions = await this.upsertShoppingSupplierSignalRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ShoppingSupplierSignalV11FromJSON(jsonValue));
+    }
+
+    /**
+     * Create or update persisted supplier product signal
+     */
+    async upsertShoppingSupplierSignal(requestParameters: UpsertShoppingSupplierSignalRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ShoppingSupplierSignalV11> {
+        const response = await this.upsertShoppingSupplierSignalRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

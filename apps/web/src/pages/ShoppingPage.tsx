@@ -8,6 +8,7 @@ import type {
   ShoppingCreateRunRequestV1,
   ShoppingRunRequestV1,
   ShoppingRunV1,
+  ShoppingSupplierSignalV1,
 } from "@metalshopping/sdk-types";
 import { AppFrame, Checkbox, FilterDropdown, type SelectMenuOption } from "@metalshopping/ui";
 
@@ -109,6 +110,13 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
   const [advancedHttpWorkers, setAdvancedHttpWorkers] = useState(10);
   const [advancedPlaywrightWorkers, setAdvancedPlaywrightWorkers] = useState(7);
   const [advancedTopN, setAdvancedTopN] = useState(5);
+  const [manualSignalProductId, setManualSignalProductId] = useState("");
+  const [manualSignalSupplierCode, setManualSignalSupplierCode] = useState("");
+  const [manualSignalUrl, setManualSignalUrl] = useState("");
+  const [manualSignalLookupMode, setManualSignalLookupMode] = useState<"EAN" | "REFERENCE">("REFERENCE");
+  const [manualSignalUrlStatus, setManualSignalUrlStatus] = useState<"ACTIVE" | "STALE" | "INVALID">("ACTIVE");
+  const [manualSignalSaving, setManualSignalSaving] = useState(false);
+  const [manualSignals, setManualSignals] = useState<ShoppingSupplierSignalV1[]>([]);
 
   const [catalogSearch, setCatalogSearch] = useState("");
   const [catalogBrand, setCatalogBrand] = useState(allOptionValue);
@@ -182,6 +190,52 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
       cancelled = true;
     };
   }, [shoppingApi, selectedStatus, reloadTick]);
+
+  useEffect(() => {
+    if (!bootstrap || bootstrap.suppliers.length === 0) {
+      return;
+    }
+    if (manualSignalSupplierCode === "") {
+      const firstEnabled = bootstrap.suppliers.find((item) => item.enabled);
+      if (firstEnabled) {
+        setManualSignalSupplierCode(firstEnabled.supplierCode);
+      }
+    }
+  }, [bootstrap, manualSignalSupplierCode]);
+
+  useEffect(() => {
+    if (selectedProductIds.length > 0) {
+      setManualSignalProductId(selectedProductIds[0]);
+    }
+  }, [selectedProductIds]);
+
+  useEffect(() => {
+    if (manualSignalProductId === "" || manualSignalSupplierCode === "") {
+      return;
+    }
+    let cancelled = false;
+    async function loadSignals() {
+      try {
+        const list = await shoppingApi.listSupplierSignals({
+          productId: manualSignalProductId,
+          supplierCode: manualSignalSupplierCode,
+          limit: 10,
+          offset: 0,
+        });
+        if (!cancelled) {
+          setManualSignals(list.rows);
+        }
+      } catch {
+        if (!cancelled) {
+          setManualSignals([]);
+        }
+      }
+    }
+    void loadSignals();
+    return () => {
+      cancelled = true;
+    };
+  }, [shoppingApi, manualSignalProductId, manualSignalSupplierCode, reloadTick]);
 
   useEffect(() => {
     if (inputMode !== "catalog") {
@@ -388,6 +442,31 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
       setError(message);
     } finally {
       setCreatingRun(false);
+    }
+  }
+
+  async function saveManualSignal() {
+    if (manualSignalProductId.trim() === "" || manualSignalSupplierCode.trim() === "") {
+      setError("Selecione um produto e fornecedor para salvar URL manual.");
+      return;
+    }
+    setManualSignalSaving(true);
+    setError(null);
+    try {
+      await shoppingApi.upsertSupplierSignal({
+        productId: manualSignalProductId.trim(),
+        supplierCode: manualSignalSupplierCode.trim(),
+        productUrl: manualSignalUrl.trim() || null,
+        lookupMode: manualSignalLookupMode,
+        urlStatus: manualSignalUrlStatus,
+        manualOverride: true,
+      });
+      setReloadTick((current) => current + 1);
+    } catch (saveError) {
+      const message = saveError instanceof Error ? saveError.message : "Falha ao salvar configuracao manual de URL.";
+      setError(message);
+    } finally {
+      setManualSignalSaving(false);
     }
   }
 
@@ -699,6 +778,65 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                   />
                 </label>
               </div>
+            ) : null}
+          </div>
+
+          <div className={styles.catalogBlock}>
+            <strong>Configurar URLs por fornecedor</strong>
+            <div className={styles.advancedGrid}>
+              <label>
+                Product ID
+                <input
+                  type="text"
+                  value={manualSignalProductId}
+                  onChange={(event) => setManualSignalProductId(event.target.value)}
+                  placeholder="product_id"
+                />
+              </label>
+              <label>
+                Fornecedor
+                <input
+                  type="text"
+                  value={manualSignalSupplierCode}
+                  onChange={(event) => setManualSignalSupplierCode(event.target.value.toUpperCase())}
+                  placeholder="SUPPLIER_CODE"
+                />
+              </label>
+              <label>
+                URL manual
+                <input
+                  type="text"
+                  value={manualSignalUrl}
+                  onChange={(event) => setManualSignalUrl(event.target.value)}
+                  placeholder="https://fornecedor/pdp/produto"
+                />
+              </label>
+              <label>
+                Lookup mode
+                <select
+                  value={manualSignalLookupMode}
+                  onChange={(event) => setManualSignalLookupMode(event.target.value as "EAN" | "REFERENCE")}
+                >
+                  <option value="REFERENCE">REFERENCE</option>
+                  <option value="EAN">EAN</option>
+                </select>
+              </label>
+            </div>
+            <div className={styles.btnRow}>
+              <button
+                type="button"
+                className={`${styles.btn} ${styles.btnSecondary}`}
+                onClick={() => void saveManualSignal()}
+                disabled={manualSignalSaving}
+              >
+                {manualSignalSaving ? "Salvando..." : "Salvar URL manual"}
+              </button>
+            </div>
+            {manualSignals.length > 0 ? (
+              <p className={styles.modeSummary}>
+                Sinal atual: {manualSignals[0].urlStatus} | {manualSignals[0].lookupMode} |{" "}
+                {manualSignals[0].productUrl ?? "sem URL"}
+              </p>
             ) : null}
           </div>
 

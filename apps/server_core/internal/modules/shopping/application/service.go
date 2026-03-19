@@ -79,3 +79,28 @@ func (s *Service) CreateRunRequest(ctx context.Context, tenantID string, input p
 
 	return s.writer.CreateRunRequest(ctx, strings.TrimSpace(tenantID), input)
 }
+
+func (s *Service) ListSupplierSignals(ctx context.Context, tenantID string, filter ports.SupplierSignalListFilter) (ports.SupplierSignalList, error) {
+	filter.SupplierCode = strings.ToUpper(strings.TrimSpace(filter.SupplierCode))
+	filter.ProductID = strings.TrimSpace(filter.ProductID)
+	return s.reader.ListSupplierSignals(ctx, strings.TrimSpace(tenantID), filter)
+}
+
+func (s *Service) UpsertSupplierSignal(ctx context.Context, tenantID string, input ports.UpsertSupplierSignalInput) (ports.SupplierSignal, error) {
+	input.ProductID = strings.TrimSpace(input.ProductID)
+	input.SupplierCode = strings.ToUpper(strings.TrimSpace(input.SupplierCode))
+	input.UpdatedBy = strings.TrimSpace(input.UpdatedBy)
+	if input.ProductURL != nil {
+		value := strings.TrimSpace(*input.ProductURL)
+		input.ProductURL = &value
+	}
+	if input.URLStatus != nil {
+		value := strings.ToUpper(strings.TrimSpace(*input.URLStatus))
+		input.URLStatus = &value
+	}
+	if input.LookupMode != nil {
+		value := strings.ToUpper(strings.TrimSpace(*input.LookupMode))
+		input.LookupMode = &value
+	}
+	return s.writer.UpsertSupplierSignal(ctx, strings.TrimSpace(tenantID), input)
+}
