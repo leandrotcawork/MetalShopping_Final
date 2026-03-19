@@ -21,7 +21,7 @@ We need a generation path that is:
 - the TypeScript SDK flow now uses the official OpenAPI Generator `typescript-fetch` generator
 - generation runs through the official Docker image `openapitools/openapi-generator-cli`
 - `scripts/generate_contract_artifacts.ps1` stays as the repo orchestration entrypoint, but no longer emits SDK transport code manually
-- the repo may keep a thin generated facade over the official generated clients to preserve canonical query shapes, centralized browser runtime composition, and stable frontend consumption
+- the stable browser runtime/facade lives in an authored package (`packages/platform-sdk`) that composes generated clients
 
 ## Consequences
 
@@ -29,7 +29,7 @@ We need a generation path that is:
 - local Java version differences no longer define whether SDK generation works
 - frontend runtime concerns stay centralized and thin
 - future front+back integration work must start from contracts, generation, and the shared runtime pattern rather than page-local HTTP code or feature-local clients
-- the current PowerShell script is now orchestration only; it is not the long-term justification for handwritten SDK logic
+- the current PowerShell script is now orchestration only; handwritten runtime logic remains explicit, reviewable, and versioned outside generated outputs
 - contract hygiene still needs a follow-up pass because some OpenAPI and schema identifiers emit noisy remote-resolution warnings during generation even though the pipeline succeeds
 
 ## Follow-up

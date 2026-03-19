@@ -113,6 +113,7 @@ Current status:
 - the auth/session foundation is now implemented, so the next gate is real issuer bootstrap with Keycloak and tenant claim wiring before login UI work
 - the login hardening tranche now closes CSRF defense, generated browser HTTP runtime centralization, and thinner auth composition so the next gate can move to post-login operational surfaces
 - the next frontend/backend hardening step is replacing handwritten SDK emission with OpenAPI Generator-backed `sdk_ts` generation and a stable shared runtime pattern
+- the next login closure step is now explicitly frozen as T1/T2/T3 under `docs/LOGIN_MVP_EXECUTION_PLAN.md`, governed by `docs/LOGIN_DOD.md`
 
 ## Phase 4: Domain expansion
 

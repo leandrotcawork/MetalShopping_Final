@@ -84,23 +84,29 @@
 - reproducible local Keycloak bootstrap assets added for realm import, tenant claim mapping, local test users, and repeatable IAM role seeding
 - login hardening completed with backend-owned CSRF protection for cookie-backed mutations, centralized generated browser HTTP runtime, thinner auth routing composition, and a frozen login visual baseline shared with the Keycloak theme
 - official `sdk_ts` migration target frozen on OpenAPI Generator `typescript-fetch` with Docker-backed orchestration and a repo-specific integration skill
+- `server_core` composition root refactored into capability-focused composition files to reduce bootstrap concentration in `main.go`
+- frontend auth ownership hardened so `feature-auth-session` no longer depends on app runtime `apiBaseUrl`, while SDK composition is centralized in the web runtime provider
+- login visual baseline hardened with shared token source-of-truth and cross-surface sync/check automation for React fallback and Keycloak theme
+- auth/session bootstrap now enforces explicit mode semantics with fail-fast default (`required`) to avoid silent OIDC/session fallback
+- `server_core` runtime now shuts down gracefully with signal-aware context cancellation and outbox dispatcher lifecycle wiring
+- frontend runtime/facade extraction completed in `packages/platform-sdk`, removing transport code emission from `generate_contract_artifacts.ps1`
+- SoT drift guard hardened with branch-diff mode (`-BaseRef`) and expanded structural scope (workspace manifests plus web runtime config) so CI can detect structural changes beyond local working tree
+- pull request CI workflow now enforces contract validation, generated artifact drift check, backend tests, web typecheck/build, and SoT drift guard sequencing
+- login closure governance was frozen with explicit scope (`docs/LOGIN_MVP_SCOPE.md`), DoD (`docs/LOGIN_DOD.md`), SDK boundary rules (`docs/SDK_BOUNDARY.md`), and tranche plan (`docs/LOGIN_MVP_EXECUTION_PLAN.md`)
+- ADR-0015 and ADR-0016 were added to bind login closure governance and generated-vs-runtime SDK boundary semantics
+- login T2 SDK/runtime hardening implemented with stable workspace alias imports in `packages/platform-sdk`, explicit CI guards for deep-relative-import and `as unknown as`, and environment-aware CI behavior for Docker availability
+- local developer guidance was updated so Docker-based artifact generation is optional outside CI and Windows `esbuild EPERM` fallback is explicit (including WSL script path)
+- login T3 local smoke automation implemented in `scripts/smoke_auth_session_local.ps1` and validated end-to-end against local Keycloak (`login -> me -> refresh/logout with CSRF`)
+- OpenAPI generation check was hardened to run against a sanitized local contract mirror so JSON Schema canonical `$id` values do not force remote resolution during SDK generation drift checks
+- frontend auth route behavior was hardened with explicit route policy functions plus unit tests for redirect/manual/authenticated modes and auto-redirect no-loop guard semantics
 
 ## Next
 
 - keep ADR set complete and stable
-- freeze and implement the backend-owned `auth/session` surface before login UI work
-- bootstrap Keycloak locally as the first real issuer
-- start the local Keycloak issuer from the committed bootstrap assets
-- configure realm, client, redirect URI, and `tenant_id` mapper
-- seed internal IAM roles for the imported Keycloak subject ids before switching the backend to JWT mode
-- connect `.env` to the Keycloak local issuer and validate `auth/session` end to end
-- validate migrations `0008`, `0009`, and `0010` end-to-end in the running server with smoke coverage
-- enforce contract validation and artifact generation in team workflow and CI
-- connect the JWT/OIDC auth path to a real issuer configuration
-- bootstrap authenticated session state in `apps/web`
+- execute login MVP closure plan T3 and close every remaining checklist item in `docs/LOGIN_DOD.md`
 - validate the hardened login flow end-to-end against the running Keycloak issuer after every local restart
-- replace the remaining handwritten `sdk_ts` emission path with the official generator-backed flow
-- create and adopt the repo skill that freezes front+back integration rules around contracts, generation, runtime, and docs sync
+- keep the Keycloak theme reapply plus login token sync/check as a standard local bring-up step
+- keep CI workflow scope aligned with future structural package boundaries and new quality gates
 - apply pricing migrations and database-backed governance defaults in runtime
 - validate pricing write/list/current and outbox publication through smoke tests
 - revise pricing semantics to align with the accepted canonical SKU data ownership model

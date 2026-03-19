@@ -1,5 +1,5 @@
-import type { ServerCoreSdk } from "@metalshopping/generated-sdk";
-import type { AuthSessionStateV1 } from "@metalshopping/generated-types";
+import type { ServerCoreSdk } from "@metalshopping/sdk-runtime";
+import type { AuthSessionStateV1 } from "@metalshopping/sdk-types";
 
 export type AuthSessionApi = ServerCoreSdk["authSession"];
 

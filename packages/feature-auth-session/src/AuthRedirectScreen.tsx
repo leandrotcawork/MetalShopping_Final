@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 
 import { LoginPage } from "./LoginPage";
+import { shouldAutoRedirect } from "./routePolicy";
 import { useSession } from "./SessionProvider";
 import styles from "./AuthStatusScreen.module.css";
 
@@ -12,20 +13,25 @@ type AuthRedirectScreenProps = {
 export function AuthRedirectScreen({ returnTo, logoSrc }: AuthRedirectScreenProps) {
   const { errorMessage, login, status } = useSession();
   const redirectStartedRef = useRef(false);
+  const canAutoRedirect = shouldAutoRedirect({
+    status,
+    errorMessage,
+    alreadyStarted: redirectStartedRef.current,
+    enabled: true,
+  });
 
   useEffect(() => {
-    if (status !== "unauthenticated" || errorMessage.trim() !== "" || redirectStartedRef.current) {
+    if (!canAutoRedirect) {
       return;
     }
 
     redirectStartedRef.current = true;
     login(returnTo);
-  }, [errorMessage, login, returnTo, status]);
+  }, [canAutoRedirect, login, returnTo]);
 
   if (errorMessage.trim() !== "") {
     return (
       <LoginPage
-        apiBaseUrl=""
         defaultReturnTo={returnTo}
         logoSrc={logoSrc}
         autoRedirect={false}

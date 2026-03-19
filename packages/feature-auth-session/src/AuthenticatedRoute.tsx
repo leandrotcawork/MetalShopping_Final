@@ -2,6 +2,7 @@ import { Outlet, useLocation } from "react-router-dom";
 
 import { AuthBootstrapScreen } from "./AuthBootstrapScreen";
 import { AuthRedirectScreen } from "./AuthRedirectScreen";
+import { resolveAuthenticatedRouteMode } from "./routePolicy";
 import { useSession } from "./SessionProvider";
 
 type AuthenticatedRouteProps = {
@@ -16,12 +17,13 @@ export function AuthenticatedRoute({
   const { status } = useSession();
   const location = useLocation();
   const returnTo = `${location.pathname}${location.search}${location.hash}`;
+  const mode = resolveAuthenticatedRouteMode({ status });
 
-  if (status === "bootstrapping") {
+  if (mode === "bootstrapping") {
     return <AuthBootstrapScreen />;
   }
 
-  if (status === "unauthenticated" || status === "starting_login") {
+  if (mode === "redirect") {
     return (
       <AuthRedirectScreen
         returnTo={returnTo === "/" ? defaultReturnTo : returnTo}

@@ -1,13 +1,12 @@
 import type { PropsWithChildren } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-import type { AuthSessionStateV1 } from "@metalshopping/generated-types";
+import type { AuthSessionStateV1 } from "@metalshopping/sdk-types";
 
 import type { AuthSessionApi, AuthSessionContextValue, AuthSessionStatus } from "./types";
 
 type SessionProviderProps = PropsWithChildren<{
   api: AuthSessionApi;
-  apiBaseUrl: string;
   defaultReturnTo?: string;
 }>;
 
@@ -37,7 +36,6 @@ function errorMessage(error: unknown, fallback: string) {
 
 export function SessionProvider({
   api,
-  apiBaseUrl,
   defaultReturnTo = "/products",
   children,
 }: SessionProviderProps) {
@@ -72,12 +70,14 @@ export function SessionProvider({
   const login = useCallback(
     (returnTo?: string) => {
       setStatus("starting_login");
-      const target = api.buildStartLoginUrl(apiBaseUrl, {
-        return_to: returnTo ?? defaultReturnTo,
-      });
-      window.location.assign(target);
+      void (async () => {
+        const target = await api.buildStartLoginUrl({
+          return_to: returnTo ?? defaultReturnTo,
+        });
+        window.location.assign(target);
+      })();
     },
-    [api, apiBaseUrl, defaultReturnTo],
+    [api, defaultReturnTo],
   );
 
   const logout = useCallback(async () => {

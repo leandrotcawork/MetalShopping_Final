@@ -26,10 +26,20 @@ Primary consumers:
 Expected contents:
 
 - API client bindings
-- event contract helpers if needed
-- typed request and response models
 - generated `typescript-fetch` client output produced by OpenAPI Generator
-- thin generated facade for stable repo consumption when raw generator output needs normalization
+
+### `packages/platform-sdk`
+
+Primary consumers:
+
+- `apps/web`
+- frontend feature packages through the current SDK runtime package alias
+
+Expected contents:
+
+- authored thin runtime/facade over generated `sdk_ts` clients
+- centralized browser HTTP behavior (credentials, CSRF header, trace header)
+- uniform frontend error mapping for generated client exceptions
 
 ### `packages/generated/types_ts`
 
@@ -43,6 +53,7 @@ Expected contents:
 - shared TypeScript types derived from schemas
 - event payload type definitions
 - governance type definitions
+- consumed through workspace package `@metalshopping/sdk-types` for stable frontend imports
 
 ### `packages/generated/sdk_py`
 
@@ -68,6 +79,7 @@ Expected contents:
 - `sdk_ts` generation uses the official OpenAPI Generator `typescript-fetch` generator
 - `sdk_ts` generation runs through the Docker image `openapitools/openapi-generator-cli`
 - repo scripts may orchestrate generation, but must not handwrite SDK transport code
+- stable runtime/facade code is authored in `packages/platform-sdk`, not emitted by generation scripts
 
 ## Initial generation split
 
@@ -95,6 +107,8 @@ Generate:
 ## Consumer rules
 
 - frontend code uses generated TS SDKs and types
+- frontend runtime/facade code lives in `packages/platform-sdk`
+- generated-versus-authored ownership and import boundaries follow `docs/SDK_BOUNDARY.md`
 - workers use generated Python models or SDKs where contract interaction exists
 - app code must not handcraft alternative contract definitions
 - feature packages must not create their own API clients or HTTP adapters

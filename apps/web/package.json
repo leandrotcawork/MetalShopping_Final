@@ -7,9 +7,17 @@
     "dev": "vite",
     "typecheck": "tsc --noEmit",
     "build": "vite build",
-    "test": "vitest run"
+    "web:build:wsl": "NODE_OPTIONS=--max-old-space-size=4096 vite build",
+    "test": "vitest run -c vitest.config.mjs",
+    "test:local": "vitest run -c vitest.config.mjs --pool=vmThreads",
+    "test:ci": "vitest run -c vitest.config.mjs --reporter=verbose"
   },
   "dependencies": {
+    "@metalshopping/feature-auth-session": "*",
+    "@metalshopping/feature-products": "*",
+    "@metalshopping/sdk-runtime": "*",
+    "@metalshopping/sdk-types": "*",
+    "@metalshopping/ui": "*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.30.1"

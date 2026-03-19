@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import {
@@ -7,7 +6,6 @@ import {
   SessionProvider,
 } from "@metalshopping/feature-auth-session";
 import { ProductsPortfolioPage } from "@metalshopping/feature-products";
-import { createServerCoreSdk } from "@metalshopping/generated-sdk";
 import { AppFrame } from "@metalshopping/ui";
 
 import logoMetalNobre from "../assets/logo_metal_nobre.svg";
@@ -15,8 +13,7 @@ import { AppShell } from "./layouts/AppShell";
 import { AppRuntimeProvider, useAppRuntime } from "./providers/AppRuntimeProvider";
 
 function ProductsRoute() {
-  const { httpClient } = useAppRuntime();
-  const sdk = useMemo(() => createServerCoreSdk(httpClient), [httpClient]);
+  const { sdk } = useAppRuntime();
 
   return <ProductsPortfolioPage api={sdk.products} />;
 }
@@ -26,16 +23,15 @@ function PlaceholderRoute(props: { title: string; subtitle: string }) {
 }
 
 function RoutedApp() {
-  const { apiBaseUrl, httpClient } = useAppRuntime();
-  const sdk = useMemo(() => createServerCoreSdk(httpClient), [httpClient]);
+  const { sdk } = useAppRuntime();
 
   return (
-    <SessionProvider api={sdk.authSession} apiBaseUrl={apiBaseUrl} defaultReturnTo="/products">
+    <SessionProvider api={sdk.authSession} defaultReturnTo="/products">
       <BrowserRouter>
         <Routes>
           <Route
             path="/login"
-            element={<LoginRoutePage apiBaseUrl={apiBaseUrl} defaultReturnTo="/products" logoSrc={logoMetalNobre} />}
+            element={<LoginRoutePage defaultReturnTo="/products" logoSrc={logoMetalNobre} />}
           />
           <Route element={<AuthenticatedRoute defaultReturnTo="/products" logoSrc={logoMetalNobre} />}>
             <Route element={<AppShell />}>

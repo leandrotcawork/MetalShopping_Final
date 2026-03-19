@@ -1,7 +1,9 @@
 import path from "node:path";
 
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
+
+const isWindows = process.platform === "win32";
 
 export default defineConfig({
   plugins: [react()],
@@ -16,14 +18,6 @@ export default defineConfig({
       "@metalshopping/feature-products": path.resolve(
         __dirname,
         "../../packages/feature-products/src",
-      ),
-      "@metalshopping/generated-types": path.resolve(
-        __dirname,
-        "../../packages/generated/types_ts/contracts.generated.ts",
-      ),
-      "@metalshopping/generated-sdk": path.resolve(
-        __dirname,
-        "../../packages/generated/sdk_ts/openapi.generated.ts",
       ),
     },
   },
@@ -40,5 +34,11 @@ export default defineConfig({
       "../../packages/feature-products/src/**/*.test.ts",
       "../../packages/feature-products/src/**/*.test.tsx",
     ],
+    pool: isWindows ? "vmThreads" : "forks",
+    poolOptions: {
+      vmThreads: {
+        useAtomics: true,
+      },
+    },
   },
 });

@@ -2,33 +2,39 @@ import { useEffect, useMemo, useRef } from "react";
 
 import { Button } from "@metalshopping/ui";
 
+import { shouldAutoRedirect } from "./routePolicy";
 import { useSession } from "./SessionProvider";
+import "./login.tokens.css";
 import styles from "./LoginPage.module.css";
 
 type LoginPageProps = {
-  apiBaseUrl: string;
   defaultReturnTo?: string;
   logoSrc: string;
   autoRedirect?: boolean;
 };
 
 export function LoginPage({
-  apiBaseUrl,
   defaultReturnTo = "/products",
   logoSrc,
   autoRedirect = false,
 }: LoginPageProps) {
   const { errorMessage, login, status } = useSession();
   const redirectStartedRef = useRef(false);
+  const canAutoRedirect = shouldAutoRedirect({
+    status,
+    errorMessage,
+    alreadyStarted: redirectStartedRef.current,
+    enabled: autoRedirect,
+  });
 
   useEffect(() => {
-    if (!autoRedirect || status !== "unauthenticated" || errorMessage.trim() !== "" || redirectStartedRef.current) {
+    if (!canAutoRedirect) {
       return;
     }
 
     redirectStartedRef.current = true;
     login(defaultReturnTo);
-  }, [autoRedirect, defaultReturnTo, errorMessage, login, status]);
+  }, [canAutoRedirect, defaultReturnTo, login]);
 
   const helperCopy = useMemo(() => {
     switch (status) {
@@ -108,7 +114,6 @@ export function LoginPage({
             <span>
               Metal<span>Shopping</span> v3.0
             </span>
-            <small>API: {apiBaseUrl}</small>
           </footer>
         </div>
       </main>

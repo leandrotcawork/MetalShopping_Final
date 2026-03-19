@@ -3,6 +3,8 @@
   "private": true,
   "workspaces": [
     "apps/web",
+    "packages/generated-types",
+    "packages/platform-sdk",
     "packages/ui",
     "packages/feature-products",
     "packages/feature-auth-session"

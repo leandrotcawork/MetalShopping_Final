@@ -2,15 +2,20 @@ import type { PropsWithChildren } from "react";
 import { createContext, useContext, useMemo } from "react";
 
 import {
+  createServerCoreSdk,
   createBrowserGeneratedHttpClient,
+  defaultWebSessionCSRFCookieName,
+  defaultWebSessionCSRFHeaderName,
   type GeneratedHttpClient,
-} from "@metalshopping/generated-sdk";
+  type ServerCoreSdk,
+} from "@metalshopping/sdk-runtime";
 
 export type AppHttpClient = GeneratedHttpClient;
 
 type AppRuntime = {
   apiBaseUrl: string;
   httpClient: AppHttpClient;
+  sdk: ServerCoreSdk;
 };
 
 const defaultApiBaseUrl = "http://127.0.0.1:8080";
@@ -26,13 +31,15 @@ export function AppRuntimeProvider({ children }: PropsWithChildren) {
     const httpClient = createBrowserGeneratedHttpClient({
       baseUrl: apiBaseUrl,
       bearerToken,
-      csrfCookieName: "ms_web_csrf",
-      csrfHeaderName: "X-CSRF-Token",
+      csrfCookieName: defaultWebSessionCSRFCookieName,
+      csrfHeaderName: defaultWebSessionCSRFHeaderName,
     });
+    const sdk = createServerCoreSdk(httpClient);
 
     return {
       apiBaseUrl,
       httpClient,
+      sdk,
     };
   }, [apiBaseUrl, bearerToken]);
 

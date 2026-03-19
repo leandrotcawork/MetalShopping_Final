@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${realm.displayName!'MetalShopping'}</title>
     <link rel="icon" href="${url.resourcesPath}/img/logo_ico.jpg">
+    <link rel="stylesheet" href="${url.resourcesPath}/css/login.tokens.css">
     <link rel="stylesheet" href="${url.resourcesPath}/css/login.css">
 </head>
 <body class="ms-body">

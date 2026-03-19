@@ -61,6 +61,10 @@ bootstrap/
   seeds/
 
 packages/
+  feature-auth-session/
+  feature-products/
+  generated-types/
+  platform-sdk/
   ui/
   generated/
 
@@ -203,3 +207,5 @@ Regras:
 - `docs/adrs/ADR-0004-runtime-governance.md`
 - `docs/adrs/ADR-0005-thin-clients-and-generated-sdks.md`
 - `docs/adrs/ADR-0006-versioned-async-integration.md`
+- `docs/adrs/ADR-0015-login-mvp-closure-governance.md`
+- `docs/adrs/ADR-0016-sdk-generated-runtime-boundary.md`

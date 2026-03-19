@@ -262,6 +262,8 @@ The next execution slice should create:
 
 ### Web session and cookies
 
+- `MS_AUTH_WEB_SESSION_MODE` (`required`, `optional`, `disabled`)
+  - default: `optional` when `MS_AUTH_MODE=static`, otherwise `required`
 - `MS_AUTH_WEB_DEFAULT_RETURN_TO`
 - `MS_AUTH_WEB_LOGIN_STATE_TTL_MINUTES`
 - `MS_AUTH_WEB_SESSION_COOKIE_NAME`
@@ -288,7 +290,7 @@ This is complete enough to proceed.
 
 Stand up Keycloak locally and configure the first real issuer integration.
 
-This is the next execution gate.
+This is complete.
 
 ### Phase 4
 
@@ -299,6 +301,8 @@ Run backend smoke for:
 - `me`
 - refresh
 - logout
+
+This is complete for the current local bootstrap.
 
 ### Phase 5
 

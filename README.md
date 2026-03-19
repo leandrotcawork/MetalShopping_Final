@@ -34,3 +34,23 @@ O repositorio esta em modo de planejamento. Antes do desenvolvimento funcional, 
 - `docs/LEGACY_TO_TARGET_MAP.md`: ponte entre o repositorio antigo e o alvo final.
 - `scripts/scaffold_architecture.ps1`: script idempotente para materializar a estrutura base.
 - `AGENTS.md`: orientacao global para agentes trabalharem com contexto certo e menos desperdicio de tokens.
+
+## Pre-requisitos locais
+
+- Docker e opcional para desenvolvimento geral.
+- Docker e necessario somente para regenerar artefatos de contrato (`scripts/generate_contract_artifacts.ps1 -Target all -Check`).
+- Se Docker nao estiver disponivel localmente, use os artefatos gerados ja commitados; o CI remoto valida drift de artefatos no PR.
+
+## Build local no Windows
+
+Se `npm run web:build` falhar com `EPERM` (esbuild), use uma destas opcoes:
+
+1. Reinstalar dependencias para recuperar binario do esbuild:
+   `pnpm store prune`
+   `Remove-Item -Recurse -Force node_modules`
+   `pnpm install`
+2. Adicionar excecao no antivrus para `node_modules/.bin` e `node_modules/esbuild`.
+3. Rodar build pelo WSL2:
+   `npm --workspace @metalshopping/web run web:build:wsl`
+
+O gate canonico de merge e o CI remoto (GitHub Actions). Falha local de EPERM no Windows nao bloqueia merge se o CI remoto estiver verde.

@@ -81,6 +81,7 @@ MetalShopping is not a traditional e-commerce product. It is an enterprise platf
 - Do not add product code just because a structure exists
 - Prefer writing or updating SoT docs, ADRs, and phase plans first
 - Avoid duplicate planning docs that restate the same rule in different wording
+- Structural changes must be paired with `docs/PROJECT_SOT.md` and `docs/PROGRESS.md` updates in the same tranche
 
 ## Current implementation baseline
 
@@ -103,18 +104,27 @@ The repository now includes:
 - first thin-client `Products` surface implemented with generated frontend transport and backend-owned sorting
 - backend-owned `auth/session` foundation implemented with OIDC cookie-session runtime and generated transport support
 - login hardening now includes browser-safe CSRF defense for cookie-backed mutations, centralized generated browser HTTP runtime, and a thinner auth composition in `apps/web`
+- login closure governance is now frozen with explicit scope, DoD, SDK boundary references, and tranche execution plan
 - `sdk_ts` hardening now targets OpenAPI Generator via Docker-backed orchestration instead of handwritten TypeScript emission
+- `server_core` startup composition root is now decomposed by capability for clearer ownership and maintenance
+- frontend auth ownership now keeps `feature-auth-session` runtime-agnostic, with session login URL composition owned by the generated SDK facade
+- login visual baseline now has shared token files and an explicit sync/check workflow across React fallback and Keycloak theme
+- auth/session bootstrap mode is now explicit (`required`, `optional`, `disabled`) with fail-fast default to avoid silent runtime degradation
+- `server_core` now uses signal-aware graceful shutdown and shared context cancellation for HTTP server and outbox dispatcher lifecycle
+- frontend authored runtime/facade moved to `packages/platform-sdk`, while `scripts/generate_contract_artifacts.ps1` now orchestrates OpenAPI generation without hand-emitting transport code
+- SoT drift guard now supports branch diff mode (`-BaseRef`) for CI-grade checks and covers workspace manifests plus web runtime config files in addition to local working-tree validation
 
 ## Current structural gaps
 
 The most important remaining gaps are:
 
 - production identity integration is not yet connected to a real issuer or JWKS source
-- full migration of generated SDK/runtime from bootstrap-era handwritten emission to the official generator path is not yet completed across all consumers
+- generated artifact drift check is now wired in pull request CI together with contract validation
+- login closure now has T1/T2 implemented and still requires T3 execution plus full DoD completion
 - outbox exists and catalog emits real events, but broker delivery and worker consumption are still not in place
 - governance is operational in runtime, but broader operational surfaces still need administrative mutation paths
 - catalog is now a strong canonical foundation, pricing semantics have been realigned against the accepted SKU ownership model, inventory owns live stock position, and the next gate is freezing procurement so supplier-side replenishment semantics do not leak into existing modules
-- contract validation and generation are now functional locally and must next be enforced in team workflow and CI
+- contract validation, generated artifact drift checks, backend tests, web typecheck/build, and SoT documentation consistency are now enforced on `pull_request` CI workflow
 
 ## Planning deliverables
 
@@ -137,6 +147,7 @@ The most important remaining gaps are:
 - explicit decision record for the next implementation area
 - explicit web auth session model before login UI implementation
 - explicit login and identity architecture before local issuer bootstrap and login UI
+- explicit login MVP closure scope, DoD, and SDK boundary governance before opening new authenticated surfaces
 
 ## Key planning docs
 
@@ -173,5 +184,9 @@ The most important remaining gaps are:
 - `docs/NEXT_EXECUTION_DECISION.md`
 - `docs/WEB_AUTH_SESSION_IMPLEMENTATION_PLAN.md`
 - `docs/LOGIN_AND_IDENTITY_ARCHITECTURE.md`
+- `docs/LOGIN_MVP_SCOPE.md`
+- `docs/LOGIN_DOD.md`
+- `docs/LOGIN_MVP_EXECUTION_PLAN.md`
+- `docs/SDK_BOUNDARY.md`
 - `docs/IMPLEMENTATION_PLAN.md`
 - `docs/PROGRESS.md`

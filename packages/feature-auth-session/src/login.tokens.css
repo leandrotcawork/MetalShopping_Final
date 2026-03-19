@@ -1,0 +1,32 @@
+:root {
+  --ms-login-font-family: Inter, "Segoe UI", Arial, sans-serif;
+  --ms-login-bg-shell: #f6f3f4;
+  --ms-login-bg-surface: #fdfcfc;
+  --ms-login-brand-start: #91132a;
+  --ms-login-brand-mid: #6a0d1e;
+  --ms-login-brand-end: #4a0a15;
+  --ms-login-brand-highlight-start: #ffd4db;
+  --ms-login-brand-highlight-end: #ffb3bf;
+  --ms-login-text-strong: #1e1b1c;
+  --ms-login-text-body: #5e5458;
+  --ms-login-text-muted: #6f676a;
+  --ms-login-text-subtle: #8a8084;
+  --ms-login-primary: #91132a;
+  --ms-login-border-soft: #e7e2e4;
+  --ms-login-border-input: #ead5dc;
+  --ms-login-focus: #c73f67;
+  --ms-login-panel-bg-start: #ffffff;
+  --ms-login-panel-bg-end: #fbf7f9;
+  --ms-login-radius-panel: 18px;
+  --ms-login-radius-input: 12px;
+  --ms-login-radius-alert: 10px;
+  --ms-login-shadow-panel: 0 18px 38px rgba(34, 20, 27, 0.08);
+  --ms-login-shadow-focus: 0 0 0 4px rgba(199, 63, 103, 0.14);
+  --ms-login-space-panel: 20px;
+  --ms-login-space-card-gap: 22px;
+  --ms-login-space-grid-gap: 14px;
+  --ms-login-page-padding: 36px 24px;
+  --ms-login-brand-padding: 52px;
+  --ms-login-brand-width: 42%;
+  --ms-login-brand-min-width: 420px;
+}

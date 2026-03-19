@@ -36,6 +36,15 @@ Freeze the shared visual baseline for the MetalShopping login experience across:
 - lightly rounded controls and cards
 - stronger branded CTA than secondary actions
 
+## Token source of truth
+
+- login token source file: `packages/feature-auth-session/src/login.tokens.css`
+- Keycloak token mirror: `ops/keycloak/themes/metalshopping/login/resources/css/login.tokens.css`
+- sync command:
+  - `powershell -ExecutionPolicy Bypass -File .\scripts\sync_login_theme_tokens.ps1`
+- drift check command:
+  - `powershell -ExecutionPolicy Bypass -File .\scripts\sync_login_theme_tokens.ps1 -Check`
+
 ## Drift guardrails
 
 - do not redesign Keycloak independently from the React fallback

@@ -3,11 +3,11 @@ import type {
   ProductsPortfolioSortDirection,
   ProductsPortfolioSortKey,
   ServerCoreSdk,
-} from "@metalshopping/generated-sdk";
+} from "@metalshopping/sdk-runtime";
 import type {
   ProductsPortfolioItemV1,
   ProductsPortfolioListV1,
-} from "@metalshopping/generated-types";
+} from "@metalshopping/sdk-types";
 
 export type ProductsPortfolioQuery = Required<ListProductsPortfolioQueryParams>;
 export type ProductsPortfolioResult = ProductsPortfolioListV1;
