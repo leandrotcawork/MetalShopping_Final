@@ -51,10 +51,19 @@ type CreateDriverManifestInput struct {
 	CreatedBy    string
 }
 
+type ValidationError struct {
+	Code    string `json:"code"`
+	Field   string `json:"field"`
+	Message string `json:"message"`
+}
+
 type Repository interface {
 	ListDirectory(ctx context.Context, tenantID string, onlyEnabled bool) ([]DirectorySupplier, error)
 	UpsertDirectorySupplier(ctx context.Context, tenantID string, input UpsertDirectorySupplierInput) (DirectorySupplier, error)
 	SetDirectorySupplierEnabled(ctx context.Context, tenantID, supplierCode string, enabled bool) (DirectorySupplier, error)
 	ListDriverManifests(ctx context.Context, tenantID, supplierCode string, limit, offset int64) (DriverManifestList, error)
+	GetDriverManifest(ctx context.Context, tenantID, manifestID string) (DriverManifest, error)
 	CreateDriverManifest(ctx context.Context, tenantID string, input CreateDriverManifestInput) (DriverManifest, error)
+	ValidateDriverManifest(ctx context.Context, tenantID, manifestID string, errors []ValidationError) (DriverManifest, error)
+	ActivateDriverManifest(ctx context.Context, tenantID, manifestID string) (DriverManifest, error)
 }

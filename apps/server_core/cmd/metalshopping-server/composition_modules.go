@@ -31,6 +31,7 @@ import (
 	suppliersapp "metalshopping/server_core/internal/modules/suppliers/application"
 	suppliershttp "metalshopping/server_core/internal/modules/suppliers/transport/http"
 	"metalshopping/server_core/internal/platform/messaging/outbox"
+	platformsuppliers "metalshopping/server_core/internal/platform/suppliers"
 )
 
 type moduleComposition struct {
@@ -54,7 +55,7 @@ func composeModules(ctx context.Context, runtime runtimeComposition, governance 
 	pricingRepo := pricingpg.NewRepository(runtime.db, outboxStore)
 	homeSummaryReader := homepg.NewSummaryReader(runtime.db)
 	suppliersRepo := supplierspg.NewRepository(runtime.db)
-	suppliersService := suppliersapp.NewService(suppliersRepo)
+	suppliersService := suppliersapp.NewService(suppliersRepo, platformsuppliers.NewDefaultRegistry())
 	shoppingReader := shoppingpg.NewReader(runtime.db, suppliersService)
 	shoppingWriter := shoppingpg.NewWriter(runtime.db, outboxStore)
 

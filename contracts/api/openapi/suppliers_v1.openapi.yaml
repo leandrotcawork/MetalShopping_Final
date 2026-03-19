@@ -226,5 +226,113 @@ paths:
             application/json:
               schema:
                 $ref: "../jsonschema/common_error_v1.schema.json"
+  /api/v1/suppliers/manifests/{manifest_id}/validate:
+    post:
+      operationId: validateSupplierDriverManifest
+      summary: "Validate one supplier driver manifest deterministically for the authenticated tenant"
+      parameters:
+        - in: path
+          name: manifest_id
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "../jsonschema/suppliers_manifest_operation_request_v1.schema.json"
+      responses:
+        "200":
+          description: "Manifest validated"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/suppliers_driver_manifest_v1.schema.json"
+        "400":
+          description: "Validation failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Tenant context required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "404":
+          description: "Manifest not found"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+  /api/v1/suppliers/manifests/{manifest_id}/activate:
+    post:
+      operationId: activateSupplierDriverManifest
+      summary: "Activate one valid supplier driver manifest for the authenticated tenant"
+      parameters:
+        - in: path
+          name: manifest_id
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "../jsonschema/suppliers_manifest_operation_request_v1.schema.json"
+      responses:
+        "200":
+          description: "Manifest activated"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/suppliers_driver_manifest_v1.schema.json"
+        "400":
+          description: "Manifest is not valid"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Tenant context required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "404":
+          description: "Manifest not found"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
 components:
   schemas: {}

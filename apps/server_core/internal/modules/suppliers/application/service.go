@@ -7,14 +7,19 @@ import (
 	"strings"
 
 	"metalshopping/server_core/internal/modules/suppliers/ports"
+	platformsuppliers "metalshopping/server_core/internal/platform/suppliers"
 )
 
 type Service struct {
-	repo ports.Repository
+	repo     ports.Repository
+	registry *platformsuppliers.Registry
 }
 
-func NewService(repo ports.Repository) *Service {
-	return &Service{repo: repo}
+func NewService(repo ports.Repository, registry *platformsuppliers.Registry) *Service {
+	return &Service{
+		repo:     repo,
+		registry: registry,
+	}
 }
 
 func (s *Service) ListDirectory(ctx context.Context, tenantID string, onlyEnabled bool) ([]ports.DirectorySupplier, error) {
@@ -80,4 +85,41 @@ func (s *Service) CreateDriverManifest(ctx context.Context, tenantID string, inp
 		return ports.DriverManifest{}, errors.New("config must be valid JSON")
 	}
 	return s.repo.CreateDriverManifest(ctx, strings.TrimSpace(tenantID), input)
+}
+
+func (s *Service) ValidateDriverManifest(ctx context.Context, tenantID, manifestID string) (ports.DriverManifest, error) {
+	manifestID = strings.TrimSpace(manifestID)
+	if manifestID == "" {
+		return ports.DriverManifest{}, errors.New("manifestId is required")
+	}
+	if s.registry == nil {
+		return ports.DriverManifest{}, errors.New("driver family registry is required")
+	}
+
+	current, err := s.repo.GetDriverManifest(ctx, strings.TrimSpace(tenantID), manifestID)
+	if err != nil {
+		return ports.DriverManifest{}, err
+	}
+
+	validationErrors, err := s.registry.Validate(current.Family, current.ConfigJSON)
+	if err != nil {
+		return ports.DriverManifest{}, err
+	}
+	normalizedErrors := make([]ports.ValidationError, 0, len(validationErrors))
+	for _, item := range validationErrors {
+		normalizedErrors = append(normalizedErrors, ports.ValidationError{
+			Code:    item.Code,
+			Field:   item.Field,
+			Message: item.Message,
+		})
+	}
+	return s.repo.ValidateDriverManifest(ctx, strings.TrimSpace(tenantID), manifestID, normalizedErrors)
+}
+
+func (s *Service) ActivateDriverManifest(ctx context.Context, tenantID, manifestID string) (ports.DriverManifest, error) {
+	manifestID = strings.TrimSpace(manifestID)
+	if manifestID == "" {
+		return ports.DriverManifest{}, errors.New("manifestId is required")
+	}
+	return s.repo.ActivateDriverManifest(ctx, strings.TrimSpace(tenantID), manifestID)
 }

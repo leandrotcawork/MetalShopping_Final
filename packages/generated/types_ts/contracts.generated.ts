@@ -43,11 +43,14 @@ export const schemaIds = {
   "shopping_supplier_signal_list_v1.schema": "https://schemas.metalshopping.local/api/shopping_supplier_signal_list_v1.schema.json",
   "shopping_supplier_signal_v1.schema": "https://schemas.metalshopping.local/api/shopping_supplier_signal_v1.schema.json",
   "shopping_upsert_supplier_signal_request_v1.schema": "https://schemas.metalshopping.local/api/shopping_upsert_supplier_signal_request_v1.schema.json",
+  "supplier_driver_manifest_http_v1.schema": "https://schemas.metalshopping.local/api/supplier_driver_manifest_http_v1.schema.json",
+  "supplier_driver_manifest_playwright_v1.schema": "https://schemas.metalshopping.local/api/supplier_driver_manifest_playwright_v1.schema.json",
   "suppliers_create_driver_manifest_request_v1.schema": "https://schemas.metalshopping.local/api/suppliers_create_driver_manifest_request_v1.schema.json",
   "suppliers_directory_list_v1.schema": "https://schemas.metalshopping.local/api/suppliers_directory_list_v1.schema.json",
   "suppliers_directory_supplier_v1.schema": "https://schemas.metalshopping.local/api/suppliers_directory_supplier_v1.schema.json",
   "suppliers_driver_manifest_list_v1.schema": "https://schemas.metalshopping.local/api/suppliers_driver_manifest_list_v1.schema.json",
   "suppliers_driver_manifest_v1.schema": "https://schemas.metalshopping.local/api/suppliers_driver_manifest_v1.schema.json",
+  "suppliers_manifest_operation_request_v1.schema": "https://schemas.metalshopping.local/api/suppliers_manifest_operation_request_v1.schema.json",
   "suppliers_set_directory_supplier_enabled_request_v1.schema": "https://schemas.metalshopping.local/api/suppliers_set_directory_supplier_enabled_request_v1.schema.json",
   "suppliers_upsert_directory_supplier_request_v1.schema": "https://schemas.metalshopping.local/api/suppliers_upsert_directory_supplier_request_v1.schema.json"
 } as const;
@@ -507,10 +510,20 @@ export type ShoppingUpsertSupplierSignalRequestV1 = {
   manualOverride?: boolean;
 };
 
+export type SupplierDriverManifestHttpV1 = {
+  baseUrl?: string;
+  endpointTemplate?: string;
+};
+
+export type SupplierDriverManifestPlaywrightV1 = {
+  startUrl?: string;
+  searchUrl?: string;
+};
+
 export type SuppliersCreateDriverManifestRequestV1 = {
   supplierCode: string;
-  family: string;
-  config: Record<string, unknown>;
+  family: "http" | "playwright" | "http_v1" | "playwright_v1";
+  config: unknown;
 };
 
 export type SuppliersDirectoryListV1 = {
@@ -543,11 +556,19 @@ export type SuppliersDriverManifestV1 = {
   family: string;
   config: Record<string, unknown>;
   validationStatus: "valid" | "invalid" | "pending";
-  validationErrors: Array<Record<string, unknown>>;
+  validationErrors: Array<{
+    code: string;
+    field: string;
+    message: string;
+  }>;
   isActive: boolean;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+};
+
+export type SuppliersManifestOperationRequestV1 = {
+  reason?: string;
 };
 
 export type SuppliersSetDirectorySupplierEnabledRequestV1 = {

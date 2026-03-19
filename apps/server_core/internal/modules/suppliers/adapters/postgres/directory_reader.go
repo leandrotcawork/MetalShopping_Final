@@ -5,6 +5,8 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -16,6 +18,11 @@ import (
 type Repository struct {
 	db *sql.DB
 }
+
+var (
+	ErrDriverManifestNotFound = errors.New("supplier driver manifest not found")
+	ErrDriverManifestNotValid = errors.New("supplier driver manifest must be valid before activation")
+)
 
 func NewRepository(db *sql.DB) *Repository {
 	return &Repository{db: db}
@@ -240,6 +247,46 @@ LIMIT $2 OFFSET $3
 	}, nil
 }
 
+func (r *Repository) GetDriverManifest(ctx context.Context, tenantID, manifestID string) (ports.DriverManifest, error) {
+	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return ports.DriverManifest{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	const query = `
+SELECT
+  manifest_id,
+  supplier_code,
+  version_number,
+  family,
+  config_json,
+  validation_status,
+  validation_errors_json,
+  is_active,
+  created_by,
+  created_at,
+  updated_at
+FROM supplier_driver_manifests
+WHERE tenant_id = current_tenant_id()
+  AND manifest_id = $1
+LIMIT 1
+`
+	row := tx.QueryRowContext(ctx, query, manifestID)
+	item, err := scanDriverManifest(row)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ports.DriverManifest{}, ErrDriverManifestNotFound
+		}
+		return ports.DriverManifest{}, fmt.Errorf("get supplier driver manifest: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return ports.DriverManifest{}, fmt.Errorf("commit supplier driver manifest read: %w", err)
+	}
+	return item, nil
+}
+
 func (r *Repository) CreateDriverManifest(ctx context.Context, tenantID string, input ports.CreateDriverManifestInput) (ports.DriverManifest, error) {
 	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, nil)
 	if err != nil {
@@ -334,6 +381,143 @@ RETURNING
 		return ports.DriverManifest{}, fmt.Errorf("commit supplier driver manifest create: %w", err)
 	}
 	return item, nil
+}
+
+func (r *Repository) ValidateDriverManifest(ctx context.Context, tenantID, manifestID string, validationErrors []ports.ValidationError) (ports.DriverManifest, error) {
+	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, nil)
+	if err != nil {
+		return ports.DriverManifest{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	status := "valid"
+	if len(validationErrors) > 0 {
+		status = "invalid"
+	}
+	rawErrors, err := json.Marshal(validationErrors)
+	if err != nil {
+		return ports.DriverManifest{}, fmt.Errorf("marshal supplier manifest validation errors: %w", err)
+	}
+	now := time.Now().UTC()
+
+	const query = `
+UPDATE supplier_driver_manifests
+SET validation_status = $2,
+    validation_errors_json = $3::jsonb,
+    updated_at = $4
+WHERE tenant_id = current_tenant_id()
+  AND manifest_id = $1
+RETURNING
+  manifest_id,
+  supplier_code,
+  version_number,
+  family,
+  config_json,
+  validation_status,
+  validation_errors_json,
+  is_active,
+  created_by,
+  created_at,
+  updated_at
+`
+	row := tx.QueryRowContext(ctx, query, manifestID, status, string(rawErrors), now)
+	item, err := scanDriverManifest(row)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ports.DriverManifest{}, ErrDriverManifestNotFound
+		}
+		return ports.DriverManifest{}, fmt.Errorf("validate supplier driver manifest: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return ports.DriverManifest{}, fmt.Errorf("commit supplier driver manifest validation: %w", err)
+	}
+	return item, nil
+}
+
+func (r *Repository) ActivateDriverManifest(ctx context.Context, tenantID, manifestID string) (ports.DriverManifest, error) {
+	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, nil)
+	if err != nil {
+		return ports.DriverManifest{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	const loadQuery = `
+SELECT
+  manifest_id,
+  supplier_code,
+  version_number,
+  family,
+  config_json,
+  validation_status,
+  validation_errors_json,
+  is_active,
+  created_by,
+  created_at,
+  updated_at
+FROM supplier_driver_manifests
+WHERE tenant_id = current_tenant_id()
+  AND manifest_id = $1
+LIMIT 1
+`
+	currentRow := tx.QueryRowContext(ctx, loadQuery, manifestID)
+	current, err := scanDriverManifest(currentRow)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ports.DriverManifest{}, ErrDriverManifestNotFound
+		}
+		return ports.DriverManifest{}, fmt.Errorf("load supplier driver manifest for activation: %w", err)
+	}
+	if strings.TrimSpace(current.ValidationStatus) != "valid" {
+		return ports.DriverManifest{}, ErrDriverManifestNotValid
+	}
+
+	now := time.Now().UTC()
+	const deactivateQuery = `
+UPDATE supplier_driver_manifests
+SET is_active = FALSE,
+    updated_at = $2
+WHERE tenant_id = current_tenant_id()
+  AND supplier_code = $1
+  AND manifest_id <> $3
+  AND is_active = TRUE
+`
+	if _, err := tx.ExecContext(ctx, deactivateQuery, current.SupplierCode, now, current.ManifestID); err != nil {
+		return ports.DriverManifest{}, fmt.Errorf("deactivate previous supplier manifests: %w", err)
+	}
+
+	const activateQuery = `
+UPDATE supplier_driver_manifests
+SET is_active = TRUE,
+    updated_at = $2
+WHERE tenant_id = current_tenant_id()
+  AND manifest_id = $1
+RETURNING
+  manifest_id,
+  supplier_code,
+  version_number,
+  family,
+  config_json,
+  validation_status,
+  validation_errors_json,
+  is_active,
+  created_by,
+  created_at,
+  updated_at
+`
+	activatedRow := tx.QueryRowContext(ctx, activateQuery, manifestID, now)
+	activated, err := scanDriverManifest(activatedRow)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ports.DriverManifest{}, ErrDriverManifestNotFound
+		}
+		return ports.DriverManifest{}, fmt.Errorf("activate supplier manifest: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return ports.DriverManifest{}, fmt.Errorf("commit supplier manifest activation: %w", err)
+	}
+	return activated, nil
 }
 
 type scanner interface {

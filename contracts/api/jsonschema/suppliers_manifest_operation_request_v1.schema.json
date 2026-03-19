@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.metalshopping.local/api/suppliers_manifest_operation_request_v1.schema.json",
+  "title": "SuppliersManifestOperationRequestV1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "reason": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

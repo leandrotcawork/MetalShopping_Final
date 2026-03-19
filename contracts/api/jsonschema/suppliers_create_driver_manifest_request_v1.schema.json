@@ -16,10 +16,22 @@
     },
     "family": {
       "type": "string",
-      "minLength": 1
+      "enum": [
+        "http",
+        "playwright",
+        "http_v1",
+        "playwright_v1"
+      ]
     },
     "config": {
-      "type": "object"
+      "oneOf": [
+        {
+          "$ref": "./supplier_driver_manifest_http_v1.schema.json"
+        },
+        {
+          "$ref": "./supplier_driver_manifest_playwright_v1.schema.json"
+        }
+      ]
     }
   }
 }

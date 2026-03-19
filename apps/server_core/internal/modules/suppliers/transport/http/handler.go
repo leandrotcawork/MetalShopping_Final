@@ -2,11 +2,13 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
+	supplierspg "metalshopping/server_core/internal/modules/suppliers/adapters/postgres"
 	"metalshopping/server_core/internal/modules/suppliers/application"
 	"metalshopping/server_core/internal/modules/suppliers/ports"
 	platformauth "metalshopping/server_core/internal/platform/auth"
@@ -25,6 +27,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/suppliers/directory", h.handleDirectory)
 	mux.HandleFunc("/api/v1/suppliers/directory/", h.handleDirectoryByCode)
 	mux.HandleFunc("/api/v1/suppliers/manifests", h.handleManifests)
+	mux.HandleFunc("/api/v1/suppliers/manifests/", h.handleManifestByID)
 }
 
 type upsertDirectoryRequest struct {
@@ -43,6 +46,10 @@ type createManifestRequest struct {
 	SupplierCode string          `json:"supplierCode"`
 	Family       string          `json:"family"`
 	Config       json.RawMessage `json:"config"`
+}
+
+type operationManifestRequest struct {
+	Reason string `json:"reason"`
 }
 
 func (h *Handler) handleDirectory(w http.ResponseWriter, r *http.Request) {
@@ -200,6 +207,65 @@ func (h *Handler) handleManifests(w http.ResponseWriter, r *http.Request) {
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
+}
+
+func (h *Handler) handleManifestByID(w http.ResponseWriter, r *http.Request) {
+	tenantID, ok := authenticatedTenantID(w, r)
+	if !ok {
+		return
+	}
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	trimmed := strings.TrimPrefix(r.URL.Path, "/api/v1/suppliers/manifests/")
+	parts := strings.Split(strings.Trim(trimmed, "/"), "/")
+	if len(parts) != 2 {
+		http.NotFound(w, r)
+		return
+	}
+	manifestID := strings.TrimSpace(parts[0])
+	action := strings.TrimSpace(parts[1])
+	if manifestID == "" || action == "" {
+		http.NotFound(w, r)
+		return
+	}
+
+	var req operationManifestRequest
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&req); err != nil {
+		if !strings.Contains(strings.ToLower(err.Error()), "eof") {
+			writeAPIError(w, http.StatusBadRequest, "SUPPLIERS_MANIFEST_INVALID", "Invalid manifest operation payload", requestTraceID(r))
+			return
+		}
+	}
+	_ = req
+
+	var result ports.DriverManifest
+	var err error
+	switch action {
+	case "validate":
+		result, err = h.service.ValidateDriverManifest(r.Context(), tenantID, manifestID)
+	case "activate":
+		result, err = h.service.ActivateDriverManifest(r.Context(), tenantID, manifestID)
+	default:
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		switch {
+		case errors.Is(err, supplierspg.ErrDriverManifestNotFound):
+			writeAPIError(w, http.StatusNotFound, "SUPPLIERS_MANIFEST_NOT_FOUND", "Manifest not found", requestTraceID(r))
+		case errors.Is(err, supplierspg.ErrDriverManifestNotValid):
+			writeAPIError(w, http.StatusBadRequest, "SUPPLIERS_MANIFEST_NOT_VALID", err.Error(), requestTraceID(r))
+		default:
+			writeAPIError(w, http.StatusBadRequest, "SUPPLIERS_MANIFEST_INVALID", err.Error(), requestTraceID(r))
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, mapDriverManifest(result))
 }
 
 func mapDirectorySupplier(item ports.DirectorySupplier) map[string]any {
