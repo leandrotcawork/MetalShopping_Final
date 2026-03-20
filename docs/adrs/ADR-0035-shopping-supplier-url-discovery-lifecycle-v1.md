@@ -1,6 +1,6 @@
 # ADR-0035: Shopping Supplier URL Discovery Lifecycle v1
 
-- Status: draft
+- Status: accepted
 - Date: 2026-03-20
 
 ## Context
@@ -112,6 +112,10 @@ Frozen execution order for this ADR:
   - `go test ./apps/server_core/...` -> pass
 - Smoke:
   - Playwright supplier respects `next_discovery_at` cooldown and does not reprocess NOT_FOUND products on every run.
+  - Event smoke with catalog scope executed:
+    - `run_request_id=1f07ab5f-22b0-4440-bde0-e9c9eeea25e2`
+    - `run_id=80a0f6a9-9d34-45a4-928c-d150d2e9dbdc`
+    - `rows_written=10`
 
 ## Alternatives considered
 
