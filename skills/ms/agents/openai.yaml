@@ -1,0 +1,6 @@
+interface:
+  display_name: "MetalShopping"
+  short_description: "Master orchestrator. Plan + implement + review any feature. Activates plan mode automatically, validates architecture, orchestrates all specialist skills. Use: 'use $ms to implement X'."
+  default_prompt: "Use $ms to implement the requested feature following the full plan → implement → review workflow."
+policy:
+  allow_implicit_invocation: true

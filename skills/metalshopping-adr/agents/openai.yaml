@@ -1,0 +1,6 @@
+interface:
+  display_name: "MS ADR"
+  short_description: "Full ADR lifecycle: write with acceptance test, update SOT, verify passes, commit. ADR done only when test passes."
+  default_prompt: "Use $metalshopping-adr to create or close an ADR."
+policy:
+  allow_implicit_invocation: true

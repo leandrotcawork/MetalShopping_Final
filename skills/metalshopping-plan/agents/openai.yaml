@@ -1,0 +1,6 @@
+interface:
+  display_name: "MS Plan"
+  short_description: "Plan feature before code. Writes tasks/todo.md with tasks, contracts, skills, acceptance tests, commit messages."
+  default_prompt: "Use $metalshopping-plan to plan the current feature."
+policy:
+  allow_implicit_invocation: true

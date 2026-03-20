@@ -131,6 +131,11 @@ The supplier directory and the initial active driver manifests must be seeded fo
     - `run_id=91e4dc66-9660-414d-8072-566fbe82d690`
     - `OK`, `channel=HTTP_HTML`, `http_status=200`
     - note: `html_dom_first_card attempt=1 hint_priority:calculated_first`
+  - ABC reference lookup validation (site changed; reference-first is now required):
+    - `lookup_policy=REFERENCE_FIRST` for `ABC` in `suppliers_directory`
+    - `run_request_id=cef2f593-d918-4fc4-a0c8-f7455834ff56`
+    - `run_id=9daf00bb-41a2-4b57-a85e-e8c89d972bc2`
+    - sample: `lookup_term=2251.C`, `observed_price=878.9000`, `http_status=200`, `item_status=OK`
 
 ## Consequences
 

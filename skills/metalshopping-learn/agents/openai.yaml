@@ -1,0 +1,6 @@
+interface:
+  display_name: "MS Learn"
+  short_description: "Capture lessons after any correction. Writes to tasks/lessons.md. Prevents recurring mistakes."
+  default_prompt: "Use $metalshopping-learn to capture the lesson from this correction."
+policy:
+  allow_implicit_invocation: true

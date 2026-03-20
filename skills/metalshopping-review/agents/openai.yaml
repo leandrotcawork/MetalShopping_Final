@@ -1,0 +1,6 @@
+interface:
+  display_name: "MS Review"
+  short_description: "10-lens architecture review. Tenancy, auth, outbox, contracts, frontend, observability. Produces Go/No-Go verdict."
+  default_prompt: "Use $metalshopping-review to review the current implementation."
+policy:
+  allow_implicit_invocation: true
