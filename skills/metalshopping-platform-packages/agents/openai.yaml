@@ -1,8 +1,0 @@
-interface:
-  display_name: "MetalShopping Platform"
-  short_description: "Create or review platform packages."
-  default_prompt: "Use $metalshopping-platform-packages to create or review a MetalShopping platform package under apps/server_core/internal/platform."
-
-policy:
-  allow_implicit_invocation: true
-

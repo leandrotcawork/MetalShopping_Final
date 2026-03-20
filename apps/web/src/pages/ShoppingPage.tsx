@@ -535,8 +535,8 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
         {error ? <p className={styles.error}>{error}</p> : null}
 
         <article className={`${styles.panel} ${step === 1 ? styles.panelActive : ""}`}>
-          <h2 className={styles.panelTitle}>Passo 1 - Origem da Run</h2>
-          <p className={styles.panelSubtitle}>Escolha entre arquivo XLSX atual ou produtos cadastrados filtrados.</p>
+          <h2 className={styles.panelTitle}>Selecione a entrada de produtos</h2>
+          <p className={styles.panelSubtitle}>Buscar precos de mercado nos fornecedores selecionados.</p>
 
           <div className={styles.inputModeToggle}>
             <button

@@ -1,6 +1,6 @@
 interface:
   display_name: "MS Implement"
-  short_description: "Implement Go module or Python worker with real repo patterns. BeginTenantTx, AppendInTx, handler auth flow, worker tenant context."
-  default_prompt: "Use $metalshopping-implement to implement the current task."
+  short_description: "Implement Go modules and Python workers with real repo patterns. BeginTenantTx, AppendInTx, handler auth flow, worker tenant context."
+  default_prompt: "Use $metalshopping-implement to implement the current Go module or Python worker."
 policy:
   allow_implicit_invocation: true

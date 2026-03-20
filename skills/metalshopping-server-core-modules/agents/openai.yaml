@@ -1,8 +1,0 @@
-interface:
-  display_name: "MetalShopping Core Mods"
-  short_description: "Create or review server_core modules."
-  default_prompt: "Use $metalshopping-server-core-modules to create or review a MetalShopping business module in apps/server_core/internal/modules."
-
-policy:
-  allow_implicit_invocation: true
-

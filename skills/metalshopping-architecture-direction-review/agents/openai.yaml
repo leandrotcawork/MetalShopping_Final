@@ -1,7 +1,0 @@
-interface:
-  display_name: "MetalShopping Direction Review"
-  short_description: "Review architecture, structure, and roadmap alignment."
-  default_prompt: "Use $metalshopping-architecture-direction-review to review whether the current MetalShopping code or plan is aligned with the frozen architecture, future product goals, and big-tech quality bar."
-
-policy:
-  allow_implicit_invocation: true

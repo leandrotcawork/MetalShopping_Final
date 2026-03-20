@@ -1,51 +1,27 @@
 ---
 name: metalshopping-sdk-generation
-description: Plan, create, or review MetalShopping generated SDK and type workflows using `contracts/` as the single source of truth and `packages/generated/*` as downstream outputs. Use when defining or revising generation flows for `sdk_ts`, `types_ts`, or `sdk_py`, reviewing generation boundaries, or checking that frontend and worker consumers stay aligned with the repo SDK generation strategy.
+description: Generate MetalShopping SDK and type artifacts from contracts/. Called by $ms for T4. Run after any contract change before writing frontend code.
 ---
 
 # MetalShopping SDK Generation
 
-## Overview
-
-Use this skill to define or review how MetalShopping generates SDKs and shared types from contracts. Keep the work anchored to the repository generation strategy and output boundaries instead of inventing ad hoc generation flows.
-
 ## Workflow
+1. Confirm the contract change is finalized in `contracts/`
+2. Run generation: `./scripts/generate_contract_artifacts.ps1`
+3. Verify: `pnpm tsc --noEmit` passes
+4. Commit: `chore(sdk): regenerate after <module> contract`
 
-1. Read only the minimum repo context:
-   `docs/SDK_GENERATION_STRATEGY.md`
-   `docs/CONTRACT_CONVENTIONS.md`
-   `packages/generated/README.md`
-   `scripts/generate_contract_artifacts.ps1`
-2. Confirm the generation target:
-   `packages/generated/sdk_ts/`
-   `packages/generated/types_ts/`
-   `packages/generated/sdk_py/`
-3. Confirm the source contract set in `contracts/`.
-4. Keep generated outputs downstream only; do not treat them as authoring sources.
-5. Keep generation reproducible, scriptable, and all-or-nothing per target where possible.
-6. Finish with the review checklist in `references/sdk-generation-checklist.md`.
+## Rules
+- `contracts/` is the only source of truth — never edit generated outputs
+- `packages/generated/*` contains generated artifacts only — never edit manually
+- Run generation all-or-nothing: do not partially regenerate
+- Frontend code is written only after generation succeeds and tsc passes
 
-## Generation rules
-
-- `contracts/` is the only source of truth.
-- `packages/generated/*` contains generated outputs only.
-- frontend consumes generated TypeScript SDKs and types.
-- workers consume generated Python models or SDKs where contract-driven interaction exists.
-- do not create manual fallback type systems that compete with generated outputs.
-- keep generation workflows in `scripts/`.
-
-## Output expectations
-
-When defining or reviewing a generation workflow:
-
-- preserve source-versus-output boundaries
-- make target ownership explicit
-- keep the workflow reproducible from scripts
-- keep versioning behavior explicit
-- ensure the result supports frontend and worker consumers without parallel contract drift
+## Output targets
+- `packages/generated/sdk_ts/` — TypeScript SDK clients (web consumption)
+- `packages/generated/types_ts/` — shared TypeScript types
+- `packages/generated/sdk_py/` — Python models (worker consumption)
 
 ## References
-
-- For the exact repo workflow and file touchpoints, read `references/repo-sdk-flow.md`.
-- For the final review pass, read `references/sdk-generation-checklist.md`.
-
+- Generation script: `scripts/generate_contract_artifacts.ps1`
+- Strategy doc: `docs/SDK_GENERATION_STRATEGY.md`

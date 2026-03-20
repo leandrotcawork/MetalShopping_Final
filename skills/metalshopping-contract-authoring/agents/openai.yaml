@@ -1,8 +1,0 @@
-interface:
-  display_name: "MetalShopping Contracts"
-  short_description: "Coordinate multi-surface contract work."
-  default_prompt: "Use $metalshopping-contract-authoring to determine and review the MetalShopping contracts needed for a feature."
-
-policy:
-  allow_implicit_invocation: true
-

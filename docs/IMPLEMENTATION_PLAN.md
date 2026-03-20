@@ -152,6 +152,7 @@ Phase 4 gate:
 - operational observability and security
 - domain sequencing
 - migration planning from legacy
+- catalog master data import from legacy (taxonomy + products) as admin-run pipeline
 - thin-client operational surface recovery
 - frontend migration guardrails for legacy visual reuse with modern package ownership
 - backend-owned web auth/session foundation for thin clients

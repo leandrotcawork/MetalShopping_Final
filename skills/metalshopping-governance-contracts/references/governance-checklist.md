@@ -1,25 +1,19 @@
-# Governance Checklist
+# Governance Contract Checklist
 
 ## Before editing
-
-- confirm whether the artifact is a policy, threshold, or feature flag
-- confirm the bounded context
-- confirm whether a companion schema already exists
+- [ ] Artifact type confirmed: policy | threshold | feature_flag
+- [ ] Bounded context confirmed
+- [ ] Companion schema checked in `contracts/api/jsonschema/`
 
 ## While editing
+- [ ] Version explicit
+- [ ] Status explicit
+- [ ] Bounded context explicit
+- [ ] Scope hierarchy explicit (global → env → tenant → module)
+- [ ] Semantics work for both Go and Python consumers
 
-- keep version explicit
-- keep status explicit
-- keep bounded context explicit
-- keep scope hierarchy explicit
-- ensure the semantics fit both core and worker consumers
-
-## Final review
-
-- file lives under the correct `contracts/governance/` subfolder
-- the artifact type is explicit and stable
-- the scope hierarchy matches the accepted runtime model
-- schema references are correct when used
-- no app code is being treated as a parallel governance source
-- the artifact supports auditability and explainability
-
+## Final
+- [ ] File in correct `contracts/governance/` subfolder
+- [ ] Artifact type stable and explicit
+- [ ] No app code treated as parallel governance source
+- [ ] Supports auditability and explainability

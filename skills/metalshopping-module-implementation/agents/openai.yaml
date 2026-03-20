@@ -1,7 +1,0 @@
-interface:
-  display_name: "Metalshopping Module Implementation"
-  short_description: "Executa validacao simples de skill no MetalShopping."
-  default_prompt: "Use $metalshopping-teste para validar rapidamente o fluxo de skills."
-
-policy:
-  allow_implicit_invocation: true

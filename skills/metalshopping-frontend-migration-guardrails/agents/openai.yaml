@@ -1,7 +1,0 @@
-interface:
-  display_name: "MetalShopping Frontend Migration"
-  short_description: "Preserve legacy visuals without reintroducing weak frontend architecture."
-  default_prompt: "Use $metalshopping-frontend-migration-guardrails to review or implement MetalShopping frontend migration work while preserving the approved legacy visual language and enforcing thin-client package boundaries, generated contracts, reusable widgets, and professional API communication."
-
-policy:
-  allow_implicit_invocation: true

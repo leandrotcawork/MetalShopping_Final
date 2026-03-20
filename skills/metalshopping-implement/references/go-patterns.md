@@ -1,63 +1,65 @@
-# Go Patterns — MetalShopping
+# Go Patterns
 
-## Postgres adapter (every query)
+## Nullable columns
 ```go
-tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
-if err != nil { return zero, err }
-defer func() { _ = tx.Rollback() }()
-
-row := tx.QueryRowContext(ctx, `
-    SELECT col1, col2
-    FROM table
-    WHERE tenant_id = current_tenant_id()
-    AND id = $1`, id)
-
-if err := tx.Commit(); err != nil {
-    return zero, fmt.Errorf("commit <action>: %w", err)
+var finishedAt sql.NullTime
+rows.Scan(..., &finishedAt)
+if finishedAt.Valid {
+    value := finishedAt.Time.UTC()
+    item.FinishedAt = &value
 }
 ```
 
-## Write + outbox (atomic)
+## List with pagination
 ```go
-tx, err := pgdb.BeginTenantTx(ctx, w.db, tenantID, nil)
-defer func() { _ = tx.Rollback() }()
+const countQ = `SELECT COUNT(*) FROM t WHERE tenant_id = current_tenant_id() AND ($1='all' OR status=$1)`
+var total int64
+tx.QueryRowContext(ctx, countQ, filter).Scan(&total)
 
-// 1. INSERT
-tx.ExecContext(ctx, `INSERT INTO t(...) VALUES(current_tenant_id(),...)`, ...)
-
-// 2. Outbox — BEFORE Commit, INSIDE same tx
-record, _ := events.NewXxxOutboxRecord(tenantID, result, traceID, now)
-w.outboxStore.AppendInTx(ctx, tx, []outbox.Record{record})
-
-// 3. Commit both atomically
-tx.Commit()
+const listQ = `SELECT ... FROM t WHERE tenant_id = current_tenant_id() ORDER BY created_at DESC LIMIT $1 OFFSET $2`
+rows, _ := tx.QueryContext(ctx, listQ, limit, offset)
 ```
 
-## Error codes pattern
-MODULE_ENTITY_REASON — e.g.:
-  SHOPPING_RUN_NOT_FOUND
-  AUTH_TENANT_MISSING
-  CATALOG_PRODUCT_SKU_DUPLICATE
-
-## Structured log defer
+## UUID v4 generation
 ```go
-startedAt := time.Now()
-traceID   := requestTraceID(r)
-statusCode := http.StatusOK
-reqResult  := "success"
-defer logRequest("module.action", traceID, &statusCode, &reqResult, startedAt)
+func generateID() string {
+    buf := make([]byte, 16)
+    rand.Read(buf)
+    buf[6] = (buf[6] & 0x0f) | 0x40
+    buf[8] = (buf[8] & 0x3f) | 0x80
+    h := hex.EncodeToString(buf)
+    return fmt.Sprintf("%s-%s-%s-%s-%s", h[0:8], h[8:12], h[12:16], h[16:20], h[20:32])
+}
 ```
 
-## Composition wiring (composition_modules.go)
-Follow existing pattern exactly — reader → service → handler → RegisterRoutes.
-New module = new block following the same structure as catalog or shopping.
-
-## Key imports
+## Error wrapping
 ```go
-pgdb          "metalshopping/server_core/internal/platform/db/postgres"
-platformauth  "metalshopping/server_core/internal/platform/auth"
-tenancy       "metalshopping/server_core/internal/platform/tenancy_runtime"
-outbox        "metalshopping/server_core/internal/platform/messaging/outbox"
-govbootstrap  "metalshopping/server_core/internal/platform/governance/bootstrap"
-featureflags  "metalshopping/server_core/internal/platform/governance/feature_flags"
+// always wrap with context on every layer crossing
+return fmt.Errorf("query analytics overview for tenant %s: %w", tenantID, err)
+
+// domain sentinel errors
+var ErrRunNotFound = errors.New("shopping run not found")
+
+// handler checks
+if errors.Is(err, postgres.ErrRunNotFound) {
+    writeError(w, 404, "SHOPPING_RUN_NOT_FOUND", "Shopping run not found", traceID)
+    return
+}
+```
+
+## Governance guard
+```go
+// ports/repository.go — define the interface
+type XCreationGuard interface {
+    IsXCreationEnabled(ctx context.Context, tenantID string) (bool, error)
+}
+
+// adapters/governance/x_guard.go — implement
+type XCreationGuard struct { resolver *feature_flags.Resolver; environment string }
+func (g *XCreationGuard) IsXCreationEnabled(_ context.Context, tenantID string) (bool, error) {
+    return g.resolver.Resolve(bootstrap.XCreationEnabledKey, feature_flags.ResolutionContext{
+        Environment: g.environment, TenantID: tenantID,
+    })
+}
+// Add const XCreationEnabledKey = "x.creation.enabled" to bootstrap/bootstrap.go
 ```

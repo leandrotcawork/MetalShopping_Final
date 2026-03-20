@@ -34,14 +34,14 @@ The local Keycloak setup provisions:
 - username: `ms_admin`
 - password: `ChangeMe123!`
 - subject id: `11111111-1111-1111-1111-111111111111`
-- tenant_id: `bootstrap-local`
+- tenant_id: `tenant_default`
 
 ### Viewer user
 
 - username: `ms_viewer`
 - password: `ChangeMe123!`
 - subject id: `22222222-2222-2222-2222-222222222222`
-- tenant_id: `bootstrap-local`
+- tenant_id: `tenant_default`
 
 ## Why fixed subject ids matter
 

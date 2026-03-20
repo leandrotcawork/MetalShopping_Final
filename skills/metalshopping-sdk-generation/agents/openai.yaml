@@ -1,8 +1,6 @@
 interface:
-  display_name: "MetalShopping SDK Gen"
-  short_description: "Plan or review SDK generation workflows."
-  default_prompt: "Use $metalshopping-sdk-generation to plan or review a MetalShopping SDK generation workflow."
-
+  display_name: "MS SDK"
+  short_description: "Generate SDK and type artifacts from contracts/. Run after any contract change before writing frontend code."
+  default_prompt: "Use $metalshopping-sdk-generation to regenerate the SDK after a contract change."
 policy:
   allow_implicit_invocation: true
-

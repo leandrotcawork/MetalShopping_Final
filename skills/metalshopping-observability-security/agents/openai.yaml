@@ -1,8 +1,0 @@
-interface:
-  display_name: "MetalShopping ObsSec"
-  short_description: "Review observability and security baseline."
-  default_prompt: "Use $metalshopping-observability-security to review a MetalShopping design or change against the observability and security baseline."
-
-policy:
-  allow_implicit_invocation: true
-

@@ -1,29 +1,32 @@
 # AGENTS — MetalShopping
 
 ## On every session start
-1. Read `tasks/lessons.md` — non-negotiable, before any code
-2. Read `tasks/todo.md` — know current state and next task
-3. Use skill map below to pick the right skill
+1. Read `tasks/lessons.md` — apply every rule before touching code
+2. Read `tasks/todo.md` — know current state
+3. After any correction: write lesson to `tasks/lessons.md` immediately
 
-## Engineering standard
-Write code a Stripe or Google senior engineer would approve in review.
-This means: self-documenting names, structured errors with codes, every
-handler logged, every write idempotent, no cross-tenant data leakage,
-layers that don't know about each other.
+## Engineering bar
+Every decision passes this filter:
+*"Would a Stripe or Google senior engineer approve this in code review?"*
+- Names are self-documenting — no comment needed to understand them
+- Errors carry structured codes: `MODULE_ENTITY_REASON`
+- Every handler logs `trace_id`, `action`, `result`, `duration_ms`
+- Every write is idempotent and retry-safe
+- No query ever returns cross-tenant data
 
-## Absolute rules — violation = broken code, stop and fix
+## Absolute rules — violation = stop and fix immediately
 
 **Go**
-- `pgdb.BeginTenantTx` on every Postgres adapter query. No exceptions.
+- `pgdb.BeginTenantTx` on every Postgres adapter query — no exceptions
 - `current_tenant_id()` in every WHERE on tenant-scoped tables
 - `platformauth.PrincipalFromContext` → 401 before any handler operation
 - `tenancy_runtime.TenantFromContext` → 403 before any handler operation
-- `outbox.AppendInTx` inside the same tx as the INSERT, never after Commit
-- Register every new module in `composition_modules.go`
+- `outbox.AppendInTx` inside the same tx as INSERT — never after Commit
+- Every new module registered in `composition_modules.go`
 
 **Python worker**
 - `set_config('app.current_tenant_id', %s, true)` before every write tx
-- `ON CONFLICT ... DO UPDATE` on every insert (idempotent)
+- `ON CONFLICT ... DO UPDATE` on every insert
 - Never call server_core HTTP endpoints
 
 **Frontend**
@@ -33,24 +36,31 @@ layers that don't know about each other.
 - Loading + error + empty state on every data-fetching component
 
 **Process**
-- No task marked [x] without: build passes + real data + commit made
+- No task marked [x] without: build passes + real data verified + commit made
 - ADR done only when acceptance test passes and commit is made
 - `packages/generated/` never edited manually
+- One commit per completed task — no uncommitted work at session end
 
 ## Skill map
 
-| Need | Skill |
+| Task | Skill |
 |---|---|
-| Plan a feature | `$metalshopping-plan` |
-| Implement end-to-end | `$metalshopping-implement` |
-| Review architecture | `$metalshopping-review` |
-| Learn from correction | `$metalshopping-learn` |
-| Frontend page/component | `$metalshopping-frontend` |
-| ADR lifecycle | `$metalshopping-adr` |
+| Any implementation (default) | `$ms` |
 | OpenAPI contract | `$metalshopping-openapi-contracts` |
+| Event contract | `$metalshopping-event-contracts` |
+| Governance contract | `$metalshopping-governance-contracts` |
 | SDK generation | `$metalshopping-sdk-generation` |
-| Governance/events/platform | existing specialist skills |
+| ADR lifecycle | `$metalshopping-adr` |
+
+## Lesson format (write to tasks/lessons.md after every correction)
+```
+## Lesson N — <title>
+Date: YYYY-MM-DD | Trigger: <correction | review | build failure>
+Wrong:   <exact code or decision>
+Correct: <exact code or decision>
+Rule:    <one sentence>
+Layer:   <Go adapter | handler | worker | frontend | process>
+```
 
 ## Commit format
 `<type>(<scope>): <what>` — feat | fix | docs | chore | refactor
-One commit per completed task. No uncommitted work at session end.
