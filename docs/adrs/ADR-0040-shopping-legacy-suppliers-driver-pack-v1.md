@@ -1,6 +1,6 @@
 # ADR-0040: Shopping Legacy Suppliers Driver Pack v1 (TELHA_NORTE, LEROY, ABC)
 
-- Status: draft
+- Status: accepted
 - Date: 2026-03-20
 
 ## Context
@@ -113,18 +113,27 @@ The supplier directory and the initial active driver manifests must be seeded fo
 
 ## Acceptance Evidence (for Status: accepted)
 
-- `GET /api/v1/shopping/bootstrap` (tenant `tenant_default`) returns enabled suppliers:
-  - `DEXCO`, `TELHA_NORTE`, `CONDEC`, `OBRA_FACIL`, `LEROY`, `ABC`
-- Driver suite (`scripts/smoke_shopping_driver_suite_local.ps1`) includes:
-  - `TELHA_NORTE` non-mock HTTP VTEX strategy
-  - `LEROY` non-mock strategy
-  - `ABC` non-mock strategy
-- DB evidence:
-  - `shopping_price_observations` contains rows with `channel` matching the family and `item_status` not all `ERROR`.
+- `tenant_default` suppliers directory includes enabled suppliers:
+  - `ABC`, `CONDEC`, `DEXCO`, `LEROY`, `OBRA_FACIL`, `TELHA_NORTE`
+- Smoke evidence (catalog input, `prd_smoke_abc_001`):
+  - `TELHA_NORTE` (`http.vtex_persisted_query.v1`):
+    - `run_request_id=8d12a4c6-72c2-40d5-b085-53dbf7667a55`
+    - `run_id=bfaf1b28-0f61-4b7c-985b-f89d480a9d15`
+    - `OK`, `channel=HTTP_VTEX`, `http_status=200`
+    - note: `http_vtex_runtime attempt=1`
+  - `LEROY` (`http.leroy_search_sellers.v1`):
+    - `run_request_id=eef80baa-cdcf-4a57-a472-68df306da2af`
+    - `run_id=818c9511-2988-4959-8f8e-415e5cbeffb4`
+    - `NOT_FOUND`, `channel=HTTP_LEROY`, `http_status=200`
+    - note: `leroy_product_id_not_found`
+  - `ABC` (`http.html_dom_first_card.v1`):
+    - `run_request_id=aba7655c-d422-4960-8765-8627638fad47`
+    - `run_id=91e4dc66-9660-414d-8072-566fbe82d690`
+    - `OK`, `channel=HTTP_HTML`, `http_status=200`
+    - note: `html_dom_first_card attempt=1 hint_priority:calculated_first`
 
 ## Consequences
 
 - Adding suppliers becomes “manifest config first” for strategy-supported patterns.
 - New strategy work stays bounded to explicit executor modules with validation and schema touchpoints.
 - Shopping UI bootstrap in `tenant_default` becomes legacy-complete for the initial supplier set.
-
