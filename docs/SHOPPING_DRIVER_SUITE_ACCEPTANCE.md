@@ -1,6 +1,6 @@
 ﻿# Shopping Driver Suite Acceptance
 
-- Generated at: 2026-03-19 22:33:32 -03:00
+- Generated at: 2026-03-19 22:47:59 -03:00
 - Tenant: tenant_default
 - InputMode: xlsx
 - CatalogProductIds: 
@@ -9,15 +9,15 @@
 
 | Supplier | Strategy | RunRequest | RunID | TotalItems | Outcome | Reason |
 |---|---|---|---|---:|---|---|
-| DEXCO | http.vtex_persisted_query.v1 | 34f0d2bd-d1ca-47b6-832b-abd9f06fe688 | 9180624a-fac4-4eee-b25c-98595abbca18 | 0 | PASS | ok |
-| TELHA_NORTE | http.vtex_persisted_query.v1 | cc158250-779e-49c7-af76-eb6e908a7cb2 | 107bfc00-9a61-46aa-b472-7f2bee27e624 | 0 | PASS | ok |
-| CONDEC | http.html_search.v1 | 249eb262-83a4-477f-baa8-54b97e423413 | d9be5478-b779-4794-abd9-8d4066af8766 | 0 | PASS | ok |
-| OBRA_FACIL | http.mock.v1 | c5603973-bcea-425e-b7aa-1e2258212416 | 87874012-44cd-42be-b0ca-49a4e6618484 | 0 | PASS | ok |
+| DEXCO | http.vtex_persisted_query.v1 | bec0b570-49c4-4687-b4fe-bb7d8c83d8a1 | d5976967-7a4d-49d6-831d-da9193c7c8fa | 0 | PASS | ok |
+| TELHA_NORTE | http.vtex_persisted_query.v1 | 79102a3a-0c72-41e1-ad89-65fd4dd4578a | 761ab255-9846-40cd-8913-737e333b03eb | 0 | PASS | ok |
+| CONDEC | http.html_search.v1 | 7d9f41d0-ce1a-46d3-bbc6-d845b75102ab | c110765e-eaad-4315-a82d-ee10eb606dd0 | 0 | PASS | ok |
+| OBRA_FACIL | playwright.pdp_first.v1 | 9c3a52de-7979-4116-ba40-decee7bfa50a | 105e0bbe-25da-49f4-b3fa-8665dfc5e1f7 | 0 | PASS | ok |
 
 ### DEXCO
 
 - RequestStatus: completed
-- RunID: 9180624a-fac4-4eee-b25c-98595abbca18
+- RunID: d5976967-7a4d-49d6-831d-da9193c7c8fa
 - TotalItems: 0
 - StatusCounts: 
 - ChannelStatusCounts: 
@@ -26,7 +26,7 @@
 ### TELHA_NORTE
 
 - RequestStatus: completed
-- RunID: 107bfc00-9a61-46aa-b472-7f2bee27e624
+- RunID: 761ab255-9846-40cd-8913-737e333b03eb
 - TotalItems: 0
 - StatusCounts: 
 - ChannelStatusCounts: 
@@ -35,7 +35,7 @@
 ### CONDEC
 
 - RequestStatus: completed
-- RunID: d9be5478-b779-4794-abd9-8d4066af8766
+- RunID: c110765e-eaad-4315-a82d-ee10eb606dd0
 - TotalItems: 0
 - StatusCounts: 
 - ChannelStatusCounts: 
@@ -43,9 +43,9 @@
 
 ### OBRA_FACIL
 
-- Notes: PLAYWRIGHT non-mock runtime validation remains under ADR-0034.
+- Notes: PLAYWRIGHT non-mock runtime validation uses manifest-configured start/search URL and selectors.
 - RequestStatus: completed
-- RunID: 87874012-44cd-42be-b0ca-49a4e6618484
+- RunID: 105e0bbe-25da-49f4-b3fa-8665dfc5e1f7
 - TotalItems: 0
 - StatusCounts: 
 - ChannelStatusCounts: 

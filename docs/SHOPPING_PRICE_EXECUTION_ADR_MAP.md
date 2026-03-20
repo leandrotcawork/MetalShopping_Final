@@ -125,6 +125,7 @@ For any Shopping evolution (Level 2+), the execution sequence is frozen:
   Skills: `metalshopping-contract-authoring`, `metalshopping-worker-patterns`, `metalshopping-worker-scaffold`, `metalshopping-observability-security`, `metalshopping-adr-updates`
   Contracts: JSON Schema evolution + deterministic validation for Playwright selectors/runtime options
   Goal: at least one non-mock Playwright supplier (OBRA_FACIL) accepted end-to-end.
+  Status: implementation completed; acceptance pending DB-backed non-empty OBRA_FACIL smoke evidence
 
 ## Rule
 

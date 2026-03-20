@@ -284,6 +284,13 @@ func validatePlaywrightFamily(config map[string]any) []ValidationError {
 				Message: "playwright.pdp_first.v1 requires startUrl or searchUrl",
 			})
 		}
+		if !hasNonEmptyStringInObject(config, "pdpSelectors", "price") {
+			errors = append(errors, ValidationError{
+				Code:    "MISSING_REQUIRED_FIELD",
+				Field:   "config.pdpSelectors.price",
+				Message: "playwright.pdp_first.v1 requires pdpSelectors.price",
+			})
+		}
 	default:
 		errors = append(errors, ValidationError{
 			Code:    "UNKNOWN_STRATEGY",
@@ -298,6 +305,15 @@ func validatePlaywrightFamily(config map[string]any) []ValidationError {
 				Code:    "INVALID_FIELD",
 				Field:   "config.timeoutSeconds",
 				Message: "timeoutSeconds must be integer between 1 and 120",
+			})
+		}
+	}
+	if !hasIntegerInRange(config, "maxRetries", 1, 8) {
+		if _, ok := config["maxRetries"]; ok {
+			errors = append(errors, ValidationError{
+				Code:    "INVALID_FIELD",
+				Field:   "config.maxRetries",
+				Message: "maxRetries must be integer between 1 and 8",
 			})
 		}
 	}
@@ -318,6 +334,13 @@ func validatePlaywrightFamily(config map[string]any) []ValidationError {
 				Message: "circuitBreakerThreshold must be integer between 1 and 10",
 			})
 		}
+	}
+	if !hasNonEmptyStringWhenPresent(config, "searchUrlTemplate") {
+		errors = append(errors, ValidationError{
+			Code:    "INVALID_FIELD",
+			Field:   "config.searchUrlTemplate",
+			Message: "searchUrlTemplate must be non-empty string when provided",
+		})
 	}
 
 	return errors
@@ -427,4 +450,21 @@ func normalizeStrategy(value any) string {
 		return ""
 	}
 	return strings.ToLower(strings.TrimSpace(text))
+}
+
+func hasNonEmptyStringInObject(payload map[string]any, objectKey, key string) bool {
+	value, ok := payload[objectKey]
+	if !ok {
+		return false
+	}
+	obj, ok := value.(map[string]any)
+	if !ok {
+		return false
+	}
+	entry, ok := obj[key]
+	if !ok {
+		return false
+	}
+	text, ok := entry.(string)
+	return ok && strings.TrimSpace(text) != ""
 }

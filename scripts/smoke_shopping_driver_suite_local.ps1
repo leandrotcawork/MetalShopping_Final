@@ -50,10 +50,10 @@ function New-DefaultSuiteConfig {
     },
     @{
       supplier_code = "OBRA_FACIL"
-      strategy = "http.mock.v1"
+      strategy = "playwright.pdp_first.v1"
       expected_statuses = @("OK", "NOT_FOUND", "AMBIGUOUS", "ERROR")
       allow_empty = $true
-      notes = "PLAYWRIGHT non-mock runtime validation remains under ADR-0034."
+      notes = "PLAYWRIGHT non-mock runtime validation uses manifest-configured start/search URL and selectors."
     }
   )
 }
@@ -201,6 +201,15 @@ foreach ($entryObj in $suite) {
   if ($entry.ContainsKey("search_url_template")) { $env:MS_SMOKE_SEARCH_URL_TEMPLATE = ("" + $entry.search_url_template).Trim() }
   if ($entry.ContainsKey("price_regex")) { $env:MS_SMOKE_PRICE_REGEX = ("" + $entry.price_regex).Trim() }
   if ($entry.ContainsKey("seller_regex")) { $env:MS_SMOKE_SELLER_REGEX = ("" + $entry.seller_regex).Trim() }
+  if ($entry.ContainsKey("start_url")) { $env:MS_SMOKE_START_URL = ("" + $entry.start_url).Trim() }
+  if ($entry.ContainsKey("search_url")) { $env:MS_SMOKE_SEARCH_URL = ("" + $entry.search_url).Trim() }
+  if ($entry.ContainsKey("wait_until")) { $env:MS_SMOKE_WAIT_UNTIL = ("" + $entry.wait_until).Trim() }
+  if ($entry.ContainsKey("headless")) { $env:MS_SMOKE_HEADLESS = ("" + $entry.headless).Trim() }
+  if ($entry.ContainsKey("fallback_search_enabled")) { $env:MS_SMOKE_FALLBACK_SEARCH_ENABLED = ("" + $entry.fallback_search_enabled).Trim() }
+  if ($entry.ContainsKey("pdp_selectors_json")) { $env:MS_SMOKE_PDP_SELECTORS_JSON = ("" + $entry.pdp_selectors_json).Trim() }
+  if ($entry.ContainsKey("pdp_price_selector")) { $env:MS_SMOKE_PDP_PRICE_SELECTOR = ("" + $entry.pdp_price_selector).Trim() }
+  if ($entry.ContainsKey("pdp_seller_selector")) { $env:MS_SMOKE_PDP_SELLER_SELECTOR = ("" + $entry.pdp_seller_selector).Trim() }
+  if ($entry.ContainsKey("pdp_channel_selector")) { $env:MS_SMOKE_PDP_CHANNEL_SELECTOR = ("" + $entry.pdp_channel_selector).Trim() }
 
   $publishedRaw = go run .\apps\server_core\cmd\smoke-shopping-event
   $published = $publishedRaw | ConvertFrom-Json

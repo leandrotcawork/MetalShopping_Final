@@ -24,7 +24,8 @@ Current next step inside Shopping Level 2:
 - ADR-0031 accepted (runtime package extraction + compile + smoke evidence).
 - ADR-0032 implemented (bounded concurrency/rate-limit controls) and awaiting ADR-0033 multi-supplier acceptance evidence.
 - ADR-0033 implemented (multi-supplier suite + report generation) with pending non-empty catalog evidence and Playwright non-mock closure.
-- next: execute ADR-0034 to close Playwright non-mock runtime and then rerun ADR-0033 suite in catalog mode for acceptance.
+- ADR-0034 implemented (Playwright non-mock runtime and smoke tooling wiring) with pending DB-backed non-empty OBRA_FACIL evidence.
+- next: populate catalog scope in local DB, run ADR-0033 suite in `catalog` mode, and close ADR-0033/ADR-0034 acceptance.
 
 ## Constraints
 

@@ -34,8 +34,10 @@ def execute(
         return execute_playwright_runtime(
             config=config,
             strategy=strategy,
+            product_id=inputs.product_id,
             lookup_term=lookup_term,
             base_price=base_price,
+            signal=signal,
         )
     return RuntimeObservation(
         "ERROR",

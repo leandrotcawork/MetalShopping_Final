@@ -59,9 +59,16 @@
       "type": "string",
       "minLength": 1
     },
+    "searchUrlTemplate": {
+      "type": "string",
+      "minLength": 1
+    },
     "fallbackSearchUrl": {
       "type": "string",
       "minLength": 1
+    },
+    "fallbackSearchEnabled": {
+      "type": "boolean"
     },
     "pdpSelectors": {
       "type": "object",
@@ -86,6 +93,11 @@
       "type": "integer",
       "minimum": 1,
       "maximum": 120
+    },
+    "maxRetries": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 8
     },
     "tabs": {
       "type": "integer",
