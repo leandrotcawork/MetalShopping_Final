@@ -251,6 +251,33 @@ func buildSmokeManifestConfig(strategy, supplierCode string) map[string]any {
 		if sellerPickStrategy != "" {
 			base["sellerPickStrategy"] = sellerPickStrategy
 		}
+	case "http.html_dom_first_card.v1":
+		base["searchUrlTemplate"] = strings.TrimSpace(os.Getenv("MS_SMOKE_SEARCH_URL_TEMPLATE"))
+		base["cardRootHint"] = strings.TrimSpace(os.Getenv("MS_SMOKE_CARD_ROOT_HINT"))
+		cardItemHint := strings.TrimSpace(os.Getenv("MS_SMOKE_CARD_ITEM_HINT"))
+		titleHint := strings.TrimSpace(os.Getenv("MS_SMOKE_TITLE_HINT"))
+		priceHint := strings.TrimSpace(os.Getenv("MS_SMOKE_PRICE_HINT"))
+		listPriceHint := strings.TrimSpace(os.Getenv("MS_SMOKE_LIST_PRICE_HINT"))
+		calculatedPriceHint := strings.TrimSpace(os.Getenv("MS_SMOKE_CALCULATED_PRICE_HINT"))
+		pricePriority := strings.TrimSpace(os.Getenv("MS_SMOKE_PRICE_PRIORITY"))
+		if cardItemHint != "" {
+			base["cardItemHint"] = cardItemHint
+		}
+		if titleHint != "" {
+			base["titleHint"] = titleHint
+		}
+		if priceHint != "" {
+			base["priceHint"] = priceHint
+		}
+		if listPriceHint != "" {
+			base["listPriceHint"] = listPriceHint
+		}
+		if calculatedPriceHint != "" {
+			base["calculatedPriceHint"] = calculatedPriceHint
+		}
+		if pricePriority != "" {
+			base["pricePriority"] = pricePriority
+		}
 	case "playwright.pdp_first.v1":
 		startURL := strings.TrimSpace(os.Getenv("MS_SMOKE_START_URL"))
 		searchURL := strings.TrimSpace(os.Getenv("MS_SMOKE_SEARCH_URL"))

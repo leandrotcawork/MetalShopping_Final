@@ -17,6 +17,7 @@ const (
 	httpStrategyVTEX           = "http.vtex_persisted_query.v1"
 	httpStrategyHTMLSearch     = "http.html_search.v1"
 	httpStrategyLeroySearch    = "http.leroy_search_sellers.v1"
+	httpStrategyHTMLDOMFirst   = "http.html_dom_first_card.v1"
 	playwrightStrategyMock     = "playwright.mock.v1"
 	playwrightStrategyPDPFirst = "playwright.pdp_first.v1"
 )
@@ -152,6 +153,21 @@ func validateHTTPFamily(config map[string]any) []ValidationError {
 				Message: "http.leroy_search_sellers.v1 requires sellersUrlTemplate",
 			})
 		}
+	case httpStrategyHTMLDOMFirst:
+		if !hasNonEmptyString(config, "searchUrlTemplate") {
+			errors = append(errors, ValidationError{
+				Code:    "MISSING_REQUIRED_FIELD",
+				Field:   "config.searchUrlTemplate",
+				Message: "http.html_dom_first_card.v1 requires searchUrlTemplate",
+			})
+		}
+		if !hasNonEmptyString(config, "cardRootHint") {
+			errors = append(errors, ValidationError{
+				Code:    "MISSING_REQUIRED_FIELD",
+				Field:   "config.cardRootHint",
+				Message: "http.html_dom_first_card.v1 requires cardRootHint",
+			})
+		}
 	default:
 		errors = append(errors, ValidationError{
 			Code:    "UNKNOWN_STRATEGY",
@@ -243,6 +259,51 @@ func validateHTTPFamily(config map[string]any) []ValidationError {
 			Code:    "INVALID_FIELD",
 			Field:   "config.sellerRegex",
 			Message: "sellerRegex must be non-empty string when provided",
+		})
+	}
+	if !hasNonEmptyStringWhenPresent(config, "cardRootHint") {
+		errors = append(errors, ValidationError{
+			Code:    "INVALID_FIELD",
+			Field:   "config.cardRootHint",
+			Message: "cardRootHint must be non-empty string when provided",
+		})
+	}
+	if !hasNonEmptyStringWhenPresent(config, "cardItemHint") {
+		errors = append(errors, ValidationError{
+			Code:    "INVALID_FIELD",
+			Field:   "config.cardItemHint",
+			Message: "cardItemHint must be non-empty string when provided",
+		})
+	}
+	if !hasNonEmptyStringWhenPresent(config, "titleHint") {
+		errors = append(errors, ValidationError{
+			Code:    "INVALID_FIELD",
+			Field:   "config.titleHint",
+			Message: "titleHint must be non-empty string when provided",
+		})
+	}
+	if !hasNonEmptyStringWhenPresent(config, "listPriceHint") {
+		errors = append(errors, ValidationError{
+			Code:    "INVALID_FIELD",
+			Field:   "config.listPriceHint",
+			Message: "listPriceHint must be non-empty string when provided",
+		})
+	}
+	if !hasNonEmptyStringWhenPresent(config, "calculatedPriceHint") {
+		errors = append(errors, ValidationError{
+			Code:    "INVALID_FIELD",
+			Field:   "config.calculatedPriceHint",
+			Message: "calculatedPriceHint must be non-empty string when provided",
+		})
+	}
+	if !hasAllowedStringWhenPresent(config, "pricePriority", map[string]struct{}{
+		"calculated_first": {},
+		"sale_first":       {},
+	}) {
+		errors = append(errors, ValidationError{
+			Code:    "INVALID_FIELD",
+			Field:   "config.pricePriority",
+			Message: "pricePriority must be one of: calculated_first|sale_first",
 		})
 	}
 	if !hasNonEmptyStringWhenPresent(config, "region") {

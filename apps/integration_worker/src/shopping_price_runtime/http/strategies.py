@@ -6,6 +6,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from html.parser import HTMLParser
 from typing import Any
 
 from ..headers import build_runtime_headers
@@ -231,6 +232,207 @@ def _build_html_search_url(
         .replace("{supplier_code}", urllib.parse.quote(config.supplier_code, safe=""))
         .replace("{lookup_mode}", urllib.parse.quote(lookup_mode, safe=""))
     )
+
+
+def _normalize_hint(value: str) -> str:
+    return safe_str(value, "").lower()
+
+
+def _text_matches_hint(text: str, hint: str) -> bool:
+    normalized_hint = _normalize_hint(hint)
+    if normalized_hint == "":
+        return False
+    return normalized_hint in safe_str(text, "").lower()
+
+
+def _extract_price_candidates(text: str) -> list[float]:
+    normalized = safe_str(text, "")
+    if normalized == "":
+        return []
+    matches = re.findall(r"\d{1,3}(?:\.\d{3})*,\d{2}|\d+(?:\.\d{2})?", normalized, flags=re.IGNORECASE | re.MULTILINE)
+    output: list[float] = []
+    for match in matches:
+        parsed = decode_price_text(match, -1.0)
+        if parsed > 0:
+            output.append(parsed)
+    return output
+
+
+class _DOMScopeParser(HTMLParser):
+    def __init__(
+        self,
+        *,
+        root_hint: str,
+        card_item_hint: str,
+        max_chars: int = 250_000,
+    ) -> None:
+        super().__init__(convert_charrefs=True)
+        self.root_hint = _normalize_hint(root_hint)
+        self.card_item_hint = _normalize_hint(card_item_hint)
+        self.max_chars = max_chars
+        self._stack: list[str] = []
+        self._root_depth: int | None = None
+        self._card_depth: int | None = None
+        self.entries: list[tuple[str, str]] = []
+        self._captured_chars = 0
+
+    def _attrs_context(self, tag: str, attrs: list[tuple[str, str | None]]) -> str:
+        parts: list[str] = [tag.lower()]
+        for key, value in attrs:
+            normalized_key = safe_str(key, "").lower()
+            normalized_value = safe_str(value, "").lower()
+            if normalized_key != "" and normalized_value != "":
+                parts.append(f"{normalized_key}={normalized_value}")
+        return " ".join(parts)
+
+    def _capture_active(self) -> bool:
+        if self._root_depth is None:
+            return False
+        if self.card_item_hint == "":
+            return True
+        return self._card_depth is not None
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        context = self._attrs_context(tag, attrs)
+        self._stack.append(context)
+        if self._root_depth is None and _text_matches_hint(context, self.root_hint):
+            self._root_depth = len(self._stack)
+            if self.card_item_hint == "":
+                self._card_depth = self._root_depth
+        elif self._root_depth is not None and self._card_depth is None and self.card_item_hint != "":
+            if _text_matches_hint(context, self.card_item_hint):
+                self._card_depth = len(self._stack)
+
+    def handle_endtag(self, _tag: str) -> None:
+        if len(self._stack) == 0:
+            return
+        depth_before_pop = len(self._stack)
+        if self._card_depth is not None and depth_before_pop == self._card_depth:
+            self._card_depth = None
+        if self._root_depth is not None and depth_before_pop == self._root_depth:
+            self._root_depth = None
+            self._card_depth = None
+        self._stack.pop()
+
+    def handle_data(self, data: str) -> None:
+        if not self._capture_active():
+            return
+        text = safe_str(data, "")
+        if text == "":
+            return
+        if self._captured_chars >= self.max_chars:
+            return
+        remaining = self.max_chars - self._captured_chars
+        clipped = text[:remaining]
+        self._captured_chars += len(clipped)
+        context = " > ".join(self._stack[-6:]) if len(self._stack) > 0 else ""
+        self.entries.append((context, clipped))
+
+
+def _pick_dom_price(
+    *,
+    entries: list[tuple[str, str]],
+    config: SupplierRuntimeConfig,
+    base_price: float,
+) -> tuple[float, str]:
+    price_hint = safe_str(config.config_json.get("priceHint"), "")
+    list_price_hint = safe_str(config.config_json.get("listPriceHint"), "")
+    calculated_price_hint = safe_str(config.config_json.get("calculatedPriceHint"), "")
+    priority = safe_str(config.config_json.get("pricePriority"), "calculated_first").lower()
+    priority = priority if priority in {"calculated_first", "sale_first"} else "calculated_first"
+
+    def first_price_by_hint(hint: str) -> float | None:
+        if safe_str(hint, "") == "":
+            return None
+        for context, text in entries:
+            haystack = f"{context} {text}".lower()
+            if _text_matches_hint(haystack, hint):
+                prices = _extract_price_candidates(text)
+                if len(prices) > 0:
+                    return prices[0]
+        return None
+
+    calculated = first_price_by_hint(calculated_price_hint)
+    sale = first_price_by_hint(price_hint)
+    listed = first_price_by_hint(list_price_hint)
+
+    ordered = [calculated, sale, listed] if priority == "calculated_first" else [sale, calculated, listed]
+    for candidate in ordered:
+        if candidate is not None and candidate > 0:
+            return safe_float(candidate, base_price), f"hint_priority:{priority}"
+
+    merged = " ".join(text for _ctx, text in entries)
+    fallback_prices = _extract_price_candidates(merged)
+    if len(fallback_prices) > 0:
+        return safe_float(fallback_prices[0], base_price), "fallback_first_price_token"
+    return safe_float(base_price, base_price), "price_not_found"
+
+
+def _pick_dom_title(entries: list[tuple[str, str]], config: SupplierRuntimeConfig, fallback: str) -> str:
+    title_hint = safe_str(config.config_json.get("titleHint"), "")
+    if title_hint != "":
+        for context, text in entries:
+            if _text_matches_hint(f"{context} {text}", title_hint):
+                title = safe_str(text, "")
+                if title != "":
+                    return title[:120]
+    for _context, text in entries:
+        title = safe_str(text, "")
+        if title != "":
+            return title[:120]
+    return fallback
+
+
+def _execute_http_html_dom_first_card_strategy(
+    *,
+    config: SupplierRuntimeConfig,
+    lookup_term: str,
+    base_price: float,
+    signal: SupplierSignal | None,
+    timeout_seconds: int,
+    max_retries: int,
+    seller_default: str,
+) -> RuntimeObservation:
+    strategy = _strategy_for_config(config)
+    url = _build_html_search_url(config, lookup_term, signal)
+    if url is None:
+        return RuntimeObservation("ERROR", safe_float(base_price, 0), seller_default, "HTTP_HTML", None, "html_dom_search_url_missing", strategy, lookup_term)
+
+    retry_statuses = _retry_http_statuses(config)
+    headers = build_runtime_headers(config)
+    headers.setdefault("Accept", "text/html")
+    root_hint = safe_str(config.config_json.get("cardRootHint"), "")
+    card_item_hint = safe_str(config.config_json.get("cardItemHint"), "")
+    if root_hint == "":
+        return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_HTML", None, "html_dom_card_root_hint_missing", strategy, lookup_term)
+
+    last_error = "html_dom_runtime_failed"
+    for attempt in range(1, max_retries + 1):
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=timeout_seconds) as response:
+                raw_html = response.read().decode("utf-8", errors="replace")
+                parser = _DOMScopeParser(root_hint=root_hint, card_item_hint=card_item_hint)
+                parser.feed(raw_html)
+                entries = parser.entries
+                if len(entries) == 0:
+                    return RuntimeObservation("NOT_FOUND", safe_float(base_price, base_price), seller_default, "HTTP_HTML", int(response.status), "html_dom_first_card_not_found", strategy, lookup_term)
+
+                observed_price, price_note = _pick_dom_price(entries=entries, config=config, base_price=base_price)
+                if price_note == "price_not_found":
+                    return RuntimeObservation("NOT_FOUND", safe_float(base_price, base_price), seller_default, "HTTP_HTML", int(response.status), "html_dom_price_not_found", strategy, lookup_term)
+
+                seller_name = _pick_dom_title(entries, config, seller_default)
+                note = f"html_dom_first_card attempt={attempt} {price_note}"
+                return RuntimeObservation("OK", observed_price, seller_name, "HTTP_HTML", int(response.status), note[:280], strategy, lookup_term)
+        except urllib.error.HTTPError as exc:
+            if exc.code not in retry_statuses:
+                return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_HTML", int(exc.code), f"http_status_{exc.code}_not_retryable", strategy, lookup_term)
+            last_error = f"http_status_{exc.code}"
+        except Exception as exc:
+            last_error = f"http_error:{exc}"
+        time.sleep(0.1)
+    return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_HTML", None, last_error[:280], strategy, lookup_term)
 
 
 def _leroy_extract_product_id_from_url(url: str) -> str:
@@ -640,6 +842,17 @@ def execute_http_runtime(
 
     if strategy == "http.html_search.v1":
         return _execute_http_html_search_strategy(
+            config=config,
+            lookup_term=lookup_term,
+            base_price=base_price,
+            signal=signal,
+            timeout_seconds=timeout_seconds,
+            max_retries=max_retries,
+            seller_default=seller_default,
+        )
+
+    if strategy == "http.html_dom_first_card.v1":
+        return _execute_http_html_dom_first_card_strategy(
             config=config,
             lookup_term=lookup_term,
             base_price=base_price,

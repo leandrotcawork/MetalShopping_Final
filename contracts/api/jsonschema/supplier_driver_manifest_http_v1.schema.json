@@ -55,6 +55,18 @@
         "searchUrlTemplate",
         "sellersUrlTemplate"
       ]
+    },
+    {
+      "properties": {
+        "strategy": {
+          "const": "http.html_dom_first_card.v1"
+        }
+      },
+      "required": [
+        "strategy",
+        "searchUrlTemplate",
+        "cardRootHint"
+      ]
     }
   ],
   "properties": {
@@ -64,7 +76,8 @@
         "http.mock.v1",
         "http.vtex_persisted_query.v1",
         "http.html_search.v1",
-        "http.leroy_search_sellers.v1"
+        "http.leroy_search_sellers.v1",
+        "http.html_dom_first_card.v1"
       ]
     },
     "baseUrl": {
@@ -127,6 +140,33 @@
       "enum": [
         "selected",
         "min_sale"
+      ]
+    },
+    "cardRootHint": {
+      "type": "string",
+      "minLength": 1
+    },
+    "cardItemHint": {
+      "type": "string",
+      "minLength": 1
+    },
+    "titleHint": {
+      "type": "string",
+      "minLength": 1
+    },
+    "listPriceHint": {
+      "type": "string",
+      "minLength": 1
+    },
+    "calculatedPriceHint": {
+      "type": "string",
+      "minLength": 1
+    },
+    "pricePriority": {
+      "type": "string",
+      "enum": [
+        "calculated_first",
+        "sale_first"
       ]
     },
     "timeoutSeconds": {
