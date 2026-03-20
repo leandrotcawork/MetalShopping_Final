@@ -115,6 +115,7 @@
 - Backend completion ADR tranche drafted for driver framework parity (ADR-0031..ADR-0034)
 - ADR-0031 accepted: runtime extracted from `shopping_price_worker.py` into `apps/integration_worker/src/shopping_price_runtime/*`, compile checks passed, and smoke (`scripts/smoke_shopping_event_local.ps1`) passed outside sandbox
 - ADR-0032 implemented: bounded runtime parallelism + HTTP rate limiting + retry status policy with schema and server-side validation updates; acceptance now depends on ADR-0033 multi-supplier smoke evidence
+- ADR-0033 implemented: multi-supplier smoke suite and DB evidence report generator added (`scripts/smoke_shopping_driver_suite_local.ps1`, `scripts/smoke_shopping_driver_suite_report.py`) with generated report in `docs/SHOPPING_DRIVER_SUITE_ACCEPTANCE.md`
 
 ## Next
 

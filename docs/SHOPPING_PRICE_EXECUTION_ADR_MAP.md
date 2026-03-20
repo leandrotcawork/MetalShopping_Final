@@ -119,6 +119,7 @@ For any Shopping evolution (Level 2+), the execution sequence is frozen:
   Skills: `metalshopping-worker-patterns`, `metalshopping-worker-scaffold`, `metalshopping-observability-security`, `metalshopping-adr-updates`
   Contracts: no new external contracts
   Goal: one deterministic command that validates the legacy parity supplier set.
+  Status: implementation completed; acceptance pending catalog non-empty run + ADR-0034 Playwright non-mock evidence
 
 - ADR-0034: Shopping Playwright Driver Runtime v1 (PDP-first, non-mock)
   Skills: `metalshopping-contract-authoring`, `metalshopping-worker-patterns`, `metalshopping-worker-scaffold`, `metalshopping-observability-security`, `metalshopping-adr-updates`
