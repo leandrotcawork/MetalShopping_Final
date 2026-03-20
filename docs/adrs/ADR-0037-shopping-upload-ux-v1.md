@@ -1,6 +1,6 @@
 # ADR-0037: Shopping Upload UX v1 (Desktop Picker First)
 
-- Status: draft
+- Status: accepted
 - Date: 2026-03-20
 
 ## Context
@@ -43,6 +43,8 @@ The Shopping API contract is not changed in this ADR.
 - Upload step does not show raw scope identifiers or backend path fields by default.
 - Desktop-capable environment can pick XLSX and populates `xlsxFilePath` reliably.
 - Web fallback still allows manual `xlsxFilePath` for local/dev without breaking contract validation.
+- `npm.cmd run web:typecheck` passes.
+- `npm.cmd run web:build` passes.
 
 ## Consequences
 

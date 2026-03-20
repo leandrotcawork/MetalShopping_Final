@@ -1,6 +1,6 @@
 # ADR-0039: Shopping Manual URL Panel v1 (Operational Table)
 
-- Status: draft
+- Status: accepted
 - Date: 2026-03-20
 
 ## Context
@@ -45,6 +45,8 @@ Contract behavior remains unchanged in v1. Bulk edits, if needed, will be introd
 - Manual URL panel matches legacy intent with a table-first operational UX.
 - Table can filter by supplier and product id and can persist manual URL changes via SDK.
 - The panel displays lifecycle fields from ADR-0035 without leaking internal DB details.
+- `npm.cmd run web:typecheck` passes.
+- `npm.cmd run web:build` passes.
 
 ## Consequences
 

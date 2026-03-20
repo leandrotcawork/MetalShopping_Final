@@ -1,6 +1,6 @@
 # ADR-0036: Shopping Frontend Parity Baseline v1
 
-- Status: draft
+- Status: accepted
 - Date: 2026-03-20
 
 ## Context
@@ -59,9 +59,9 @@ Follow-up ADRs will cover:
 ## Acceptance Evidence (for Status: accepted)
 
 - `apps/web/src/pages/ShoppingPage.tsx` renders a single header/hero region.
-- Visual parity checklist for the tranche is recorded in a dedicated acceptance note (file name to be decided when the tranche is executed).
-- `npm.cmd --workspace @metalshopping/web run typecheck` passes.
-- `npm.cmd --workspace @metalshopping/web run build` passes.
+- Visual parity checklist for the tranche is recorded in `docs/SHOPPING_FRONTEND_PARITY_ACCEPTANCE.md`.
+- `npm.cmd run web:typecheck` passes.
+- `npm.cmd run web:build` passes.
 
 ## Consequences
 

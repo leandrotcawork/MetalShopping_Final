@@ -1,6 +1,6 @@
 # ADR-0038: Shopping Supplier Selection Cards v1
 
-- Status: draft
+- Status: accepted
 - Date: 2026-03-20
 
 ## Context
@@ -38,4 +38,3 @@ No contract changes are introduced in this ADR. The cards are a rendering of the
 ## Consequences
 
 - Suppliers remain easy to scan and operate on as the supplier list grows.
-
