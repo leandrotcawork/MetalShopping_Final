@@ -1,6 +1,6 @@
 # ADR-0044: Catalog Import Idempotency and Identifier Conflicts v1
 
-- Status: draft
+- Status: accepted
 - Date: 2026-03-20
 
 ## Context
@@ -122,6 +122,13 @@ Frozen execution order for this ADR:
 - Spot-check:
   - random sample of 20 products contains correct `pn_interno/reference/ean` placement and primary flags.
 
+Evidence captured on 2026-03-20:
+
+- Rerun summary (no reset):
+  - `levels=3`, `nodes=100`, `products_imported=3838`
+  - `identifier_conflicts=59`, `missing_taxonomy_rows=1`
+  - reports: `.tmp/import_catalog_reports/20260320_210414`
+
 ## Alternatives considered
 
 - Relax uniqueness constraints in the new schema:
@@ -134,4 +141,3 @@ Frozen execution order for this ADR:
 - We can import the full legacy universe without weakening the new canonical model.
 - Data issues become visible and actionable instead of silently corrupting identity resolution.
 - The import pipeline becomes idempotent and safe to rerun during development.
-

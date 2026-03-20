@@ -120,11 +120,11 @@
 - ADR-0042 accepted: `http.html_dom_first_card.v1` validated with `ABC` smoke `OK` (`run_request_id=aba7655c-d422-4960-8765-8627638fad47`)
 - ADR-0040 accepted: legacy suppliers pack validated (`TELHA_NORTE`, `LEROY`, `ABC`) with non-mock smoke evidence and enabled suppliers directory list
 - ADR-0041 accepted: `http.leroy_search_sellers.v1` validated with `LEROY` smoke `OK` and `http_status=200` (`run_request_id=fc383948-a124-4db1-b428-6c775eba8b8c`)
+- ADR-0043/ADR-0044 accepted: legacy catalog import pipeline executed for `tenant_default` with reports and idempotent rerun evidence
 
 ## Next
 
 - keep ADR set complete and stable
-- freeze and implement the legacy-to-catalog master data import pipeline (ADR-0043, ADR-0044)
 - execute Shopping frontend parity ADR tranche (ADR-0036..ADR-0039) before expanding Shopping UX/features
 - execute Shopping legacy suppliers driver pack ADR tranche (ADR-0040..ADR-0042) to add `TELHA_NORTE`, `LEROY`, `ABC` under governed manifests (complete)
 - freeze and follow the Shopping Price Level 2 ADR set (ADR-0017 .. ADR-0024) before implementation work starts

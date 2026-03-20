@@ -1,6 +1,6 @@
 # ADR-0043: Catalog Legacy Master Data Import v1
 
-- Status: draft
+- Status: accepted
 - Date: 2026-03-20
 
 ## Context
@@ -114,6 +114,13 @@ Frozen execution order for this ADR:
   - Products portfolio filters list real brands and taxonomy leaf0 names
   - Shopping run scope from catalog can select a realistic list of products
 
+Evidence captured on 2026-03-20:
+
+- Import run (reset + import) summary:
+  - `levels=3`, `nodes=100`, `products_imported=3838`
+  - `identifier_conflicts=59`, `missing_taxonomy_rows=1`
+  - reports: `.tmp/import_catalog_reports/20260320_210326`
+
 ## Alternatives considered
 
 - Import through `server_core` HTTP endpoints:
@@ -126,4 +133,3 @@ Frozen execution order for this ADR:
 - We gain a repeatable path to populate canonical `catalog` state from legacy master data.
 - Data quality issues become explicit via reports instead of being silently absorbed into the new system.
 - We keep the core runtime clean: no legacy DB dependency in request serving.
-
