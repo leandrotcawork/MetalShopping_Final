@@ -105,18 +105,21 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
   const [runRequest, setRunRequest] = useState<ShoppingRunRequestV1 | null>(null);
   const [xlsxFilePath, setXlsxFilePath] = useState("");
   const [xlsxScopeText, setXlsxScopeText] = useState("");
+  const [showUploadAdvanced, setShowUploadAdvanced] = useState(false);
+  const [xlsxSelectedName, setXlsxSelectedName] = useState("");
   const [supplierCodes, setSupplierCodes] = useState<string[]>([]);
   const [advancedTimeout, setAdvancedTimeout] = useState(60);
   const [advancedHttpWorkers, setAdvancedHttpWorkers] = useState(10);
   const [advancedPlaywrightWorkers, setAdvancedPlaywrightWorkers] = useState(7);
   const [advancedTopN, setAdvancedTopN] = useState(5);
-  const [manualSignalProductId, setManualSignalProductId] = useState("");
-  const [manualSignalSupplierCode, setManualSignalSupplierCode] = useState("");
-  const [manualSignalUrl, setManualSignalUrl] = useState("");
-  const [manualSignalLookupMode, setManualSignalLookupMode] = useState<"EAN" | "REFERENCE">("REFERENCE");
-  const [manualSignalUrlStatus, setManualSignalUrlStatus] = useState<"ACTIVE" | "STALE" | "INVALID">("ACTIVE");
   const [manualSignalSaving, setManualSignalSaving] = useState(false);
   const [manualSignals, setManualSignals] = useState<ShoppingSupplierSignalV1[]>([]);
+  const [manualFilterProductId, setManualFilterProductId] = useState("");
+  const [manualFilterSupplierCode, setManualFilterSupplierCode] = useState("");
+  const [manualOffset, setManualOffset] = useState(0);
+  const [manualTotal, setManualTotal] = useState(0);
+  const [manualReturned, setManualReturned] = useState(0);
+  const [manualEditUrls, setManualEditUrls] = useState<Record<string, string>>({});
 
   const [catalogSearch, setCatalogSearch] = useState("");
   const [catalogBrand, setCatalogBrand] = useState(allOptionValue);
@@ -192,42 +195,25 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
   }, [shoppingApi, selectedStatus, reloadTick]);
 
   useEffect(() => {
-    if (!bootstrap || bootstrap.suppliers.length === 0) {
-      return;
-    }
-    if (manualSignalSupplierCode === "") {
-      const firstEnabled = bootstrap.suppliers.find((item) => item.enabled);
-      if (firstEnabled) {
-        setManualSignalSupplierCode(firstEnabled.supplierCode);
-      }
-    }
-  }, [bootstrap, manualSignalSupplierCode]);
-
-  useEffect(() => {
-    if (selectedProductIds.length > 0) {
-      setManualSignalProductId(selectedProductIds[0]);
-    }
-  }, [selectedProductIds]);
-
-  useEffect(() => {
-    if (manualSignalProductId === "" || manualSignalSupplierCode === "") {
-      return;
-    }
     let cancelled = false;
     async function loadSignals() {
       try {
         const list = await shoppingApi.listSupplierSignals({
-          productId: manualSignalProductId,
-          supplierCode: manualSignalSupplierCode,
+          productId: manualFilterProductId.trim() || undefined,
+          supplierCode: manualFilterSupplierCode.trim() || undefined,
           limit: 10,
-          offset: 0,
+          offset: manualOffset,
         });
         if (!cancelled) {
           setManualSignals(list.rows);
+          setManualTotal(list.paging.total);
+          setManualReturned(list.paging.returned);
         }
       } catch {
         if (!cancelled) {
           setManualSignals([]);
+          setManualTotal(0);
+          setManualReturned(0);
         }
       }
     }
@@ -235,7 +221,7 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     return () => {
       cancelled = true;
     };
-  }, [shoppingApi, manualSignalProductId, manualSignalSupplierCode, reloadTick]);
+  }, [shoppingApi, manualFilterProductId, manualFilterSupplierCode, manualOffset, reloadTick]);
 
   useEffect(() => {
     if (inputMode !== "catalog") {
@@ -328,6 +314,17 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     setCatalogBrandOptions(toSelectOptions(filters.brands, "Todas as marcas"));
     setCatalogLeaf0Options(toSelectOptions(filters.taxonomy_leaf0_names, `Todos os ${leaf0Label.toLowerCase()}s`));
     setCatalogStatusOptions(toSelectOptions(filters.status, "Todos os status"));
+  }
+
+  function handleXlsxSelection(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    if (!file) {
+      setXlsxSelectedName("");
+      return;
+    }
+    const maybePath = (file as File & { path?: string }).path;
+    setXlsxFilePath((maybePath || file.name || "").trim());
+    setXlsxSelectedName(file.name || "");
   }
 
   const runProgressPct = useMemo(() => {
@@ -445,20 +442,26 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     }
   }
 
-  async function saveManualSignal() {
-    if (manualSignalProductId.trim() === "" || manualSignalSupplierCode.trim() === "") {
-      setError("Selecione um produto e fornecedor para salvar URL manual.");
+  function manualRowKey(productId: string, supplierCode: string) {
+    return `${productId}::${supplierCode.toUpperCase()}`;
+  }
+
+  async function saveManualSignalRow(productId: string, supplierCode: string) {
+    const key = manualRowKey(productId, supplierCode);
+    const nextUrl = (manualEditUrls[key] ?? "").trim();
+    if (nextUrl && !nextUrl.startsWith("http")) {
+      setError("A URL manual deve iniciar com http ou https.");
       return;
     }
     setManualSignalSaving(true);
     setError(null);
     try {
       await shoppingApi.upsertSupplierSignal({
-        productId: manualSignalProductId.trim(),
-        supplierCode: manualSignalSupplierCode.trim(),
-        productUrl: manualSignalUrl.trim() || null,
-        lookupMode: manualSignalLookupMode,
-        urlStatus: manualSignalUrlStatus,
+        productId,
+        supplierCode,
+        productUrl: nextUrl || null,
+        lookupMode: "REFERENCE",
+        urlStatus: nextUrl ? "ACTIVE" : "STALE",
         manualOverride: true,
       });
       setReloadTick((current) => current + 1);
@@ -475,6 +478,7 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
       eyebrow="MetalShopping"
       title="Shopping de Precos"
       subtitle="Fluxo legado preservado, consumo via SDK oficial."
+      hideHero
     >
       <section className={styles.shopping}>
         <header className={styles.header}>
@@ -518,28 +522,41 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
           {inputMode === "xlsx" ? (
             <div className={styles.catalogBlock}>
               <label className={styles.uploadZone}>
-                <span className={styles.uploadIcon}>UPLOAD</span>
+                <span className={styles.uploadIcon}>PASTA</span>
                 <strong>Arraste um arquivo XLSX ou clique para selecionar</strong>
-                <span>A importacao real permanece no worker e backend.</span>
-                <input type="file" className={styles.hiddenInput} />
+                <span>{xlsxSelectedName ? `Arquivo: ${xlsxSelectedName}` : "Nenhum arquivo selecionado"}</span>
+                <input type="file" className={styles.hiddenInput} onChange={handleXlsxSelection} />
               </label>
-              <label className={styles.fieldLabel}>
-                Caminho do arquivo XLSX (backend)
-                <input
-                  type="text"
-                  value={xlsxFilePath}
-                  onChange={(event) => setXlsxFilePath(event.target.value)}
-                  placeholder="ex: C:\\imports\\shopping\\atual.xlsx"
-                />
-              </label>
-              <label className={styles.fieldLabel}>
-                Identificadores de escopo (um por linha: SKU/EAN/Referencia)
-                <textarea
-                  value={xlsxScopeText}
-                  onChange={(event) => setXlsxScopeText(event.target.value)}
-                  placeholder={"ex:\n7891234567890\nREF-001\nSKU-XYZ"}
-                />
-              </label>
+              <div className={styles.uploadAdvancedRow}>
+                <button
+                  type="button"
+                  className={styles.linkButton}
+                  onClick={() => setShowUploadAdvanced((value) => !value)}
+                >
+                  {showUploadAdvanced ? "Ocultar configuracao tecnica" : "Mostrar configuracao tecnica"}
+                </button>
+              </div>
+              {showUploadAdvanced ? (
+                <div className={styles.uploadAdvancedPanel}>
+                  <label className={styles.fieldLabel}>
+                    Caminho do arquivo XLSX (backend)
+                    <input
+                      type="text"
+                      value={xlsxFilePath}
+                      onChange={(event) => setXlsxFilePath(event.target.value)}
+                      placeholder="ex: C:\\imports\\shopping\\atual.xlsx"
+                    />
+                  </label>
+                  <label className={styles.fieldLabel}>
+                    Identificadores de escopo (um por linha: SKU/EAN/Referencia)
+                    <textarea
+                      value={xlsxScopeText}
+                      onChange={(event) => setXlsxScopeText(event.target.value)}
+                      placeholder={"ex:\n7891234567890\nREF-001\nSKU-XYZ"}
+                    />
+                  </label>
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className={styles.catalogBlock}>
@@ -706,39 +723,65 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
         </article>
 
         <article className={`${styles.panel} ${step === 2 ? styles.panelActive : ""}`}>
-          <h2 className={styles.panelTitle}>Passo 2 - Configurar</h2>
-          <p className={styles.panelSubtitle}>Parametros de execucao e filtros da run.</p>
+          <h2 className={styles.panelTitle}>Passo 2 - Configurar fornecedores</h2>
+          <p className={styles.panelSubtitle}>Escolha fornecedores, ajuste limites e configure URLs operacionais.</p>
 
           {bootstrap && bootstrap.suppliers.length > 0 ? (
             <div className={styles.catalogBlock}>
-              <strong>Fornecedores habilitados</strong>
-              <div className={styles.selectionActions}>
+              <div className={styles.supplierHeader}>
+                <div>
+                  <h3 className={styles.supplierTitle}>Fornecedores habilitados</h3>
+                  <p className={styles.supplierSubtitle}>Selecione os fornecedores que vao participar desta run.</p>
+                </div>
+                <button type="button" className={`${styles.btn} ${styles.btnGhost}`} onClick={() => setSupplierCodes([])}>
+                  Desmarcar todos
+                </button>
+              </div>
+              <div className={styles.supplierGrid}>
                 {bootstrap.suppliers
                   .filter((supplier) => supplier.enabled)
-                  .map((supplier) => (
-                    <label key={supplier.supplierCode} className={styles.checkboxItem}>
-                      <Checkbox
-                        checked={supplierCodes.includes(supplier.supplierCode)}
-                        onChange={() => toggleSupplier(supplier.supplierCode)}
-                        ariaLabel={`Selecionar fornecedor ${supplier.supplierLabel}`}
-                      />
-                      <span>
-                        {supplier.supplierLabel} ({supplier.executionKind})
-                      </span>
-                    </label>
-                  ))}
+                  .map((supplier) => {
+                    const selected = supplierCodes.includes(supplier.supplierCode);
+                    return (
+                      <button
+                        key={supplier.supplierCode}
+                        type="button"
+                        className={`${styles.supplierCard} ${selected ? styles.supplierCardSelected : ""}`.trim()}
+                        onClick={() => toggleSupplier(supplier.supplierCode)}
+                      >
+                        <span className={`${styles.supplierCheck} ${selected ? styles.supplierCheckSelected : ""}`.trim()}>
+                          {selected ? "OK" : ""}
+                        </span>
+                        <div className={styles.supplierMeta}>
+                          <strong>{supplier.supplierLabel}</strong>
+                          <small>{supplier.executionKind}</small>
+                        </div>
+                      </button>
+                    );
+                  })}
               </div>
             </div>
           ) : null}
 
           <div className={styles.advancedWrap}>
-            <button
-              type="button"
-              className={`${styles.btn} ${styles.btnSecondary}`}
-              onClick={() => setShowAdvanced((value) => !value)}
-            >
-              {showAdvanced ? "Ocultar avancado" : "Avancado"}
-            </button>
+            <div className={styles.advancedHeader}>
+              <div>
+                <h3 className={styles.advancedTitle}>Configuracoes avancadas</h3>
+                <p className={styles.advancedSubtitle}>Ajuste limites e gere relatorio de execucao quando necessario.</p>
+              </div>
+              <div className={styles.advancedActions}>
+                <button type="button" className={`${styles.btn} ${styles.btnGhost}`} disabled>
+                  Gerar relatorio
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.btn} ${styles.btnSecondary}`}
+                  onClick={() => setShowAdvanced((value) => !value)}
+                >
+                  {showAdvanced ? "Ocultar avancado" : "Exibir avancado"}
+                </button>
+              </div>
+            </div>
             {showAdvanced ? (
               <div className={styles.advancedGrid}>
                 <label>
@@ -781,15 +824,36 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
             ) : null}
           </div>
 
-          <div className={styles.catalogBlock}>
-            <strong>Configurar URLs por fornecedor</strong>
-            <div className={styles.advancedGrid}>
+          <div className={styles.manualPanel}>
+            <div className={styles.manualHeader}>
+              <div>
+                <h3>URLs manuais</h3>
+                <p>Gerencie URLs persistidas, status e cooldowns sem sair do fluxo.</p>
+              </div>
+              <div className={styles.manualHeaderActions}>
+                <button type="button" className={`${styles.btn} ${styles.btnGhost}`} disabled>
+                  Alimentar URLs automatico
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.btn} ${styles.btnSecondary}`}
+                  onClick={() => setReloadTick((current) => current + 1)}
+                >
+                  Atualizar
+                </button>
+              </div>
+            </div>
+
+            <div className={styles.manualFilters}>
               <label>
-                Product ID
+                Produto
                 <input
                   type="text"
-                  value={manualSignalProductId}
-                  onChange={(event) => setManualSignalProductId(event.target.value)}
+                  value={manualFilterProductId}
+                  onChange={(event) => {
+                    setManualFilterProductId(event.target.value);
+                    setManualOffset(0);
+                  }}
                   placeholder="product_id"
                 />
               </label>
@@ -797,47 +861,106 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                 Fornecedor
                 <input
                   type="text"
-                  value={manualSignalSupplierCode}
-                  onChange={(event) => setManualSignalSupplierCode(event.target.value.toUpperCase())}
+                  value={manualFilterSupplierCode}
+                  onChange={(event) => {
+                    setManualFilterSupplierCode(event.target.value.toUpperCase());
+                    setManualOffset(0);
+                  }}
                   placeholder="SUPPLIER_CODE"
                 />
               </label>
-              <label>
-                URL manual
-                <input
-                  type="text"
-                  value={manualSignalUrl}
-                  onChange={(event) => setManualSignalUrl(event.target.value)}
-                  placeholder="https://fornecedor/pdp/produto"
-                />
-              </label>
-              <label>
-                Lookup mode
-                <select
-                  value={manualSignalLookupMode}
-                  onChange={(event) => setManualSignalLookupMode(event.target.value as "EAN" | "REFERENCE")}
+            </div>
+
+            <div className={styles.manualTableWrap}>
+              <table className={styles.manualTable}>
+                <thead>
+                  <tr>
+                    <th>Produto</th>
+                    <th>Fornecedor</th>
+                    <th>URL</th>
+                    <th>Status</th>
+                    <th>Cooldown</th>
+                    <th>Acoes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {manualSignals.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className={styles.manualEmpty}>
+                        Nenhum sinal encontrado.
+                      </td>
+                    </tr>
+                  ) : (
+                    manualSignals.map((signal) => {
+                      const rowKey = manualRowKey(signal.productId, signal.supplierCode);
+                      const draftUrl = manualEditUrls[rowKey] ?? signal.productUrl ?? "";
+                      const nextDiscovery = signal.nextDiscoveryAt ? formatDateTime(signal.nextDiscoveryAt) : "--";
+                      const notFoundCount = signal.notFoundCount ?? 0;
+                      return (
+                        <tr key={rowKey}>
+                          <td>
+                            <div className={styles.manualProductCell}>
+                              <strong>{signal.productId}</strong>
+                              <small>NotFound {notFoundCount}</small>
+                            </div>
+                          </td>
+                          <td>{signal.supplierCode}</td>
+                          <td>
+                            <input
+                              type="text"
+                              value={draftUrl}
+                              onChange={(event) =>
+                                setManualEditUrls((current) => ({
+                                  ...current,
+                                  [rowKey]: event.target.value,
+                                }))
+                              }
+                              placeholder="https://fornecedor/pdp/produto"
+                            />
+                          </td>
+                          <td>{signal.urlStatus}</td>
+                          <td>{nextDiscovery}</td>
+                          <td>
+                            <button
+                              type="button"
+                              className={styles.btnPrimary}
+                              onClick={() => void saveManualSignalRow(signal.productId, signal.supplierCode)}
+                              disabled={manualSignalSaving}
+                            >
+                              {manualSignalSaving ? "Salvando..." : "Salvar"}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className={styles.manualPagination}>
+              <span>
+                Mostrando {manualReturned} de {manualTotal}
+              </span>
+              <div>
+                <button
+                  type="button"
+                  className={`${styles.btn} ${styles.btnGhost}`}
+                  disabled={manualOffset <= 0}
+                  onClick={() => setManualOffset((current) => Math.max(0, current - 10))}
                 >
-                  <option value="REFERENCE">REFERENCE</option>
-                  <option value="EAN">EAN</option>
-                </select>
-              </label>
+                  Pagina anterior
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.btn} ${styles.btnGhost}`}
+                  disabled={manualOffset + manualReturned >= manualTotal}
+                  onClick={() => setManualOffset((current) => current + 10)}
+                >
+                  Proxima pagina
+                </button>
+              </div>
             </div>
-            <div className={styles.btnRow}>
-              <button
-                type="button"
-                className={`${styles.btn} ${styles.btnSecondary}`}
-                onClick={() => void saveManualSignal()}
-                disabled={manualSignalSaving}
-              >
-                {manualSignalSaving ? "Salvando..." : "Salvar URL manual"}
-              </button>
-            </div>
-            {manualSignals.length > 0 ? (
-              <p className={styles.modeSummary}>
-                Sinal atual: {manualSignals[0].urlStatus} | {manualSignals[0].lookupMode} |{" "}
-                {manualSignals[0].productUrl ?? "sem URL"}
-              </p>
-            ) : null}
           </div>
 
           {createRunInfo ? <p className={styles.modeSummary}>{createRunInfo}</p> : null}
@@ -848,11 +971,11 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
             </button>
             <button
               type="button"
-              className={`${styles.btn} ${styles.btnPrimary}`}
+              className={`${styles.btn} ${styles.btnPrimary} ${styles.btnRunPrimary}`}
               onClick={() => void createRun()}
               disabled={creatingRun}
             >
-              {creatingRun ? "Solicitando..." : "Criar run"}
+              {creatingRun ? "Solicitando..." : "Iniciar run"}
             </button>
           </div>
         </article>

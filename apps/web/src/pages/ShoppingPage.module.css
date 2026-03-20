@@ -341,7 +341,9 @@
 }
 
 .uploadIcon {
-  font-size: 56px;
+  font-size: 22px;
+  letter-spacing: 3px;
+  font-weight: 900;
   line-height: 1;
   display: block;
   opacity: 0.65;
@@ -352,10 +354,56 @@
   display: none;
 }
 
+.uploadAdvancedRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.linkButton {
+  border: 0;
+  background: transparent;
+  color: var(--wine-700);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.linkButton:hover {
+  text-decoration: underline;
+}
+
+.uploadAdvancedPanel {
+  margin-top: 12px;
+  display: grid;
+  gap: 12px;
+}
+
 .supplierGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
+}
+
+.supplierHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.supplierTitle {
+  margin: 0;
+  color: var(--neutral-900);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.supplierSubtitle {
+  margin: 4px 0 0;
+  color: var(--neutral-500);
+  font-size: 12px;
 }
 
 .supplierCard {
@@ -420,6 +468,154 @@
   margin-top: 16px;
   display: grid;
   gap: 10px;
+}
+
+.advancedHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.advancedTitle {
+  margin: 0;
+  color: var(--neutral-900);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.advancedSubtitle {
+  margin: 4px 0 0;
+  color: var(--neutral-500);
+  font-size: 12px;
+}
+
+.advancedActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.manualPanel {
+  margin-top: 18px;
+  border: 1px solid var(--neutral-200);
+  border-radius: 16px;
+  background: #fff;
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+}
+
+.manualHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.manualHeader h3 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--neutral-900);
+  font-weight: 800;
+}
+
+.manualHeader p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--neutral-500);
+}
+
+.manualHeaderActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.manualFilters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.manualFilters label {
+  display: grid;
+  gap: 6px;
+  color: var(--neutral-700);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.manualFilters input {
+  border: 1px solid rgba(145, 19, 42, 0.22);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+  background: #fff;
+}
+
+.manualTableWrap {
+  border: 1px solid rgba(145, 19, 42, 0.2);
+  border-radius: 12px;
+  overflow: auto;
+}
+
+.manualTable {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.manualTable th,
+.manualTable td {
+  border-bottom: 1px solid rgba(231, 226, 228, 0.85);
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+.manualTable th {
+  background: linear-gradient(180deg, #fff, #f8f3f5);
+  color: var(--wine-700);
+  font-weight: 800;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.manualTable td input {
+  width: 100%;
+  border: 1px solid var(--neutral-200);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.manualProductCell {
+  display: grid;
+  gap: 4px;
+}
+
+.manualProductCell small {
+  color: var(--neutral-500);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.manualEmpty {
+  text-align: center;
+  color: var(--neutral-500);
+  padding: 18px 10px;
+}
+
+.manualPagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--neutral-500);
 }
 
 .advancedGrid {
@@ -764,6 +960,11 @@
   border-color: rgba(118, 13, 32, 0.88);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.02)), var(--wine-700);
   box-shadow: 0 4px 10px rgba(145, 19, 42, 0.22);
+}
+
+.btnRunPrimary {
+  padding: 12px 18px;
+  font-size: 14px;
 }
 
 .btnSecondary {
