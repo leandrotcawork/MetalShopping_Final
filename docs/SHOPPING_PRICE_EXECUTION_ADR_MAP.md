@@ -113,6 +113,7 @@ For any Shopping evolution (Level 2+), the execution sequence is frozen:
   Skills: `metalshopping-contract-authoring`, `metalshopping-platform-packages`, `metalshopping-worker-patterns`, `metalshopping-worker-scaffold`, `metalshopping-observability-security`
   Contracts: JSON Schema evolution (bounded concurrency keys) + deterministic validation
   Goal: bounded, family-aware concurrency that is safe under multi-tenant execution.
+  Status: implementation completed; acceptance pending ADR-0033 multi-supplier bounded-runtime smoke
 
 - ADR-0033: Shopping Driver Smoke Suite v1 (multi-supplier)
   Skills: `metalshopping-worker-patterns`, `metalshopping-worker-scaffold`, `metalshopping-observability-security`, `metalshopping-adr-updates`

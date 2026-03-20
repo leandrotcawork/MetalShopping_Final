@@ -13,6 +13,22 @@ from ..models import RuntimeObservation, SupplierRuntimeConfig, SupplierSignal
 from ..shared.parsing import b64json, decode_price_text, extract_by_paths, safe_float, safe_int, safe_str
 
 
+def _retry_http_statuses(config: SupplierRuntimeConfig) -> set[int]:
+    raw = config.config_json.get("retryHttpStatuses")
+    default_statuses = {408, 425, 429, 500, 502, 503, 504}
+    if not isinstance(raw, list):
+        return default_statuses
+    parsed: set[int] = set()
+    for item in raw:
+        try:
+            status = int(item)
+        except (TypeError, ValueError):
+            continue
+        if 100 <= status <= 599:
+            parsed.add(status)
+    return parsed if len(parsed) > 0 else default_statuses
+
+
 def _strategy_for_config(config: SupplierRuntimeConfig) -> str:
     return safe_str(config.config_json.get("strategy"), "").lower()
 
@@ -236,6 +252,7 @@ def _execute_http_vtex_strategy(
     headers.setdefault("Content-Type", "application/json")
     last_error = "vtex_runtime_failed"
     strategy = _strategy_for_config(config)
+    retry_statuses = _retry_http_statuses(config)
 
     for attempt in range(1, max_retries + 1):
         try:
@@ -259,6 +276,8 @@ def _execute_http_vtex_strategy(
                     lookup_term,
                 )
         except urllib.error.HTTPError as exc:
+            if exc.code not in retry_statuses:
+                return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_VTEX", int(exc.code), f"http_status_{exc.code}_not_retryable", strategy, lookup_term)
             last_error = f"http_status_{exc.code}"
         except Exception as exc:
             last_error = f"http_error:{exc}"
@@ -286,6 +305,7 @@ def _execute_http_html_search_strategy(
     price_regex = safe_str(config.config_json.get("priceRegex"), r"(\d{1,3}(?:\.\d{3})*,\d{2}|\d+(?:\.\d{2})?)")
     seller_regex = safe_str(config.config_json.get("sellerRegex"), "")
     strategy = _strategy_for_config(config)
+    retry_statuses = _retry_http_statuses(config)
 
     for attempt in range(1, max_retries + 1):
         try:
@@ -321,6 +341,8 @@ def _execute_http_html_search_strategy(
 
                 return RuntimeObservation("OK", observed_price, seller_name, "HTTP_HTML", int(response.status), f"http_html_runtime attempt={attempt}", strategy, lookup_term)
         except urllib.error.HTTPError as exc:
+            if exc.code not in retry_statuses:
+                return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_HTML", int(exc.code), f"http_status_{exc.code}_not_retryable", strategy, lookup_term)
             last_error = f"http_status_{exc.code}"
         except Exception as exc:
             last_error = f"http_error:{exc}"

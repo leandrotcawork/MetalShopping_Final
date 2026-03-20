@@ -4,19 +4,56 @@
   "title": "SupplierDriverManifestHttpV1",
   "type": "object",
   "additionalProperties": true,
-  "anyOf": [
+  "required": [
+    "strategy"
+  ],
+  "oneOf": [
     {
+      "properties": {
+        "strategy": {
+          "const": "http.mock.v1"
+        }
+      },
       "required": [
-        "baseUrl"
+        "strategy",
+        "endpointTemplate"
       ]
     },
     {
+      "properties": {
+        "strategy": {
+          "const": "http.vtex_persisted_query.v1"
+        }
+      },
       "required": [
-        "endpointTemplate"
+        "strategy",
+        "baseUrl",
+        "operationName",
+        "sha256Hash"
+      ]
+    },
+    {
+      "properties": {
+        "strategy": {
+          "const": "http.html_search.v1"
+        }
+      },
+      "required": [
+        "strategy",
+        "baseUrl",
+        "searchUrlTemplate"
       ]
     }
   ],
   "properties": {
+    "strategy": {
+      "type": "string",
+      "enum": [
+        "http.mock.v1",
+        "http.vtex_persisted_query.v1",
+        "http.html_search.v1"
+      ]
+    },
     "baseUrl": {
       "type": "string",
       "minLength": 1
@@ -24,6 +61,82 @@
     "endpointTemplate": {
       "type": "string",
       "minLength": 1
+    },
+    "searchUrlTemplate": {
+      "type": "string",
+      "minLength": 1
+    },
+    "operationName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sha256Hash": {
+      "type": "string",
+      "minLength": 16
+    },
+    "lookupVariableName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "extraVariables": {
+      "type": "object"
+    },
+    "pricePath": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sellerPath": {
+      "type": "string",
+      "minLength": 1
+    },
+    "channelPath": {
+      "type": "string",
+      "minLength": 1
+    },
+    "priceRegex": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sellerRegex": {
+      "type": "string",
+      "minLength": 1
+    },
+    "timeoutSeconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 60
+    },
+    "maxRetries": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 8
+    },
+    "maxConcurrency": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 16
+    },
+    "requestsPerSecond": {
+      "type": "number",
+      "minimum": 0.1,
+      "maximum": 10.0
+    },
+    "retryHttpStatuses": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "uniqueItems": true,
+      "items": {
+        "type": "integer",
+        "minimum": 100,
+        "maximum": 599
+      }
+    },
+    "headers": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
     }
   }
 }

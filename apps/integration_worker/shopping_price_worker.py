@@ -14,6 +14,9 @@ import json
 import os
 import socket
 import sys
+import time
+import threading
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from hashlib import sha1
@@ -567,6 +570,165 @@ def mark_request_failed(
         cur.execute("COMMIT")
 
 
+@dataclass(frozen=True)
+class RuntimeTask:
+    product_id: str
+    supplier_code: str
+    product_reference: str
+    product_ean: str
+    base_price: float
+    currency_code: str
+    observed_at: str
+    signal: SupplierSignal | None
+
+
+class TokenBucket:
+    def __init__(self, rate_per_second: float, capacity: float = 1.0) -> None:
+        self.rate_per_second = max(0.01, rate_per_second)
+        self.capacity = max(1.0, capacity)
+        self.tokens = self.capacity
+        self.updated_at = time.monotonic()
+        self._lock = threading.Lock()
+
+    def wait_for_token(self) -> None:
+        while True:
+            sleep_for = 0.0
+            with self._lock:
+                now = time.monotonic()
+                elapsed = max(0.0, now - self.updated_at)
+                self.updated_at = now
+                self.tokens = min(self.capacity, self.tokens + elapsed * self.rate_per_second)
+                if self.tokens >= 1.0:
+                    self.tokens -= 1.0
+                    return
+                missing = 1.0 - self.tokens
+                sleep_for = missing / self.rate_per_second
+            time.sleep(max(0.001, sleep_for))
+
+
+def _safe_int(value: Any, default: int, minimum: int, maximum: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    if parsed < minimum:
+        return minimum
+    if parsed > maximum:
+        return maximum
+    return parsed
+
+
+def _safe_float_range(value: Any, default: float, minimum: float, maximum: float) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return default
+    if parsed < minimum:
+        return minimum
+    if parsed > maximum:
+        return maximum
+    return parsed
+
+
+def _max_workers_for_config(config: SupplierRuntimeConfig) -> int:
+    if config.family == "http":
+        return _safe_int(config.config_json.get("maxConcurrency"), 4, 1, 16)
+    if config.family == "playwright":
+        return _safe_int(config.config_json.get("tabs"), 1, 1, 10)
+    return 1
+
+
+def _requests_per_second_for_config(config: SupplierRuntimeConfig) -> float:
+    if config.family != "http":
+        return 0.0
+    return _safe_float_range(config.config_json.get("requestsPerSecond"), 0.0, 0.0, 10.0)
+
+
+def _default_runtime_error_item(
+    task: RuntimeTask,
+    family: str,
+    note: str,
+) -> RunItem:
+    return RunItem(
+        product_id=task.product_id,
+        supplier_code=task.supplier_code,
+        item_status="ERROR",
+        seller_name=task.supplier_code.lower(),
+        channel=family.upper(),
+        observed_price=_safe_float(task.base_price, task.base_price),
+        currency_code=task.currency_code,
+        observed_at=task.observed_at,
+        product_url=task.signal.product_url if task.signal is not None else None,
+        notes=note,
+    )
+
+
+def execute_runtime_tasks_parallel(
+    tasks: list[RuntimeTask],
+    runtime_configs: dict[str, SupplierRuntimeConfig],
+) -> list[RunItem]:
+    if len(tasks) == 0:
+        return []
+
+    semaphores: dict[str, threading.Semaphore] = {}
+    rate_limiters: dict[str, TokenBucket] = {}
+    max_workers_sum = 0
+    for supplier_code, config in runtime_configs.items():
+        supplier_upper = supplier_code.upper()
+        cap = _max_workers_for_config(config)
+        semaphores[supplier_upper] = threading.Semaphore(cap)
+        max_workers_sum += cap
+        rps = _requests_per_second_for_config(config)
+        if rps > 0.0:
+            rate_limiters[supplier_upper] = TokenBucket(rate_per_second=rps, capacity=max(1.0, rps))
+
+    if max_workers_sum <= 0:
+        max_workers_sum = 1
+    max_workers = min(max_workers_sum, len(tasks), 32)
+    max_workers = max(1, max_workers)
+
+    results: list[RunItem | None] = [None] * len(tasks)
+
+    def run_single(task: RuntimeTask) -> RunItem:
+        supplier_code = task.supplier_code.upper()
+        config = runtime_configs.get(supplier_code)
+        if config is None:
+            return _default_runtime_error_item(task, "runtime", "runtime_config_missing")
+
+        semaphore = semaphores.get(supplier_code)
+        limiter = rate_limiters.get(supplier_code)
+
+        if semaphore is None:
+            return _default_runtime_error_item(task, config.family, "runtime_semaphore_missing")
+
+        with semaphore:
+            if limiter is not None:
+                limiter.wait_for_token()
+            try:
+                return execute_supplier_runtime(
+                    config=config,
+                    product_id=task.product_id,
+                    product_reference=task.product_reference,
+                    product_ean=task.product_ean,
+                    base_price=task.base_price,
+                    currency_code=task.currency_code,
+                    observed_at=task.observed_at,
+                    signal=task.signal,
+                )
+            except Exception as exc:
+                return _default_runtime_error_item(task, config.family, f"runtime_exception:{str(exc)[:240]}")
+
+    with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="shopping-runtime") as executor:
+        pending: dict[Future[RunItem], int] = {}
+        for index, task in enumerate(tasks):
+            pending[executor.submit(run_single, task)] = index
+        for future in as_completed(pending):
+            index = pending[future]
+            results[index] = future.result()
+
+    return [item for item in results if item is not None]
+
+
 def query_catalog_items(
     conn: psycopg.Connection,
     tenant_id: str,
@@ -603,6 +765,7 @@ def query_catalog_items(
     signal_overrides = fetch_supplier_signal_overrides(conn, tenant_id, [str(row[0]) for row in rows], effective_suppliers)
     runtime_configs = fetch_supplier_runtime_configs(conn, tenant_id, effective_suppliers)
     now_iso = utc_now_iso()
+    tasks: list[RuntimeTask] = []
     items: list[RunItem] = []
     for row in rows:
         product_id = str(row[0])
@@ -628,18 +791,19 @@ def query_catalog_items(
                     )
                 )
                 continue
-            items.append(
-                execute_supplier_runtime(
-                    config=runtime_config,
+            tasks.append(
+                RuntimeTask(
                     product_id=product_id,
+                    supplier_code=supplier_code.upper(),
                     product_reference=product_reference,
                     product_ean=product_ean,
-                    base_price=observed_price,
+                    base_price=_safe_float(observed_price, observed_price),
                     currency_code=currency_code,
                     observed_at=now_iso,
                     signal=signal,
                 )
             )
+    items.extend(execute_runtime_tasks_parallel(tasks, runtime_configs))
     return items
 
 
@@ -677,6 +841,7 @@ def query_xlsx_fallback_items(
     signal_overrides = fetch_supplier_signal_overrides(conn, tenant_id, [str(row[0]) for row in rows], effective_suppliers)
     runtime_configs = fetch_supplier_runtime_configs(conn, tenant_id, effective_suppliers)
     now_iso = utc_now_iso()
+    tasks: list[RuntimeTask] = []
     items: list[RunItem] = []
     for row in rows:
         product_id = str(row[0])
@@ -702,18 +867,19 @@ def query_xlsx_fallback_items(
                     )
                 )
                 continue
-            items.append(
-                execute_supplier_runtime(
-                    config=runtime_config,
+            tasks.append(
+                RuntimeTask(
                     product_id=product_id,
+                    supplier_code=supplier_code.upper(),
                     product_reference=product_reference,
                     product_ean=product_ean,
-                    base_price=observed_price,
+                    base_price=_safe_float(observed_price, observed_price),
                     currency_code=currency_code,
                     observed_at=now_iso,
                     signal=signal,
                 )
             )
+    items.extend(execute_runtime_tasks_parallel(tasks, runtime_configs))
     return items
 
 

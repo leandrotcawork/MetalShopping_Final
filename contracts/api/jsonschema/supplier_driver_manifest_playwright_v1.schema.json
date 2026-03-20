@@ -4,19 +4,53 @@
   "title": "SupplierDriverManifestPlaywrightV1",
   "type": "object",
   "additionalProperties": true,
-  "anyOf": [
+  "required": [
+    "strategy"
+  ],
+  "oneOf": [
     {
+      "properties": {
+        "strategy": {
+          "const": "playwright.mock.v1"
+        }
+      },
       "required": [
+        "strategy",
         "startUrl"
       ]
     },
     {
+      "properties": {
+        "strategy": {
+          "const": "playwright.pdp_first.v1"
+        }
+      },
       "required": [
-        "searchUrl"
+        "strategy",
+        "pdpSelectors"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "startUrl"
+          ]
+        },
+        {
+          "required": [
+            "searchUrl"
+          ]
+        }
       ]
     }
   ],
   "properties": {
+    "strategy": {
+      "type": "string",
+      "enum": [
+        "playwright.mock.v1",
+        "playwright.pdp_first.v1"
+      ]
+    },
     "startUrl": {
       "type": "string",
       "minLength": 1
@@ -24,6 +58,44 @@
     "searchUrl": {
       "type": "string",
       "minLength": 1
+    },
+    "fallbackSearchUrl": {
+      "type": "string",
+      "minLength": 1
+    },
+    "pdpSelectors": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "headless": {
+      "type": "boolean"
+    },
+    "waitUntil": {
+      "type": "string",
+      "enum": [
+        "load",
+        "domcontentloaded",
+        "networkidle",
+        "commit"
+      ]
+    },
+    "timeoutSeconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 120
+    },
+    "tabs": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10
+    },
+    "circuitBreakerThreshold": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10
     }
   }
 }

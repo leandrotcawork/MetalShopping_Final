@@ -114,6 +114,7 @@
 - Driver strategy framework ADR (ADR-0030) accepted to freeze `family + strategy` scaling model before implementing real non-mock suppliers at scale
 - Backend completion ADR tranche drafted for driver framework parity (ADR-0031..ADR-0034)
 - ADR-0031 accepted: runtime extracted from `shopping_price_worker.py` into `apps/integration_worker/src/shopping_price_runtime/*`, compile checks passed, and smoke (`scripts/smoke_shopping_event_local.ps1`) passed outside sandbox
+- ADR-0032 implemented: bounded runtime parallelism + HTTP rate limiting + retry status policy with schema and server-side validation updates; acceptance now depends on ADR-0033 multi-supplier smoke evidence
 
 ## Next
 

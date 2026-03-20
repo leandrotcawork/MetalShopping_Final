@@ -22,7 +22,8 @@ Current next step inside Shopping Level 2:
 
 - ADR-0030 accepted and one non-mock VTEX pilot completed with objective smoke evidence.
 - ADR-0031 accepted (runtime package extraction + compile + smoke evidence).
-- next: execute ADR-0032..ADR-0034 before implementing the Shopping Price legacy workflow UI.
+- ADR-0032 implemented (bounded concurrency/rate-limit controls) and awaiting ADR-0033 multi-supplier acceptance evidence.
+- next: execute ADR-0033 and ADR-0034 before implementing the Shopping Price legacy workflow UI.
 
 ## Constraints
 
