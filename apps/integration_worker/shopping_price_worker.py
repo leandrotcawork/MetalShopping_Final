@@ -250,7 +250,11 @@ def upsert_run(
                 )
                 VALUES (
                   current_tenant_id(), %s, %s, %s::text,
-                  CASE WHEN %s::text IS NULL OR %s::text = '' THEN 'STALE' ELSE 'ACTIVE' END,
+                  CASE
+                    WHEN %s::int IN (404, 410) THEN 'INVALID'
+                    WHEN %s::text IS NULL OR %s::text = '' THEN 'STALE'
+                    ELSE 'ACTIVE'
+                  END,
                   %s, 'INFERRED',
                   FALSE, (%s)::timestamptz,
                   CASE WHEN %s::text IS NULL OR %s::text = '' THEN NULL ELSE (%s)::timestamptz END,
@@ -262,10 +266,12 @@ def upsert_run(
                 ON CONFLICT (tenant_id, product_id, supplier_code) DO UPDATE SET
                   product_url = CASE
                     WHEN shopping_supplier_product_signals.manual_override THEN shopping_supplier_product_signals.product_url
+                    WHEN EXCLUDED.last_http_status IN (404, 410) THEN NULL
                     ELSE COALESCE(EXCLUDED.product_url, shopping_supplier_product_signals.product_url)
                   END,
                   url_status = CASE
                     WHEN shopping_supplier_product_signals.manual_override THEN shopping_supplier_product_signals.url_status
+                    WHEN EXCLUDED.last_http_status IN (404, 410) THEN 'INVALID'
                     WHEN EXCLUDED.product_url IS NULL OR EXCLUDED.product_url = '' THEN 'STALE'
                     ELSE 'ACTIVE'
                   END,
@@ -286,6 +292,7 @@ def upsert_run(
                   last_error_message = EXCLUDED.last_error_message,
                   next_discovery_at = CASE
                     WHEN shopping_supplier_product_signals.manual_override THEN shopping_supplier_product_signals.next_discovery_at
+                    WHEN EXCLUDED.last_http_status IN (404, 410) THEN NOW() + INTERVAL '30 days'
                     WHEN EXCLUDED.product_url IS NOT NULL AND EXCLUDED.product_url <> '' THEN NULL
                     WHEN %s::text = 'NOT_FOUND' THEN NOW() + INTERVAL '30 days'
                     WHEN %s::text = 'ERROR' AND (
@@ -307,6 +314,7 @@ def upsert_run(
                     item.product_id,
                     item.supplier_code,
                     item.product_url,
+                    item.http_status,
                     item.product_url,
                     item.product_url,
                     inferred_lookup_mode,
