@@ -439,7 +439,7 @@ def _leroy_extract_product_id_from_url(url: str) -> str:
     text = safe_str(url, "")
     if text == "":
         return ""
-    match = re.search(r"_(\d{5,})(?:[/?#]|$)", text, flags=re.IGNORECASE)
+    match = re.search(r"_(\d{5,})(?:[/?#&]|$)", text, flags=re.IGNORECASE)
     if match is not None:
         return safe_str(match.group(1), "")
     return ""
@@ -494,6 +494,8 @@ def _leroy_extract_sellers(payload: Any) -> list[dict[str, Any]]:
         return [item for item in payload if isinstance(item, dict)]
     if not isinstance(payload, dict):
         return []
+    if isinstance(payload.get("data"), list):
+        return [item for item in payload["data"] if isinstance(item, dict)]
     if isinstance(payload.get("sellers"), list):
         return [item for item in payload["sellers"] if isinstance(item, dict)]
     data = payload.get("data")
@@ -502,12 +504,32 @@ def _leroy_extract_sellers(payload: Any) -> list[dict[str, Any]]:
     return []
 
 
+def _resolve_leroy_region(config: SupplierRuntimeConfig) -> str:
+    configured = safe_str(config.config_json.get("region"), "").strip()
+    if configured == "":
+        return "uberlandia"
+    normalized = configured.lower().replace("-", "_")
+    valid_aliases = {
+        "uberlandia": "uberlandia",
+    }
+    return valid_aliases.get(normalized, "uberlandia")
+
+
 def _leroy_seller_price(seller: dict[str, Any], base_price: float) -> float:
     direct_keys = ("salePrice", "salesPrice", "price", "value")
     for key in direct_keys:
         parsed = decode_price_text(seller.get(key), -1.0)
         if parsed > 0:
             return parsed
+
+    pricing = seller.get("pricing")
+    if isinstance(pricing, dict):
+        pricing_price = pricing.get("price")
+        if isinstance(pricing_price, dict):
+            for key in ("to", "from"):
+                parsed = decode_price_text(pricing_price.get(key), -1.0)
+                if parsed > 0:
+                    return parsed
 
     nested_prices = seller.get("prices")
     if isinstance(nested_prices, dict):
@@ -647,7 +669,7 @@ def _execute_http_leroy_search_sellers_strategy(
         return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_LEROY", search_status, "leroy_sellers_url_missing", strategy, lookup_term)
 
     seller_headers = dict(base_headers)
-    seller_headers["x-region"] = safe_str(config.config_json.get("region"), "uberlandia")
+    seller_headers["x-region"] = _resolve_leroy_region(config)
     seller_headers.setdefault("Accept", "application/json")
 
     sellers_body, sellers_status, _resolved, sellers_note = _http_get_with_retries(

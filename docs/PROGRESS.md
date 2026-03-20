@@ -119,6 +119,7 @@
 - ADR-0034 implemented: `playwright.pdp_first.v1` non-mock runtime delivered (real browser navigation, selector extraction, anti-block notes, bounded retries) with Playwright toolchain installed and direct runtime smoke returning `OK` + `PLAYWRIGHT` + non-zero price
 - ADR-0042 accepted: `http.html_dom_first_card.v1` validated with `ABC` smoke `OK` (`run_request_id=aba7655c-d422-4960-8765-8627638fad47`)
 - ADR-0040 accepted: legacy suppliers pack validated (`TELHA_NORTE`, `LEROY`, `ABC`) with non-mock smoke evidence and enabled suppliers directory list
+- ADR-0041 accepted: `http.leroy_search_sellers.v1` validated with `LEROY` smoke `OK` and `http_status=200` (`run_request_id=fc383948-a124-4db1-b428-6c775eba8b8c`)
 
 ## Next
 

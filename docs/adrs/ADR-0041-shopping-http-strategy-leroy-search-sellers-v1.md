@@ -1,6 +1,6 @@
 # ADR-0041: Shopping HTTP Strategy `http.leroy_search_sellers.v1`
 
-- Status: draft
+- Status: accepted
 - Date: 2026-03-20
 
 ## Context
@@ -76,14 +76,14 @@ Optional:
 
 ## Acceptance Evidence (for Status: accepted)
 
-- Driver suite includes `LEROY` with `item_status=OK` for at least 1 real catalog product id in `tenant_default`.
-- Observation row includes:
-  - `channel=HTTP` (or `HTTP_LEROY`)
-  - `http_status` set for the sellers request
-  - `note` describing which extraction path was used.
+- Smoke (tenant `tenant_default`) produced `OK` for `LEROY` using real HTTP flow:
+  - `run_request_id`: `fc383948-a124-4db1-b428-6c775eba8b8c`
+  - `run_id`: `1412fbfd-0615-4eac-8f5f-d6d43229d3cf`
+  - sample: `product_id=prd_smoke_leroy_002`, `lookup_term=7890942819173`, `observed_price=77.9300`, `http_status=200`
+  - `channel=HTTP_LEROY`
+  - `note`: `leroy_ok search=search_final_url_product_id sellers=selected_seller ...`
 
 ## Consequences
 
 - Adds a new bounded strategy without changing the family model.
 - Enables LEROY without Playwright dependency, keeping cost and flakiness lower.
-
