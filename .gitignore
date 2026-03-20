@@ -10,6 +10,8 @@ dist/
 build/
 coverage/
 .cache/
+.gocache-*/
+.tmp/
 .env
 .env.*
 !.env.example
