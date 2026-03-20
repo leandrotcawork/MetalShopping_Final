@@ -58,6 +58,8 @@ type SupplierSignal struct {
 	LastSuccessAt    *time.Time
 	LastHTTPStatus   *int64
 	LastErrorMessage *string
+	NextDiscoveryAt  *time.Time
+	NotFoundCount    int64
 	UpdatedAt        time.Time
 }
 

@@ -498,6 +498,8 @@ export type ShoppingSupplierSignalV1 = {
   lastSuccessAt?: string | null;
   lastHttpStatus?: number | null;
   lastErrorMessage?: string | null;
+  nextDiscoveryAt?: string | null;
+  notFoundCount?: number;
   updatedAt: string;
 };
 
@@ -511,13 +513,41 @@ export type ShoppingUpsertSupplierSignalRequestV1 = {
 };
 
 export type SupplierDriverManifestHttpV1 = {
+  strategy: "http.mock.v1" | "http.vtex_persisted_query.v1" | "http.html_search.v1";
   baseUrl?: string;
   endpointTemplate?: string;
+  searchUrlTemplate?: string;
+  operationName?: string;
+  sha256Hash?: string;
+  lookupVariableName?: string;
+  extraVariables?: Record<string, unknown>;
+  pricePath?: string;
+  sellerPath?: string;
+  channelPath?: string;
+  priceRegex?: string;
+  sellerRegex?: string;
+  timeoutSeconds?: number;
+  maxRetries?: number;
+  maxConcurrency?: number;
+  requestsPerSecond?: number;
+  retryHttpStatuses?: Array<number>;
+  headers?: Record<string, unknown>;
 };
 
 export type SupplierDriverManifestPlaywrightV1 = {
+  strategy: "playwright.mock.v1" | "playwright.pdp_first.v1";
   startUrl?: string;
   searchUrl?: string;
+  searchUrlTemplate?: string;
+  fallbackSearchUrl?: string;
+  fallbackSearchEnabled?: boolean;
+  pdpSelectors?: Record<string, unknown>;
+  headless?: boolean;
+  waitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit";
+  timeoutSeconds?: number;
+  maxRetries?: number;
+  tabs?: number;
+  circuitBreakerThreshold?: number;
 };
 
 export type SuppliersCreateDriverManifestRequestV1 = {

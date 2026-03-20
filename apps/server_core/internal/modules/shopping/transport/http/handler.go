@@ -595,6 +595,8 @@ func mapSupplierSignal(item ports.SupplierSignal) map[string]any {
 		"lastSuccessAt":    nil,
 		"lastHttpStatus":   nil,
 		"lastErrorMessage": nil,
+		"nextDiscoveryAt":  nil,
+		"notFoundCount":    item.NotFoundCount,
 		"updatedAt":        item.UpdatedAt.UTC().Format(time.RFC3339),
 	}
 	if item.ProductURL != nil {
@@ -611,6 +613,9 @@ func mapSupplierSignal(item ports.SupplierSignal) map[string]any {
 	}
 	if item.LastErrorMessage != nil {
 		payload["lastErrorMessage"] = *item.LastErrorMessage
+	}
+	if item.NextDiscoveryAt != nil {
+		payload["nextDiscoveryAt"] = item.NextDiscoveryAt.UTC().Format(time.RFC3339)
 	}
 	return payload
 }

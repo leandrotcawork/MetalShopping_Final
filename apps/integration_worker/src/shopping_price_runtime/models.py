@@ -9,6 +9,9 @@ class SupplierSignal:
     product_url: str | None
     lookup_mode: str
     manual_override: bool
+    # URL discovery (search fallback) should be decided by orchestration using durable DB lifecycle fields.
+    # Strategies should treat this as a simple capability flag.
+    allow_url_discovery: bool = True
 
 
 @dataclass(frozen=True)

@@ -126,7 +126,7 @@ The most important remaining gaps are:
 - login closure governance remains documented, and operational module work now follows make-it-work-first sequencing
 - outbox exists and catalog emits real events, but broker delivery and worker consumption are still not in place
 - governance is operational in runtime, but broader operational surfaces still need administrative mutation paths
-- Shopping Price Level 2 is still missing the write/orchestration surface, supplier directory/manifests, and a real worker execution core (blocks analytics slices that depend on Shopping snapshots)
+- Shopping Price Level 2 still needs the supplier URL discovery lifecycle (ADR-0035) to avoid reprocessing NOT_FOUND products and to schedule refresh windows for Playwright suppliers
 - catalog is now a strong canonical foundation, pricing semantics have been realigned against the accepted SKU ownership model, inventory owns live stock position, and the next gate is freezing procurement so supplier-side replenishment semantics do not leak into existing modules
 - contract validation, generated artifact drift checks, backend tests, web typecheck/build, and SoT documentation consistency are now enforced on `pull_request` CI workflow
 

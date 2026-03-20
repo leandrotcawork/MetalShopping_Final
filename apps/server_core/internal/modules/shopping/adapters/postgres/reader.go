@@ -410,6 +410,8 @@ SELECT
   last_success_at,
   last_http_status,
   last_error_message,
+  next_discovery_at,
+  not_found_count,
   updated_at
 FROM shopping_supplier_product_signals
 WHERE tenant_id = current_tenant_id()
@@ -510,6 +512,7 @@ func scanSupplierSignal(s scanner) (ports.SupplierSignal, error) {
 	var lastSuccessAt sql.NullTime
 	var lastHTTPStatus sql.NullInt64
 	var lastErrorMessage sql.NullString
+	var nextDiscoveryAt sql.NullTime
 	if err := s.Scan(
 		&item.ProductID,
 		&item.SupplierCode,
@@ -522,6 +525,8 @@ func scanSupplierSignal(s scanner) (ports.SupplierSignal, error) {
 		&lastSuccessAt,
 		&lastHTTPStatus,
 		&lastErrorMessage,
+		&nextDiscoveryAt,
+		&item.NotFoundCount,
 		&item.UpdatedAt,
 	); err != nil {
 		return ports.SupplierSignal{}, err
@@ -545,6 +550,10 @@ func scanSupplierSignal(s scanner) (ports.SupplierSignal, error) {
 	if lastErrorMessage.Valid {
 		value := lastErrorMessage.String
 		item.LastErrorMessage = &value
+	}
+	if nextDiscoveryAt.Valid {
+		value := nextDiscoveryAt.Time.UTC()
+		item.NextDiscoveryAt = &value
 	}
 	item.UpdatedAt = item.UpdatedAt.UTC()
 	return item, nil

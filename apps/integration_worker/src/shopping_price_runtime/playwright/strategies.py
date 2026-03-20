@@ -77,6 +77,8 @@ def _execute_playwright_pdp_first_non_mock(
     wait_until = safe_str(config.config_json.get("waitUntil"), "domcontentloaded")
     locale = safe_str(config.config_json.get("locale"), "pt-BR")
     fallback_enabled = bool(config.config_json.get("fallbackSearchEnabled", False))
+    if signal is not None and not signal.allow_url_discovery and safe_str(signal.product_url, "").strip() == "":
+        fallback_enabled = False
     price_regex_raw = safe_str(
         config.config_json.get("priceRegex"),
         r"(\d{1,3}(?:\.\d{3})*,\d{2}|\d+(?:\.\d{2})?)",

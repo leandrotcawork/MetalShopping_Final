@@ -223,6 +223,8 @@ ON CONFLICT (tenant_id, product_id, supplier_code) DO UPDATE SET
   lookup_mode = COALESCE($5, shopping_supplier_product_signals.lookup_mode),
   lookup_mode_source = 'MANUAL',
   manual_override = COALESCE($6, TRUE),
+  next_discovery_at = NULL,
+  not_found_count = 0,
   last_checked_at = NOW(),
   last_success_at = CASE
     WHEN EXCLUDED.product_url IS NULL OR EXCLUDED.product_url = '' THEN shopping_supplier_product_signals.last_success_at
@@ -241,6 +243,8 @@ RETURNING
   last_success_at,
   last_http_status,
   last_error_message,
+  next_discovery_at,
+  not_found_count,
   updated_at
 `
 
@@ -250,6 +254,7 @@ RETURNING
 	var lastSuccessAt sql.NullTime
 	var lastHTTPStatus sql.NullInt64
 	var lastErrorMessage sql.NullString
+	var nextDiscoveryAt sql.NullTime
 	if err := tx.QueryRowContext(
 		ctx,
 		query,
@@ -272,6 +277,8 @@ RETURNING
 		&lastSuccessAt,
 		&lastHTTPStatus,
 		&lastErrorMessage,
+		&nextDiscoveryAt,
+		&signal.NotFoundCount,
 		&signal.UpdatedAt,
 	); err != nil {
 		return ports.SupplierSignal{}, fmt.Errorf("upsert shopping supplier signal: %w", err)
@@ -296,6 +303,10 @@ RETURNING
 	if lastErrorMessage.Valid {
 		value := lastErrorMessage.String
 		signal.LastErrorMessage = &value
+	}
+	if nextDiscoveryAt.Valid {
+		value := nextDiscoveryAt.Time.UTC()
+		signal.NextDiscoveryAt = &value
 	}
 	signal.UpdatedAt = signal.UpdatedAt.UTC()
 

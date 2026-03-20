@@ -245,6 +245,7 @@ def upsert_run(
                 INSERT INTO shopping_supplier_product_signals (
                   tenant_id, product_id, supplier_code, product_url, url_status, lookup_mode, lookup_mode_source,
                   manual_override, last_checked_at, last_success_at, last_http_status, last_error_message,
+                  next_discovery_at, not_found_count,
                   created_by, created_at, updated_at
                 )
                 VALUES (
@@ -254,6 +255,8 @@ def upsert_run(
                   FALSE, (%s)::timestamptz,
                   CASE WHEN %s::text IS NULL OR %s::text = '' THEN NULL ELSE (%s)::timestamptz END,
                   %s, %s,
+                  CASE WHEN %s::text = 'NOT_FOUND' THEN NOW() + INTERVAL '30 days' ELSE NULL END,
+                  CASE WHEN %s::text = 'NOT_FOUND' THEN 1 ELSE 0 END,
                   'shopping_worker', NOW(), NOW()
                 )
                 ON CONFLICT (tenant_id, product_id, supplier_code) DO UPDATE SET
@@ -281,6 +284,23 @@ def upsert_run(
                   END,
                   last_http_status = EXCLUDED.last_http_status,
                   last_error_message = EXCLUDED.last_error_message,
+                  next_discovery_at = CASE
+                    WHEN shopping_supplier_product_signals.manual_override THEN shopping_supplier_product_signals.next_discovery_at
+                    WHEN EXCLUDED.product_url IS NOT NULL AND EXCLUDED.product_url <> '' THEN NULL
+                    WHEN %s::text = 'NOT_FOUND' THEN NOW() + INTERVAL '30 days'
+                    WHEN %s::text = 'ERROR' AND (
+                      EXCLUDED.last_error_message ILIKE '%cloudflare%'
+                      OR EXCLUDED.last_error_message ILIKE '%captcha%'
+                      OR EXCLUDED.last_error_message ILIKE '%access denied%'
+                    ) THEN NOW() + INTERVAL '7 days'
+                    ELSE shopping_supplier_product_signals.next_discovery_at
+                  END,
+                  not_found_count = CASE
+                    WHEN shopping_supplier_product_signals.manual_override THEN shopping_supplier_product_signals.not_found_count
+                    WHEN EXCLUDED.product_url IS NOT NULL AND EXCLUDED.product_url <> '' THEN 0
+                    WHEN %s::text = 'NOT_FOUND' THEN shopping_supplier_product_signals.not_found_count + 1
+                    ELSE shopping_supplier_product_signals.not_found_count
+                  END,
                   updated_at = NOW()
                 """,
                 (
@@ -296,6 +316,11 @@ def upsert_run(
                     item.observed_at,
                     item.http_status,
                     item.notes,
+                    item.item_status,
+                    item.item_status,
+                    item.item_status,
+                    item.item_status,
+                    item.item_status,
                 ),
             )
 
@@ -912,7 +937,8 @@ def fetch_supplier_signal_overrides(
               supplier_code,
               product_url,
               lookup_mode,
-              manual_override
+              manual_override,
+              next_discovery_at
             FROM shopping_supplier_product_signals
             WHERE tenant_id = current_tenant_id()
               AND product_id = ANY(%s::text[])
@@ -923,6 +949,7 @@ def fetch_supplier_signal_overrides(
         rows = cur.fetchall()
         cur.execute("COMMIT")
 
+    now = datetime.now(timezone.utc)
     output: dict[str, SupplierSignal] = {}
     for row in rows:
         product_id = str(row[0])
@@ -930,10 +957,20 @@ def fetch_supplier_signal_overrides(
         product_url = str(row[2]).strip() if row[2] is not None else None
         lookup_mode = str(row[3]).upper() if row[3] is not None else "REFERENCE"
         manual_override = bool(row[4])
+        next_discovery_at = row[5] if len(row) > 5 else None
+        if isinstance(next_discovery_at, datetime) and next_discovery_at.tzinfo is None:
+            next_discovery_at = next_discovery_at.replace(tzinfo=timezone.utc)
+
+        allow_url_discovery = True
+        if manual_override:
+            allow_url_discovery = False
+        if isinstance(next_discovery_at, datetime) and next_discovery_at > now:
+            allow_url_discovery = False
         output[signal_key(product_id, supplier_code)] = SupplierSignal(
             product_url=product_url if product_url else None,
             lookup_mode=lookup_mode if lookup_mode in {"EAN", "REFERENCE"} else "REFERENCE",
             manual_override=manual_override,
+            allow_url_discovery=allow_url_discovery,
         )
     return output
 

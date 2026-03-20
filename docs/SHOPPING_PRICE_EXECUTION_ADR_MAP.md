@@ -127,6 +127,12 @@ For any Shopping evolution (Level 2+), the execution sequence is frozen:
   Goal: at least one non-mock Playwright supplier (OBRA_FACIL) accepted end-to-end.
   Status: accepted (evidence: run `23289388-75b5-4c9f-89e4-5dcc6003eeea` with `item_status=OK`, `channel=PLAYWRIGHT`)
 
+- ADR-0035: Shopping Supplier URL Discovery Lifecycle v1
+  Skills: `metalshopping-adr-updates`, `metalshopping-openapi-contracts`, `metalshopping-contract-authoring`, `metalshopping-worker-scaffold`, `metalshopping-worker-patterns`, `metalshopping-observability-security`
+  Contracts: OpenAPI + JSON Schema evolution for discovery lifecycle fields (optional governance policy)
+  Goal: deterministic URL discovery scheduling with cooldowns for Playwright suppliers.
+  Status: draft
+
 ## Rule
 
 Next gate before UI: complete backend driver framework parity ADRs (ADR-0031..ADR-0034) with objective smoke evidence for the legacy supplier set.

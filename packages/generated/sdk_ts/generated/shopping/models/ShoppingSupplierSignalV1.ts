@@ -90,6 +90,18 @@ export interface ShoppingSupplierSignalV1 {
      * @type {Date}
      * @memberof ShoppingSupplierSignalV1
      */
+    nextDiscoveryAt?: Date | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof ShoppingSupplierSignalV1
+     */
+    notFoundCount?: number;
+    /**
+     * 
+     * @type {Date}
+     * @memberof ShoppingSupplierSignalV1
+     */
     updatedAt: Date;
 }
 
@@ -158,6 +170,8 @@ export function ShoppingSupplierSignalV1FromJSONTyped(json: any, ignoreDiscrimin
         'lastSuccessAt': json['lastSuccessAt'] == null ? undefined : json['lastSuccessAt'],
         'lastHttpStatus': json['lastHttpStatus'] == null ? undefined : json['lastHttpStatus'],
         'lastErrorMessage': json['lastErrorMessage'] == null ? undefined : json['lastErrorMessage'],
+        'nextDiscoveryAt': json['nextDiscoveryAt'] == null ? undefined : (new Date(json['nextDiscoveryAt'])),
+        'notFoundCount': json['notFoundCount'] == null ? undefined : json['notFoundCount'],
         'updatedAt': (new Date(json['updatedAt'])),
     };
 }
@@ -184,6 +198,8 @@ export function ShoppingSupplierSignalV1ToJSONTyped(value?: ShoppingSupplierSign
         'lastSuccessAt': value['lastSuccessAt'],
         'lastHttpStatus': value['lastHttpStatus'],
         'lastErrorMessage': value['lastErrorMessage'],
+        'nextDiscoveryAt': value['nextDiscoveryAt'] == null ? value['nextDiscoveryAt'] : value['nextDiscoveryAt'].toISOString(),
+        'notFoundCount': value['notFoundCount'],
         'updatedAt': value['updatedAt'].toISOString(),
     };
 }
