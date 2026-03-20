@@ -12,6 +12,7 @@ type FilterDropdownProps = {
   options: SelectMenuOption[];
   onSelect: (value: string) => void;
   label?: string;
+  allLabel?: string;
   value?: string;
   values?: string[];
   selectionMode?: "one" | "duo";
@@ -29,6 +30,7 @@ export function FilterDropdown({
   options,
   onSelect,
   label,
+  allLabel,
   value = "",
   values = [],
   selectionMode = "one",
@@ -38,6 +40,13 @@ export function FilterDropdown({
   chevronStrokeWidth = 2,
   classNamesOverrides = {},
 }: FilterDropdownProps) {
+  const resolvedOptions = useMemo(() => {
+    if (!allLabel || options.some((option) => option.value === "all")) {
+      return options;
+    }
+    return [{ value: "all", label: allLabel }, ...options];
+  }, [allLabel, options]);
+
   const classNames = useMemo(
     () => createSpotlightSelectClassNames(classNamesOverrides),
     [classNamesOverrides],
@@ -47,7 +56,7 @@ export function FilterDropdown({
     <SelectMenu
       id={id}
       label={label}
-      options={options}
+      options={resolvedOptions}
       onSelect={onSelect}
       value={value}
       values={values}

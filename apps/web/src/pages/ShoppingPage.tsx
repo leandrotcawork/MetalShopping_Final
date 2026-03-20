@@ -80,7 +80,7 @@ function StepPill(props: { step: WizardStep; activeStep: WizardStep; label: stri
       className={`${styles.step} ${isCompleted ? styles.stepCompleted : ""} ${isActive ? styles.stepActive : ""}`.trim()}
       onClick={props.onClick}
     >
-      <span className={styles.stepNumber}>{isCompleted ? "OK" : props.step}</span>
+      <span className={styles.stepNumber}>{isCompleted ? "✓" : props.step}</span>
       {props.label}
     </button>
   );
@@ -92,6 +92,7 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
   const [selectedStatus, setSelectedStatus] = useState<ShoppingRunStatus | "all">("all");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showLog, setShowLog] = useState(false);
+  const [showManualUrlPanel, setShowManualUrlPanel] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
 
   const [summary, setSummary] = useState<Awaited<ReturnType<ServerCoreSdk["shopping"]["getSummary"]>> | null>(null);
@@ -115,7 +116,10 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
   const [manualSignalSaving, setManualSignalSaving] = useState(false);
   const [manualSignals, setManualSignals] = useState<ShoppingSupplierSignalV1[]>([]);
   const [manualFilterProductId, setManualFilterProductId] = useState("");
-  const [manualFilterSupplierCode, setManualFilterSupplierCode] = useState("");
+  const [manualFilterSuppliers, setManualFilterSuppliers] = useState<string[]>([]);
+  const [manualFilterBrands, setManualFilterBrands] = useState<string[]>([]);
+  const [manualFilterTaxonomies, setManualFilterTaxonomies] = useState<string[]>([]);
+  const [manualShowExisting, setManualShowExisting] = useState(true);
   const [manualOffset, setManualOffset] = useState(0);
   const [manualTotal, setManualTotal] = useState(0);
   const [manualReturned, setManualReturned] = useState(0);
@@ -200,7 +204,7 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
       try {
         const list = await shoppingApi.listSupplierSignals({
           productId: manualFilterProductId.trim() || undefined,
-          supplierCode: manualFilterSupplierCode.trim() || undefined,
+          supplierCode: manualFilterSuppliers.length === 1 ? manualFilterSuppliers[0] : undefined,
           limit: 10,
           offset: manualOffset,
         });
@@ -221,7 +225,7 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     return () => {
       cancelled = true;
     };
-  }, [shoppingApi, manualFilterProductId, manualFilterSupplierCode, manualOffset, reloadTick]);
+  }, [shoppingApi, manualFilterProductId, manualFilterSuppliers, manualOffset, reloadTick]);
 
   useEffect(() => {
     if (inputMode !== "catalog") {
@@ -354,6 +358,38 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     inputMode === "xlsx"
       ? "Fonte selecionada: XLSX (Atual)"
       : `Fonte selecionada: Produtos Cadastrados (${selectedProductIds.length} selecionados)`;
+
+  const manualSupplierOptions = useMemo(
+    () =>
+      (bootstrap?.suppliers ?? [])
+        .filter((supplier) => supplier.enabled)
+        .map((supplier) => ({
+          value: supplier.supplierCode,
+          label: `${supplier.supplierLabel} (${supplier.supplierCode})`,
+        })),
+    [bootstrap],
+  );
+
+  const manualBrandOptions = useMemo(
+    () => catalogBrandOptions.filter((option) => option.value !== allOptionValue),
+    [catalogBrandOptions],
+  );
+
+  const manualTaxonomyOptions = useMemo(
+    () => catalogLeaf0Options.filter((option) => option.value !== allOptionValue),
+    [catalogLeaf0Options],
+  );
+
+  const manualVisibleSignals = useMemo(() => {
+    let rows = manualSignals;
+    if (!manualShowExisting) {
+      rows = rows.filter((signal) => !signal.productUrl);
+    }
+    if (manualFilterSuppliers.length > 0) {
+      rows = rows.filter((signal) => manualFilterSuppliers.includes(signal.supplierCode));
+    }
+    return rows;
+  }, [manualSignals, manualShowExisting, manualFilterSuppliers]);
 
   async function handleRunSelect(runId: string) {
     setError(null);
@@ -564,6 +600,7 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                 <label>
                   Buscar
                   <input
+                    className={styles.filterWidgetInput}
                     type="text"
                     value={catalogSearch}
                     onChange={(event) => {
@@ -585,8 +622,9 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                       resetCatalogPaging();
                     }}
                     classNamesOverrides={{
-                      wrap: styles.catalogFilterDropdownWrap,
-                      trigger: styles.catalogFilterDropdownTrigger,
+                      wrap: styles.filterWidgetDropdownWrap,
+                      trigger: styles.filterWidgetDropdownTrigger,
+                      value: styles.filterWidgetDropdownValue,
                     }}
                   />
                 </div>
@@ -602,8 +640,9 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                       resetCatalogPaging();
                     }}
                     classNamesOverrides={{
-                      wrap: styles.catalogFilterDropdownWrap,
-                      trigger: styles.catalogFilterDropdownTrigger,
+                      wrap: styles.filterWidgetDropdownWrap,
+                      trigger: styles.filterWidgetDropdownTrigger,
+                      value: styles.filterWidgetDropdownValue,
                     }}
                   />
                 </div>
@@ -619,8 +658,9 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                       resetCatalogPaging();
                     }}
                     classNamesOverrides={{
-                      wrap: styles.catalogFilterDropdownWrap,
-                      trigger: styles.catalogFilterDropdownTrigger,
+                      wrap: styles.filterWidgetDropdownWrap,
+                      trigger: styles.filterWidgetDropdownTrigger,
+                      value: styles.filterWidgetDropdownValue,
                     }}
                   />
                 </div>
@@ -719,23 +759,22 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
             <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={() => setStep(2)}>
               Continuar
             </button>
-          </div>
+          </div>  
         </article>
 
         <article className={`${styles.panel} ${step === 2 ? styles.panelActive : ""}`}>
-          <h2 className={styles.panelTitle}>Passo 2 - Configurar fornecedores</h2>
-          <p className={styles.panelSubtitle}>Escolha fornecedores, ajuste limites e configure URLs operacionais.</p>
+          <h2 className={styles.panelTitle}>Selecionar fornecedores</h2>
+          <p className={styles.panelSubtitle}>Selecione fornecedores e ajuste limites conforme necessario.</p>
 
           {bootstrap && bootstrap.suppliers.length > 0 ? (
             <div className={styles.catalogBlock}>
               <div className={styles.supplierHeader}>
-                <div>
-                  <h3 className={styles.supplierTitle}>Fornecedores habilitados</h3>
-                  <p className={styles.supplierSubtitle}>Selecione os fornecedores que vao participar desta run.</p>
-                </div>
                 <button type="button" className={`${styles.btn} ${styles.btnGhost}`} onClick={() => setSupplierCodes([])}>
                   Desmarcar todos
                 </button>
+                <span className={styles.supplierCounter}>
+                  {supplierCodes.length} de {bootstrap.suppliers.filter((supplier) => supplier.enabled).length} selecionados
+                </span>
               </div>
               <div className={styles.supplierGrid}>
                 {bootstrap.suppliers
@@ -750,11 +789,14 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                         onClick={() => toggleSupplier(supplier.supplierCode)}
                       >
                         <span className={`${styles.supplierCheck} ${selected ? styles.supplierCheckSelected : ""}`.trim()}>
-                          {selected ? "OK" : ""}
+                          {selected ? "✓" : ""}
                         </span>
                         <div className={styles.supplierMeta}>
                           <strong>{supplier.supplierLabel}</strong>
-                          <small>{supplier.executionKind}</small>
+                          <small>
+                            <span className={styles.supplierMetaDot} />
+                            {supplier.supplierCode} - {supplier.executionKind}
+                          </small>
                         </div>
                       </button>
                     );
@@ -763,6 +805,226 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
             </div>
           ) : null}
 
+          <div className={styles.manualPanelCard}>
+            <div className={styles.manualPanelHeader}>
+              <div>
+                <h3 className={styles.manualPanelTitle}>Configurar URLs manuais</h3>
+                <p className={styles.manualPanelSubtitle}>Abra apenas quando precisar preencher links faltantes.</p>
+              </div>
+              <button
+                type="button"
+                className={`${styles.btn} ${styles.btnPrimary} ${styles.manualPanelTrigger}`}
+                onClick={() => setShowManualUrlPanel((value) => !value)}
+              >
+                {showManualUrlPanel ? "Fechar URLs" : "Configurar URLs"}
+              </button>
+            </div>
+            {showManualUrlPanel ? (
+  <div className={styles.manualPanel}>
+    <div className={styles.manualFiltersCard}>
+      <div className={styles.manualFilters}>
+        <label className={styles.manualSearch}>
+          Buscar
+          <input
+            className={styles.filterWidgetInput}
+            type="text"
+            value={manualFilterProductId}
+            onChange={(event) => {
+              setManualFilterProductId(event.target.value);
+              setManualOffset(0);
+            }}
+            placeholder="Produto, SKU ou referencia"
+          />
+        </label>
+        <div className={styles.manualFilterField}>
+          <span>Fornecedor</span>
+                      <FilterDropdown
+                        id="manual-filter-supplier"
+                        options={manualSupplierOptions}
+                        allLabel="Todos fornecedores"
+                        values={manualFilterSuppliers}
+                        selectionMode="duo"
+                        onSelect={(value) => {
+                          if (value === allOptionValue) {
+                            setManualFilterSuppliers([]);
+                            setManualOffset(0);
+                            return;
+                          }
+                          setManualFilterSuppliers((current) =>
+                            current.includes(value) ? current.filter((item) => item !== value) : [...current, value],
+                          );
+              setManualOffset(0);
+            }}
+                        classNamesOverrides={{
+                          wrap: styles.filterWidgetDropdownWrap,
+                          trigger: styles.filterWidgetDropdownTrigger,
+                          value: styles.filterWidgetDropdownValue,
+                        }}
+                      />
+        </div>
+        <div className={styles.manualFilterField}>
+          <span>Marca</span>
+                      <FilterDropdown
+                        id="manual-filter-brand"
+                        options={manualBrandOptions}
+                        allLabel="Todas marcas"
+                        values={manualFilterBrands}
+                        selectionMode="duo"
+                        onSelect={(value) => {
+                          if (value === allOptionValue) {
+                            setManualFilterBrands([]);
+                            return;
+                          }
+                          setManualFilterBrands((current) =>
+                            current.includes(value) ? current.filter((item) => item !== value) : [...current, value],
+                          );
+            }}
+                        classNamesOverrides={{
+                          wrap: styles.filterWidgetDropdownWrap,
+                          trigger: styles.filterWidgetDropdownTrigger,
+                          value: styles.filterWidgetDropdownValue,
+                        }}
+                      />
+        </div>
+        <div className={styles.manualFilterField}>
+          <span>{catalogLeaf0Label}</span>
+                      <FilterDropdown
+                        id="manual-filter-taxonomy"
+                        options={manualTaxonomyOptions}
+                        allLabel={`Todos os ${catalogLeaf0Label.toLowerCase()}s`}
+                        values={manualFilterTaxonomies}
+                        selectionMode="duo"
+                        onSelect={(value) => {
+                          if (value === allOptionValue) {
+                            setManualFilterTaxonomies([]);
+                            return;
+                          }
+                          setManualFilterTaxonomies((current) =>
+                            current.includes(value) ? current.filter((item) => item !== value) : [...current, value],
+                          );
+            }}
+                        classNamesOverrides={{
+                          wrap: styles.filterWidgetDropdownWrap,
+                          trigger: styles.filterWidgetDropdownTrigger,
+                          value: styles.filterWidgetDropdownValue,
+                        }}
+                      />
+        </div>
+      </div>
+      <div className={styles.manualFiltersRow}>
+        <label className={styles.manualToggleSwitch}>
+          <input
+            type="checkbox"
+            checked={manualShowExisting}
+            onChange={() => setManualShowExisting((value) => !value)}
+          />
+          <span className={styles.manualToggleSlider} />
+          <span className={styles.manualToggleLabel}>Mostrar tambem URLs ja cadastradas</span>
+        </label>
+        <button
+          type="button"
+          className={`${styles.btn} ${styles.btnSecondary}`}
+          onClick={() => {
+            setManualOffset(0);
+            setReloadTick((current) => current + 1);
+          }}
+        >
+          Atualizar lista
+        </button>
+      </div>
+    </div>
+
+    <div className={styles.manualTableWrap}>
+      <table className={styles.manualTable}>
+        <thead>
+          <tr>
+            <th>Produto</th>
+            <th>Fornecedor</th>
+            <th>URL</th>
+            <th>Status</th>
+            <th>Cooldown</th>
+          </tr>
+        </thead>
+        <tbody>
+          {manualVisibleSignals.length === 0 ? (
+            <tr>
+              <td colSpan={5} className={styles.manualEmpty}>
+                Nenhum sinal encontrado.
+              </td>
+            </tr>
+          ) : (
+            manualVisibleSignals.map((signal) => {
+              const rowKey = manualRowKey(signal.productId, signal.supplierCode);
+              const draftUrl = manualEditUrls[rowKey] ?? signal.productUrl ?? "";
+              const nextDiscovery = signal.nextDiscoveryAt ? formatDateTime(signal.nextDiscoveryAt) : "--";
+              const notFoundCount = signal.notFoundCount ?? 0;
+              return (
+                <tr key={rowKey}>
+                  <td>
+                    <div className={styles.manualProductCell}>
+                      <strong>{signal.productId}</strong>
+                      <small>NotFound {notFoundCount}</small>
+                    </div>
+                  </td>
+                  <td>{signal.supplierCode}</td>
+                  <td>
+                    <input
+                      type="text"
+                      value={draftUrl}
+                      onChange={(event) =>
+                        setManualEditUrls((current) => ({
+                          ...current,
+                          [rowKey]: event.target.value,
+                        }))
+                      }
+                      placeholder="https://fornecedor/pdp/produto"
+                    />
+                  </td>
+                  <td>{signal.urlStatus}</td>
+                  <td>{nextDiscovery}</td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
+    </div>
+
+    <div className={styles.manualFooterRow}>
+      <span className={styles.manualFooterSummary}>
+        Mostrando {manualShowExisting ? manualReturned : manualVisibleSignals.length} de {manualTotal}
+      </span>
+      <div className={styles.manualFooterPagination}>
+        <button
+          type="button"
+          className={`${styles.btn} ${styles.btnGhost}`}
+          disabled={manualOffset <= 0}
+          onClick={() => setManualOffset((current) => Math.max(0, current - 10))}
+        >
+          ← Pagina anterior
+        </button>
+        <button
+          type="button"
+          className={`${styles.btn} ${styles.btnGhost}`}
+          disabled={manualOffset + manualReturned >= manualTotal}
+          onClick={() => setManualOffset((current) => current + 10)}
+        >
+          Proxima pagina →
+        </button>
+      </div>
+      <button
+        type="button"
+        className={`${styles.btn} ${styles.btnPrimary} ${styles.btnCompact} ${styles.manualFooterSave}`}
+        disabled
+        title="Salvar em lote em breve"
+      >
+        Salvar
+      </button>
+    </div>
+  </div>
+) : null}
+          </div>
+
           <div className={styles.advancedWrap}>
             <div className={styles.advancedHeader}>
               <div>
@@ -770,12 +1032,9 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                 <p className={styles.advancedSubtitle}>Ajuste limites e gere relatorio de execucao quando necessario.</p>
               </div>
               <div className={styles.advancedActions}>
-                <button type="button" className={`${styles.btn} ${styles.btnGhost}`} disabled>
-                  Gerar relatorio
-                </button>
                 <button
                   type="button"
-                  className={`${styles.btn} ${styles.btnSecondary}`}
+                  className={`${styles.btn} ${styles.btnPrimary} ${styles.btnCompact} ${styles.manualPanelTrigger}`}
                   onClick={() => setShowAdvanced((value) => !value)}
                 >
                   {showAdvanced ? "Ocultar avancado" : "Exibir avancado"}
@@ -824,158 +1083,23 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
             ) : null}
           </div>
 
-          <div className={styles.manualPanel}>
-            <div className={styles.manualHeader}>
-              <div>
-                <h3>URLs manuais</h3>
-                <p>Gerencie URLs persistidas, status e cooldowns sem sair do fluxo.</p>
-              </div>
-              <div className={styles.manualHeaderActions}>
-                <button type="button" className={`${styles.btn} ${styles.btnGhost}`} disabled>
-                  Alimentar URLs automatico
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.btn} ${styles.btnSecondary}`}
-                  onClick={() => setReloadTick((current) => current + 1)}
-                >
-                  Atualizar
-                </button>
-              </div>
-            </div>
-
-            <div className={styles.manualFilters}>
-              <label>
-                Produto
-                <input
-                  type="text"
-                  value={manualFilterProductId}
-                  onChange={(event) => {
-                    setManualFilterProductId(event.target.value);
-                    setManualOffset(0);
-                  }}
-                  placeholder="product_id"
-                />
-              </label>
-              <label>
-                Fornecedor
-                <input
-                  type="text"
-                  value={manualFilterSupplierCode}
-                  onChange={(event) => {
-                    setManualFilterSupplierCode(event.target.value.toUpperCase());
-                    setManualOffset(0);
-                  }}
-                  placeholder="SUPPLIER_CODE"
-                />
-              </label>
-            </div>
-
-            <div className={styles.manualTableWrap}>
-              <table className={styles.manualTable}>
-                <thead>
-                  <tr>
-                    <th>Produto</th>
-                    <th>Fornecedor</th>
-                    <th>URL</th>
-                    <th>Status</th>
-                    <th>Cooldown</th>
-                    <th>Acoes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {manualSignals.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className={styles.manualEmpty}>
-                        Nenhum sinal encontrado.
-                      </td>
-                    </tr>
-                  ) : (
-                    manualSignals.map((signal) => {
-                      const rowKey = manualRowKey(signal.productId, signal.supplierCode);
-                      const draftUrl = manualEditUrls[rowKey] ?? signal.productUrl ?? "";
-                      const nextDiscovery = signal.nextDiscoveryAt ? formatDateTime(signal.nextDiscoveryAt) : "--";
-                      const notFoundCount = signal.notFoundCount ?? 0;
-                      return (
-                        <tr key={rowKey}>
-                          <td>
-                            <div className={styles.manualProductCell}>
-                              <strong>{signal.productId}</strong>
-                              <small>NotFound {notFoundCount}</small>
-                            </div>
-                          </td>
-                          <td>{signal.supplierCode}</td>
-                          <td>
-                            <input
-                              type="text"
-                              value={draftUrl}
-                              onChange={(event) =>
-                                setManualEditUrls((current) => ({
-                                  ...current,
-                                  [rowKey]: event.target.value,
-                                }))
-                              }
-                              placeholder="https://fornecedor/pdp/produto"
-                            />
-                          </td>
-                          <td>{signal.urlStatus}</td>
-                          <td>{nextDiscovery}</td>
-                          <td>
-                            <button
-                              type="button"
-                              className={styles.btnPrimary}
-                              onClick={() => void saveManualSignalRow(signal.productId, signal.supplierCode)}
-                              disabled={manualSignalSaving}
-                            >
-                              {manualSignalSaving ? "Salvando..." : "Salvar"}
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <div className={styles.manualPagination}>
-              <span>
-                Mostrando {manualReturned} de {manualTotal}
-              </span>
-              <div>
-                <button
-                  type="button"
-                  className={`${styles.btn} ${styles.btnGhost}`}
-                  disabled={manualOffset <= 0}
-                  onClick={() => setManualOffset((current) => Math.max(0, current - 10))}
-                >
-                  Pagina anterior
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.btn} ${styles.btnGhost}`}
-                  disabled={manualOffset + manualReturned >= manualTotal}
-                  onClick={() => setManualOffset((current) => current + 10)}
-                >
-                  Proxima pagina
-                </button>
-              </div>
-            </div>
-          </div>
-
           {createRunInfo ? <p className={styles.modeSummary}>{createRunInfo}</p> : null}
 
           <div className={styles.btnRow}>
-            <button type="button" className={`${styles.btn} ${styles.btnGhost}`} onClick={() => setStep(1)}>
-              Voltar
+            <button
+              type="button"
+              className={`${styles.btn} ${styles.btnGhost} ${styles.btnGhostUnderline}`}
+              onClick={() => setStep(1)}
+            >
+              ← Voltar
             </button>
             <button
               type="button"
-              className={`${styles.btn} ${styles.btnPrimary} ${styles.btnRunPrimary}`}
+              className={`${styles.btn} ${styles.btnPrimary} ${styles.btnRunPrimary} ${styles.btnCompact}`}
               onClick={() => void createRun()}
               disabled={creatingRun}
             >
-              {creatingRun ? "Solicitando..." : "Iniciar run"}
+              {creatingRun ? "Solicitando..." : "Iniciar run ⚡"}
             </button>
           </div>
         </article>

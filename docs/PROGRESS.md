@@ -122,6 +122,7 @@
 
 - keep ADR set complete and stable
 - execute Shopping frontend parity ADR tranche (ADR-0036..ADR-0039) before expanding Shopping UX/features
+- execute Shopping legacy suppliers driver pack ADR tranche (ADR-0040..ADR-0042) to add `TELHA_NORTE`, `LEROY`, `ABC` under governed manifests
 - freeze and follow the Shopping Price Level 2 ADR set (ADR-0017 .. ADR-0024) before implementation work starts
 - keep CI workflow scope aligned with future structural package boundaries and new quality gates
 - apply pricing migrations and database-backed governance defaults in runtime
