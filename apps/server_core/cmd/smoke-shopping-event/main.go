@@ -240,6 +240,17 @@ func buildSmokeManifestConfig(strategy, supplierCode string) map[string]any {
 		if sellerRegex != "" {
 			base["sellerRegex"] = sellerRegex
 		}
+	case "http.leroy_search_sellers.v1":
+		base["searchUrlTemplate"] = strings.TrimSpace(os.Getenv("MS_SMOKE_SEARCH_URL_TEMPLATE"))
+		base["sellersUrlTemplate"] = strings.TrimSpace(os.Getenv("MS_SMOKE_SELLERS_URL_TEMPLATE"))
+		region := strings.TrimSpace(os.Getenv("MS_SMOKE_REGION"))
+		sellerPickStrategy := strings.TrimSpace(os.Getenv("MS_SMOKE_SELLER_PICK_STRATEGY"))
+		if region != "" {
+			base["region"] = region
+		}
+		if sellerPickStrategy != "" {
+			base["sellerPickStrategy"] = sellerPickStrategy
+		}
 	case "playwright.pdp_first.v1":
 		startURL := strings.TrimSpace(os.Getenv("MS_SMOKE_START_URL"))
 		searchURL := strings.TrimSpace(os.Getenv("MS_SMOKE_SEARCH_URL"))

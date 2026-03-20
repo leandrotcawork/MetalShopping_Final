@@ -233,6 +233,253 @@ def _build_html_search_url(
     )
 
 
+def _leroy_extract_product_id_from_url(url: str) -> str:
+    text = safe_str(url, "")
+    if text == "":
+        return ""
+    match = re.search(r"_(\d{5,})(?:[/?#]|$)", text, flags=re.IGNORECASE)
+    if match is not None:
+        return safe_str(match.group(1), "")
+    return ""
+
+
+def _leroy_extract_product_id_from_html(raw_html: str) -> str:
+    patterns = [
+        r'"productID"\s*:\s*"(\d{5,})"',
+        r'"productId"\s*:\s*"(\d{5,})"',
+        r'"sku"\s*:\s*"(\d{5,})"',
+        r'"product_id"\s*:\s*"(\d{5,})"',
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, raw_html, flags=re.IGNORECASE | re.MULTILINE)
+        if match is not None:
+            return safe_str(match.group(1), "")
+
+    fallback = re.search(r"_(\d{5,})(?:[/?#\"'])", raw_html, flags=re.IGNORECASE | re.MULTILINE)
+    if fallback is not None:
+        return safe_str(fallback.group(1), "")
+    return ""
+
+
+def _build_leroy_search_url(
+    config: SupplierRuntimeConfig,
+    term: str,
+    signal: SupplierSignal | None,
+) -> str | None:
+    if signal is not None and signal.product_url:
+        return signal.product_url
+    template = safe_str(config.config_json.get("searchUrlTemplate"), "")
+    if template == "":
+        return None
+    lookup_mode = signal.lookup_mode if signal is not None else "REFERENCE"
+    return (
+        template.replace("{product_id}", urllib.parse.quote(term, safe=""))
+        .replace("{term}", urllib.parse.quote(term, safe=""))
+        .replace("{supplier_code}", urllib.parse.quote(config.supplier_code, safe=""))
+        .replace("{lookup_mode}", urllib.parse.quote(lookup_mode, safe=""))
+    )
+
+
+def _build_leroy_sellers_url(config: SupplierRuntimeConfig, product_id: str) -> str | None:
+    template = safe_str(config.config_json.get("sellersUrlTemplate"), "")
+    if template == "":
+        return None
+    return template.replace("{product_id}", urllib.parse.quote(product_id, safe=""))
+
+
+def _leroy_extract_sellers(payload: Any) -> list[dict[str, Any]]:
+    if isinstance(payload, list):
+        return [item for item in payload if isinstance(item, dict)]
+    if not isinstance(payload, dict):
+        return []
+    if isinstance(payload.get("sellers"), list):
+        return [item for item in payload["sellers"] if isinstance(item, dict)]
+    data = payload.get("data")
+    if isinstance(data, dict) and isinstance(data.get("sellers"), list):
+        return [item for item in data["sellers"] if isinstance(item, dict)]
+    return []
+
+
+def _leroy_seller_price(seller: dict[str, Any], base_price: float) -> float:
+    direct_keys = ("salePrice", "salesPrice", "price", "value")
+    for key in direct_keys:
+        parsed = decode_price_text(seller.get(key), -1.0)
+        if parsed > 0:
+            return parsed
+
+    nested_prices = seller.get("prices")
+    if isinstance(nested_prices, dict):
+        for key in ("salePrice", "salesPrice", "price", "current"):
+            parsed = decode_price_text(nested_prices.get(key), -1.0)
+            if parsed > 0:
+                return parsed
+    return safe_float(base_price, base_price)
+
+
+def _leroy_seller_name(seller: dict[str, Any], fallback: str) -> str:
+    for key in ("sellerName", "name", "seller", "displayName"):
+        value = safe_str(seller.get(key), "")
+        if value != "":
+            return value
+    return fallback
+
+
+def _leroy_pick_seller(
+    sellers: list[dict[str, Any]],
+    *,
+    base_price: float,
+    fallback_seller: str,
+    pick_strategy: str,
+) -> tuple[float, str, str]:
+    if len(sellers) == 0:
+        return safe_float(base_price, base_price), fallback_seller, "no_sellers_found"
+
+    normalized = safe_str(pick_strategy, "selected").lower()
+    normalized = normalized if normalized in {"selected", "min_sale"} else "selected"
+
+    def seller_tuple(item: dict[str, Any]) -> tuple[float, str]:
+        return _leroy_seller_price(item, base_price), _leroy_seller_name(item, fallback_seller)
+
+    if normalized == "selected":
+        for seller in sellers:
+            if bool(seller.get("selected")):
+                price, seller_name = seller_tuple(seller)
+                return price, seller_name, "selected_seller"
+
+    best_price = float("inf")
+    best_name = fallback_seller
+    for seller in sellers:
+        price, seller_name = seller_tuple(seller)
+        if price > 0 and price < best_price:
+            best_price = price
+            best_name = seller_name
+
+    if best_price != float("inf"):
+        return safe_float(best_price, base_price), best_name, "min_sale_seller"
+
+    price0, name0 = seller_tuple(sellers[0])
+    return price0, name0, "first_seller_fallback"
+
+
+def _http_get_with_retries(
+    *,
+    url: str,
+    headers: dict[str, str],
+    timeout_seconds: int,
+    max_retries: int,
+    retry_statuses: set[int],
+) -> tuple[str | None, int | None, str | None, str]:
+    last_error = "request_failed"
+    for _attempt in range(1, max_retries + 1):
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=timeout_seconds) as response:
+                return (
+                    response.read().decode("utf-8", errors="replace"),
+                    int(response.status),
+                    safe_str(response.geturl(), url),
+                    "ok",
+                )
+        except urllib.error.HTTPError as exc:
+            if exc.code not in retry_statuses:
+                return None, int(exc.code), None, f"http_status_{exc.code}_not_retryable"
+            last_error = f"http_status_{exc.code}"
+        except Exception as exc:
+            last_error = f"http_error:{exc}"
+        time.sleep(0.1)
+    return None, None, None, last_error
+
+
+def _execute_http_leroy_search_sellers_strategy(
+    *,
+    config: SupplierRuntimeConfig,
+    lookup_term: str,
+    base_price: float,
+    signal: SupplierSignal | None,
+    timeout_seconds: int,
+    max_retries: int,
+    seller_default: str,
+) -> RuntimeObservation:
+    strategy = _strategy_for_config(config)
+    search_url = _build_leroy_search_url(config, lookup_term, signal)
+    if search_url is None:
+        return RuntimeObservation("ERROR", safe_float(base_price, 0), seller_default, "HTTP_LEROY", None, "leroy_search_url_missing", strategy, lookup_term)
+
+    retry_statuses = _retry_http_statuses(config)
+    base_headers = build_runtime_headers(config)
+    base_headers.setdefault("Accept", "text/html,application/json")
+
+    product_id = _leroy_extract_product_id_from_url(search_url)
+    search_status: int | None = None
+    final_url = search_url
+    search_note = "search_url_from_signal" if signal is not None and signal.product_url else "search_template"
+
+    if product_id == "":
+        search_body, status, resolved_url, fetch_note = _http_get_with_retries(
+            url=search_url,
+            headers=base_headers,
+            timeout_seconds=timeout_seconds,
+            max_retries=max_retries,
+            retry_statuses=retry_statuses,
+        )
+        search_status = status
+        if search_body is None:
+            if status is not None:
+                return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_LEROY", status, f"leroy_search_failed:{fetch_note}", strategy, lookup_term)
+            return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_LEROY", None, f"leroy_search_failed:{fetch_note}", strategy, lookup_term)
+
+        final_url = safe_str(resolved_url, search_url)
+        product_id = _leroy_extract_product_id_from_url(final_url)
+        if product_id != "":
+            search_note = "search_final_url_product_id"
+        else:
+            product_id = _leroy_extract_product_id_from_html(search_body)
+            if product_id != "":
+                search_note = "search_html_ldjson_product_id"
+
+    if product_id == "":
+        return RuntimeObservation("NOT_FOUND", safe_float(base_price, base_price), seller_default, "HTTP_LEROY", search_status, "leroy_product_id_not_found", strategy, lookup_term)
+
+    sellers_url = _build_leroy_sellers_url(config, product_id)
+    if sellers_url is None:
+        return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_LEROY", search_status, "leroy_sellers_url_missing", strategy, lookup_term)
+
+    seller_headers = dict(base_headers)
+    seller_headers["x-region"] = safe_str(config.config_json.get("region"), "uberlandia")
+    seller_headers.setdefault("Accept", "application/json")
+
+    sellers_body, sellers_status, _resolved, sellers_note = _http_get_with_retries(
+        url=sellers_url,
+        headers=seller_headers,
+        timeout_seconds=timeout_seconds,
+        max_retries=max_retries,
+        retry_statuses=retry_statuses,
+    )
+    if sellers_body is None:
+        if sellers_status is not None:
+            return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_LEROY", sellers_status, f"leroy_sellers_failed:{sellers_note}", strategy, lookup_term)
+        return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_LEROY", None, f"leroy_sellers_failed:{sellers_note}", strategy, lookup_term)
+
+    try:
+        payload = json.loads(sellers_body)
+    except Exception:
+        return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_LEROY", sellers_status, "leroy_sellers_invalid_json", strategy, lookup_term)
+
+    sellers = _leroy_extract_sellers(payload)
+    if len(sellers) == 0:
+        return RuntimeObservation("NOT_FOUND", safe_float(base_price, base_price), seller_default, "HTTP_LEROY", sellers_status, "leroy_sellers_empty", strategy, lookup_term)
+
+    pick_strategy = safe_str(config.config_json.get("sellerPickStrategy"), "selected")
+    observed_price, seller_name, pick_note = _leroy_pick_seller(
+        sellers,
+        base_price=base_price,
+        fallback_seller=seller_default,
+        pick_strategy=pick_strategy,
+    )
+    note = f"leroy_ok search={search_note} sellers={pick_note} product_id={product_id} final_url={final_url}"
+    return RuntimeObservation("OK", observed_price, seller_name, "HTTP_LEROY", sellers_status, note[:280], strategy, lookup_term)
+
+
 def _execute_http_vtex_strategy(
     *,
     config: SupplierRuntimeConfig,
@@ -393,6 +640,17 @@ def execute_http_runtime(
 
     if strategy == "http.html_search.v1":
         return _execute_http_html_search_strategy(
+            config=config,
+            lookup_term=lookup_term,
+            base_price=base_price,
+            signal=signal,
+            timeout_seconds=timeout_seconds,
+            max_retries=max_retries,
+            seller_default=seller_default,
+        )
+
+    if strategy == "http.leroy_search_sellers.v1":
+        return _execute_http_leroy_search_sellers_strategy(
             config=config,
             lookup_term=lookup_term,
             base_price=base_price,

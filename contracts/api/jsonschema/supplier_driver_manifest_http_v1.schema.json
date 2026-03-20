@@ -43,6 +43,18 @@
         "baseUrl",
         "searchUrlTemplate"
       ]
+    },
+    {
+      "properties": {
+        "strategy": {
+          "const": "http.leroy_search_sellers.v1"
+        }
+      },
+      "required": [
+        "strategy",
+        "searchUrlTemplate",
+        "sellersUrlTemplate"
+      ]
     }
   ],
   "properties": {
@@ -51,7 +63,8 @@
       "enum": [
         "http.mock.v1",
         "http.vtex_persisted_query.v1",
-        "http.html_search.v1"
+        "http.html_search.v1",
+        "http.leroy_search_sellers.v1"
       ]
     },
     "baseUrl": {
@@ -63,6 +76,10 @@
       "minLength": 1
     },
     "searchUrlTemplate": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sellersUrlTemplate": {
       "type": "string",
       "minLength": 1
     },
@@ -100,6 +117,17 @@
     "sellerRegex": {
       "type": "string",
       "minLength": 1
+    },
+    "region": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sellerPickStrategy": {
+      "type": "string",
+      "enum": [
+        "selected",
+        "min_sale"
+      ]
     },
     "timeoutSeconds": {
       "type": "integer",

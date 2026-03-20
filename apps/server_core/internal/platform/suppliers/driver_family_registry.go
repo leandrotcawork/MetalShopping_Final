@@ -16,6 +16,7 @@ const (
 	httpStrategyMock           = "http.mock.v1"
 	httpStrategyVTEX           = "http.vtex_persisted_query.v1"
 	httpStrategyHTMLSearch     = "http.html_search.v1"
+	httpStrategyLeroySearch    = "http.leroy_search_sellers.v1"
 	playwrightStrategyMock     = "playwright.mock.v1"
 	playwrightStrategyPDPFirst = "playwright.pdp_first.v1"
 )
@@ -136,6 +137,21 @@ func validateHTTPFamily(config map[string]any) []ValidationError {
 				Message: "http.html_search.v1 requires searchUrlTemplate",
 			})
 		}
+	case httpStrategyLeroySearch:
+		if !hasNonEmptyString(config, "searchUrlTemplate") {
+			errors = append(errors, ValidationError{
+				Code:    "MISSING_REQUIRED_FIELD",
+				Field:   "config.searchUrlTemplate",
+				Message: "http.leroy_search_sellers.v1 requires searchUrlTemplate",
+			})
+		}
+		if !hasNonEmptyString(config, "sellersUrlTemplate") {
+			errors = append(errors, ValidationError{
+				Code:    "MISSING_REQUIRED_FIELD",
+				Field:   "config.sellersUrlTemplate",
+				Message: "http.leroy_search_sellers.v1 requires sellersUrlTemplate",
+			})
+		}
 	default:
 		errors = append(errors, ValidationError{
 			Code:    "UNKNOWN_STRATEGY",
@@ -227,6 +243,23 @@ func validateHTTPFamily(config map[string]any) []ValidationError {
 			Code:    "INVALID_FIELD",
 			Field:   "config.sellerRegex",
 			Message: "sellerRegex must be non-empty string when provided",
+		})
+	}
+	if !hasNonEmptyStringWhenPresent(config, "region") {
+		errors = append(errors, ValidationError{
+			Code:    "INVALID_FIELD",
+			Field:   "config.region",
+			Message: "region must be non-empty string when provided",
+		})
+	}
+	if !hasAllowedStringWhenPresent(config, "sellerPickStrategy", map[string]struct{}{
+		"selected": {},
+		"min_sale": {},
+	}) {
+		errors = append(errors, ValidationError{
+			Code:    "INVALID_FIELD",
+			Field:   "config.sellerPickStrategy",
+			Message: "sellerPickStrategy must be one of: selected|min_sale",
 		})
 	}
 	if !hasObjectWhenPresent(config, "headers") {
@@ -396,6 +429,23 @@ func hasNonEmptyStringWhenPresent(payload map[string]any, key string) bool {
 	}
 	text, ok := value.(string)
 	return ok && strings.TrimSpace(text) != ""
+}
+
+func hasAllowedStringWhenPresent(payload map[string]any, key string, allowed map[string]struct{}) bool {
+	value, ok := payload[key]
+	if !ok {
+		return true
+	}
+	text, ok := value.(string)
+	if !ok {
+		return false
+	}
+	normalized := strings.ToLower(strings.TrimSpace(text))
+	if normalized == "" {
+		return false
+	}
+	_, exists := allowed[normalized]
+	return exists
 }
 
 func hasNumberInRange(payload map[string]any, key string, minValue, maxValue float64) bool {
