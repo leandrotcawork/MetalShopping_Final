@@ -1,6 +1,6 @@
 # ADR-0042: Shopping HTTP Strategy `http.html_dom_first_card.v1`
 
-- Status: draft
+- Status: accepted
 - Date: 2026-03-20
 
 ## Context
@@ -73,12 +73,14 @@ Optional (recommended for correctness):
 
 ## Acceptance Evidence (for Status: accepted)
 
-- Driver suite includes `ABC` with at least one `OK` on real inputs in `tenant_default`.
-- `note` indicates extraction path: `html_dom_first_card`.
+- Smoke (tenant `tenant_default`) produced `OK` for `ABC` using real HTTP fetch:
+  - `run_request_id`: `aba7655c-d422-4960-8765-8627638fad47`
+  - `run_id`: `91e4dc66-9660-414d-8072-566fbe82d690`
+  - sample: `product_id=prd_smoke_abc_001`, `observed_price=198.9000`, `http_status=200`, `lookup_term=deca`
+  - `notes`: `html_dom_first_card attempt=1 hint_priority:calculated_first`
 - No regression in `http.html_search.v1` and `http.vtex_persisted_query.v1`.
 
 ## Consequences
 
 - Reduces fragility for HTML-only suppliers.
 - Keeps strategy surface bounded and config-driven for future HTML-only suppliers.
-

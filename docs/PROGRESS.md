@@ -117,12 +117,14 @@
 - ADR-0032 implemented: bounded runtime parallelism + HTTP rate limiting + retry status policy with schema and server-side validation updates; acceptance now depends on ADR-0033 multi-supplier smoke evidence
 - ADR-0033 implemented: multi-supplier smoke suite and DB evidence report generator added (`scripts/smoke_shopping_driver_suite_local.ps1`, `scripts/smoke_shopping_driver_suite_report.py`) with generated report in `docs/SHOPPING_DRIVER_SUITE_ACCEPTANCE.md`
 - ADR-0034 implemented: `playwright.pdp_first.v1` non-mock runtime delivered (real browser navigation, selector extraction, anti-block notes, bounded retries) with Playwright toolchain installed and direct runtime smoke returning `OK` + `PLAYWRIGHT` + non-zero price
+- ADR-0042 accepted: `http.html_dom_first_card.v1` validated with `ABC` smoke `OK` (`run_request_id=aba7655c-d422-4960-8765-8627638fad47`)
 
 ## Next
 
 - keep ADR set complete and stable
 - execute Shopping frontend parity ADR tranche (ADR-0036..ADR-0039) before expanding Shopping UX/features
 - execute Shopping legacy suppliers driver pack ADR tranche (ADR-0040..ADR-0042) to add `TELHA_NORTE`, `LEROY`, `ABC` under governed manifests
+- finish remaining legacy supplier onboarding under ADR-0040 (seed manifests + validate `TELHA_NORTE` and `LEROY` with non-mock smoke)
 - freeze and follow the Shopping Price Level 2 ADR set (ADR-0017 .. ADR-0024) before implementation work starts
 - keep CI workflow scope aligned with future structural package boundaries and new quality gates
 - apply pricing migrations and database-backed governance defaults in runtime
