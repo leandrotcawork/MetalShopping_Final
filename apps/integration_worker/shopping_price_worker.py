@@ -296,9 +296,9 @@ def upsert_run(
                     WHEN EXCLUDED.product_url IS NOT NULL AND EXCLUDED.product_url <> '' THEN NULL
                     WHEN %s::text = 'NOT_FOUND' THEN NOW() + INTERVAL '30 days'
                     WHEN %s::text = 'ERROR' AND (
-                      EXCLUDED.last_error_message ILIKE '%cloudflare%'
-                      OR EXCLUDED.last_error_message ILIKE '%captcha%'
-                      OR EXCLUDED.last_error_message ILIKE '%access denied%'
+                      EXCLUDED.last_error_message ILIKE '%%cloudflare%%'
+                      OR EXCLUDED.last_error_message ILIKE '%%captcha%%'
+                      OR EXCLUDED.last_error_message ILIKE '%%access denied%%'
                     ) THEN NOW() + INTERVAL '7 days'
                     ELSE shopping_supplier_product_signals.next_discovery_at
                   END,
