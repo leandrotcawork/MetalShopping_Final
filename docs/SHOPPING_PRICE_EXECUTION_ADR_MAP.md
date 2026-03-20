@@ -72,15 +72,58 @@ For any Shopping evolution (Level 2+), the execution sequence is frozen:
 - ADR-0025: Shopping Run Requested Event And Broker Consumption (Phase 2)
   Skills: `metalshopping-event-contracts`, `metalshopping-platform-packages`, `metalshopping-worker-patterns`, `metalshopping-worker-scaffold`, `metalshopping-observability-security`
   Contracts: Event (`contracts/events/v1/shopping_run_requested.v1.json`), outbox/inbox wiring; OpenAPI unchanged
+  Status: accepted (evidence: `docs/SHOPPING_ADR025_ACCEPTANCE.md`)
 
 - ADR-0026: Suppliers Management API Surface Split (Phase 2)
   Skills: `metalshopping-openapi-contracts`, `metalshopping-contract-authoring`, `metalshopping-module-scaffold`, `metalshopping-server-core-modules`, `metalshopping-page-delivery`, `metalshopping-frontend-migration-guardrails`
   Contracts: New OpenAPI `suppliers_v1` + JSON Schemas
+  Status: accepted (evidence: `docs/SHOPPING_ADR026_ACCEPTANCE.md`)
 
 - ADR-0027: Shopping Driver Manifest Validation And Activation (Phase 2)
   Skills: `metalshopping-platform-packages`, `metalshopping-openapi-contracts`, `metalshopping-module-scaffold`, `metalshopping-worker-scaffold`, `metalshopping-observability-security`
   Contracts: Management OpenAPI + per-family JSON Schemas; leverages existing manifest tables
+  Status: accepted (evidence: `docs/SHOPPING_ADR027_ACCEPTANCE.md`)
+
+- ADR-0028: Shopping Worker Manifest Runtime Gating (Phase 2)
+  Skills: `metalshopping-worker-scaffold`, `metalshopping-worker-patterns`, `metalshopping-observability-security`
+  Contracts: No new contract type; execution eligibility enforced from existing Suppliers + Shopping surfaces
+  Status: accepted (evidence: `docs/SHOPPING_ADR028_ACCEPTANCE.md`)
+
+- ADR-0029: Shopping Driver Runtime v1 (HTTP and PLAYWRIGHT)
+  Skills: `metalshopping-worker-patterns`, `metalshopping-worker-scaffold`, `metalshopping-observability-security`, `metalshopping-adr-updates`
+  Contracts: No new contract type in v1; runtime semantics frozen in worker + ADR
+  Status: accepted (evidence: `docs/SHOPPING_ADR029_ACCEPTANCE.md`)
+
+## Driver framework (scale-out gate)
+
+- ADR-0030: Shopping Driver Strategy Framework v1 (family + strategy)
+  Skills: `metalshopping-contract-authoring`, `metalshopping-platform-packages`, `metalshopping-module-scaffold`, `metalshopping-worker-patterns`, `metalshopping-worker-scaffold`, `metalshopping-observability-security`, `metalshopping-adr-updates`
+  Contracts: JSON Schema evolution for driver manifests + deterministic validation semantics + worker dispatcher contract
+  Status: accepted (evidence: `docs/SHOPPING_ADR030_ACCEPTANCE.md`)
+
+## Backend completion ADRs (driver framework parity)
+
+- ADR-0031: Shopping Driver Runtime Package Layout v1 (integration_worker)
+  Skills: `metalshopping-adr-updates`, `metalshopping-worker-scaffold`, `metalshopping-worker-patterns`, `metalshopping-observability-security`
+  Contracts: no new external contracts; refactor is internal packaging
+  Goal: strategy executors become modular/testable and entrypoint is orchestration-only.
+  Status: accepted (evidence: ADR-0031 build + smoke + entrypoint boundary review)
+
+- ADR-0032: Shopping Driver Parallelism and Rate Limits v1
+  Skills: `metalshopping-contract-authoring`, `metalshopping-platform-packages`, `metalshopping-worker-patterns`, `metalshopping-worker-scaffold`, `metalshopping-observability-security`
+  Contracts: JSON Schema evolution (bounded concurrency keys) + deterministic validation
+  Goal: bounded, family-aware concurrency that is safe under multi-tenant execution.
+
+- ADR-0033: Shopping Driver Smoke Suite v1 (multi-supplier)
+  Skills: `metalshopping-worker-patterns`, `metalshopping-worker-scaffold`, `metalshopping-observability-security`, `metalshopping-adr-updates`
+  Contracts: no new external contracts
+  Goal: one deterministic command that validates the legacy parity supplier set.
+
+- ADR-0034: Shopping Playwright Driver Runtime v1 (PDP-first, non-mock)
+  Skills: `metalshopping-contract-authoring`, `metalshopping-worker-patterns`, `metalshopping-worker-scaffold`, `metalshopping-observability-security`, `metalshopping-adr-updates`
+  Contracts: JSON Schema evolution + deterministic validation for Playwright selectors/runtime options
+  Goal: at least one non-mock Playwright supplier (OBRA_FACIL) accepted end-to-end.
 
 ## Rule
 
-No implementation work for Shopping Price Level 2 may start until all ADRs above exist in `docs/adrs/` with Status: accepted and are referenced by the tranche plan.
+Next gate before UI: complete backend driver framework parity ADRs (ADR-0031..ADR-0034) with objective smoke evidence for the legacy supplier set.

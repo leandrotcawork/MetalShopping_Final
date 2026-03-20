@@ -16,7 +16,13 @@ The next implementation area is Shopping Price Level 2 under the make-it-work-fi
 Binding references:
 
 - `docs/SHOPPING_PRICE_EXECUTION_ADR_MAP.md`
-- ADR-0017 .. ADR-0024
+- ADR-0017 .. ADR-0030
+
+Current next step inside Shopping Level 2:
+
+- ADR-0030 accepted and one non-mock VTEX pilot completed with objective smoke evidence.
+- ADR-0031 accepted (runtime package extraction + compile + smoke evidence).
+- next: execute ADR-0032..ADR-0034 before implementing the Shopping Price legacy workflow UI.
 
 ## Constraints
 

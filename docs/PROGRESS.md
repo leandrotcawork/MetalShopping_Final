@@ -109,6 +109,11 @@
 - root `SKILLS.md` maps specialist skills by ordered step without a dedicated orchestrator skill
 - Shopping Level 1 acceptance was formally closed with evidence in `docs/SHOPPING_LEVEL1_ACCEPTANCE.md`
 - ADR-0021 frontend migration closure recorded with legacy workflow preserved and thin-client boundaries enforced (`docs/SHOPPING_ADR021_ACCEPTANCE.md`)
+- Shopping Price Phase 2 ADRs (ADR-0025..ADR-0028) accepted with objective evidence (`docs/SHOPPING_ADR025_ACCEPTANCE.md` -> `docs/SHOPPING_ADR028_ACCEPTANCE.md`)
+- Shopping Driver Runtime v1 (ADR-0029) accepted with pilot supplier (`OBRA_FACIL`) executed end-to-end in event smoke (`docs/SHOPPING_ADR029_ACCEPTANCE.md`)
+- Driver strategy framework ADR (ADR-0030) accepted to freeze `family + strategy` scaling model before implementing real non-mock suppliers at scale
+- Backend completion ADR tranche drafted for driver framework parity (ADR-0031..ADR-0034)
+- ADR-0031 accepted: runtime extracted from `shopping_price_worker.py` into `apps/integration_worker/src/shopping_price_runtime/*`, compile checks passed, and smoke (`scripts/smoke_shopping_event_local.ps1`) passed outside sandbox
 
 ## Next
 

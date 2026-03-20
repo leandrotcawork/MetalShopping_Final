@@ -21,6 +21,8 @@ from typing import Any
 from uuid import uuid4
 
 import psycopg
+from src.shopping_price_runtime.dispatcher import execute as runtime_execute
+from src.shopping_price_runtime.models import LookupInputs, RuntimeObservation, SupplierRuntimeConfig, SupplierSignal
 
 
 @dataclass(frozen=True)
@@ -54,13 +56,6 @@ class PublishedRunRequestedEvent:
     event_id: str
     tenant_id: str
     run_request_id: str
-
-
-@dataclass(frozen=True)
-class SupplierSignal:
-    product_url: str | None
-    lookup_mode: str
-    manual_override: bool
 
 
 def utc_now_iso() -> str:
@@ -250,11 +245,11 @@ def upsert_run(
                   created_by, created_at, updated_at
                 )
                 VALUES (
-                  current_tenant_id(), %s, %s, %s,
-                  CASE WHEN %s IS NULL OR %s = '' THEN 'STALE' ELSE 'ACTIVE' END,
+                  current_tenant_id(), %s, %s, %s::text,
+                  CASE WHEN %s::text IS NULL OR %s::text = '' THEN 'STALE' ELSE 'ACTIVE' END,
                   %s, 'INFERRED',
-                  FALSE, %s,
-                  CASE WHEN %s IS NULL OR %s = '' THEN NULL ELSE %s END,
+                  FALSE, (%s)::timestamptz,
+                  CASE WHEN %s::text IS NULL OR %s::text = '' THEN NULL ELSE (%s)::timestamptz END,
                   %s, %s,
                   'shopping_worker', NOW(), NOW()
                 )
@@ -604,26 +599,45 @@ def query_catalog_items(
         cur.execute("COMMIT")
 
     effective_suppliers = supplier_codes if len(supplier_codes) > 0 else ["DEFAULT"]
+    identifiers = fetch_catalog_identifiers(conn, tenant_id, [str(row[0]) for row in rows])
     signal_overrides = fetch_supplier_signal_overrides(conn, tenant_id, [str(row[0]) for row in rows], effective_suppliers)
+    runtime_configs = fetch_supplier_runtime_configs(conn, tenant_id, effective_suppliers)
     now_iso = utc_now_iso()
     items: list[RunItem] = []
     for row in rows:
         product_id = str(row[0])
         observed_price = float(row[1])
         currency_code = str(row[2]).upper()
+        product_reference, product_ean = identifiers.get(product_id, ("", ""))
         for supplier_code in effective_suppliers:
+            runtime_config = runtime_configs.get(supplier_code.upper())
             signal = signal_overrides.get(signal_key(product_id, supplier_code))
+            if runtime_config is None:
+                items.append(
+                    RunItem(
+                        product_id=product_id,
+                        supplier_code=supplier_code.upper(),
+                        item_status="ERROR",
+                        seller_name=supplier_code.lower(),
+                        channel="RUNTIME",
+                        observed_price=_safe_float(observed_price, observed_price),
+                        currency_code=currency_code,
+                        observed_at=now_iso,
+                        product_url=signal.product_url if signal is not None else None,
+                        notes="runtime_config_missing",
+                    )
+                )
+                continue
             items.append(
-                RunItem(
+                execute_supplier_runtime(
+                    config=runtime_config,
                     product_id=product_id,
-                    supplier_code=supplier_code,
-                    item_status="OK",
-                    seller_name="catalog_reference",
-                    channel="CATALOG",
-                    observed_price=observed_price,
+                    product_reference=product_reference,
+                    product_ean=product_ean,
+                    base_price=observed_price,
                     currency_code=currency_code,
                     observed_at=now_iso,
-                    product_url=signal.product_url if signal is not None else None,
+                    signal=signal,
                 )
             )
     return items
@@ -659,26 +673,45 @@ def query_xlsx_fallback_items(
         cur.execute("COMMIT")
 
     effective_suppliers = supplier_codes if len(supplier_codes) > 0 else ["DEFAULT"]
+    identifiers = fetch_catalog_identifiers(conn, tenant_id, [str(row[0]) for row in rows])
     signal_overrides = fetch_supplier_signal_overrides(conn, tenant_id, [str(row[0]) for row in rows], effective_suppliers)
+    runtime_configs = fetch_supplier_runtime_configs(conn, tenant_id, effective_suppliers)
     now_iso = utc_now_iso()
     items: list[RunItem] = []
     for row in rows:
         product_id = str(row[0])
         observed_price = float(row[1])
         currency_code = str(row[2]).upper()
+        product_reference, product_ean = identifiers.get(product_id, ("", ""))
         for supplier_code in effective_suppliers:
+            runtime_config = runtime_configs.get(supplier_code.upper())
             signal = signal_overrides.get(signal_key(product_id, supplier_code))
+            if runtime_config is None:
+                items.append(
+                    RunItem(
+                        product_id=product_id,
+                        supplier_code=supplier_code.upper(),
+                        item_status="ERROR",
+                        seller_name=supplier_code.lower(),
+                        channel="RUNTIME",
+                        observed_price=_safe_float(observed_price, observed_price),
+                        currency_code=currency_code,
+                        observed_at=now_iso,
+                        product_url=signal.product_url if signal is not None else None,
+                        notes="runtime_config_missing",
+                    )
+                )
+                continue
             items.append(
-                RunItem(
+                execute_supplier_runtime(
+                    config=runtime_config,
                     product_id=product_id,
-                    supplier_code=supplier_code,
-                    item_status="OK",
-                    seller_name="xlsx_reference",
-                    channel="XLSX",
-                    observed_price=observed_price,
+                    product_reference=product_reference,
+                    product_ean=product_ean,
+                    base_price=observed_price,
                     currency_code=currency_code,
                     observed_at=now_iso,
-                    product_url=signal.product_url if signal is not None else None,
+                    signal=signal,
                 )
             )
     return items
@@ -739,6 +772,180 @@ def fetch_supplier_signal_overrides(
     return output
 
 
+def fetch_supplier_runtime_configs(
+    conn: psycopg.Connection,
+    tenant_id: str,
+    supplier_codes: list[str],
+) -> dict[str, SupplierRuntimeConfig]:
+    if len(supplier_codes) == 0:
+        return {}
+    with conn.cursor() as cur:
+        cur.execute("BEGIN")
+        cur.execute("SELECT set_config('app.tenant_id', %s, true)", (tenant_id,))
+        cur.execute(
+            """
+            SELECT
+              d.supplier_code,
+              d.execution_kind,
+              d.lookup_policy,
+              m.family,
+              m.config_json
+            FROM suppliers_directory d
+            JOIN supplier_driver_manifests m
+              ON m.tenant_id = d.tenant_id
+             AND m.supplier_code = d.supplier_code
+            WHERE d.tenant_id = current_tenant_id()
+              AND d.enabled = TRUE
+              AND m.is_active = TRUE
+              AND m.validation_status = 'valid'
+              AND d.supplier_code = ANY(%s::text[])
+            ORDER BY d.supplier_code
+            """,
+            (supplier_codes,),
+        )
+        rows = cur.fetchall()
+        cur.execute("COMMIT")
+
+    configs: dict[str, SupplierRuntimeConfig] = {}
+    for row in rows:
+        supplier_code = str(row[0]).strip().upper()
+        if supplier_code == "":
+            continue
+        raw_config = row[4]
+        config_json = raw_config if isinstance(raw_config, dict) else {}
+        configs[supplier_code] = SupplierRuntimeConfig(
+            supplier_code=supplier_code,
+            execution_kind=str(row[1]).strip().upper(),
+            lookup_policy=str(row[2]).strip().upper(),
+            family=str(row[3]).strip().lower(),
+            config_json=config_json,
+        )
+    return configs
+
+
+def fetch_catalog_identifiers(
+    conn: psycopg.Connection,
+    tenant_id: str,
+    product_ids: list[str],
+) -> dict[str, tuple[str, str]]:
+    if len(product_ids) == 0:
+        return {}
+    with conn.cursor() as cur:
+        cur.execute("BEGIN")
+        cur.execute("SELECT set_config('app.tenant_id', %s, true)", (tenant_id,))
+        cur.execute(
+            """
+            SELECT
+              product_id,
+              MAX(CASE WHEN identifier_type = 'reference' THEN identifier_value END) AS reference,
+              MAX(CASE WHEN identifier_type = 'ean' THEN identifier_value END) AS ean
+            FROM catalog_product_identifiers
+            WHERE tenant_id = current_tenant_id()
+              AND product_id = ANY(%s::text[])
+            GROUP BY product_id
+            """,
+            (product_ids,),
+        )
+        rows = cur.fetchall()
+        cur.execute("COMMIT")
+
+    out: dict[str, tuple[str, str]] = {}
+    for row in rows:
+        product_id = str(row[0]).strip()
+        reference = str(row[1]).strip() if row[1] is not None else ""
+        ean = str(row[2]).strip() if row[2] is not None else ""
+        if product_id:
+            out[product_id] = (reference, ean)
+    return out
+
+
+def _safe_float(value: Any, default: float) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return default
+    if parsed < 0:
+        return 0.0
+    return round(parsed, 2)
+
+
+def execute_supplier_runtime(
+    config: SupplierRuntimeConfig,
+    product_id: str,
+    product_reference: str,
+    product_ean: str,
+    base_price: float,
+    currency_code: str,
+    observed_at: str,
+    signal: SupplierSignal | None,
+) -> RunItem:
+    observation: RuntimeObservation = runtime_execute(
+        config=config,
+        inputs=LookupInputs(
+            product_id=product_id,
+            product_reference=product_reference,
+            product_ean=product_ean,
+        ),
+        base_price=base_price,
+        signal=signal,
+    )
+
+    return RunItem(
+        product_id=product_id,
+        supplier_code=config.supplier_code,
+        item_status=observation.item_status,
+        seller_name=observation.seller_name,
+        channel=observation.channel,
+        observed_price=_safe_float(observation.observed_price, base_price),
+        currency_code=currency_code.upper(),
+        observed_at=observed_at,
+        product_url=signal.product_url if signal is not None else None,
+        http_status=observation.http_status,
+        chosen_seller_json={
+            "supplier_code": config.supplier_code,
+            "family": config.family,
+            "strategy": observation.strategy,
+            "lookup_policy": config.lookup_policy,
+            "execution_kind": config.execution_kind,
+            "lookup_term": observation.lookup_term,
+        },
+        notes=observation.notes,
+    )
+
+
+def fetch_active_valid_supplier_codes(
+    conn: psycopg.Connection,
+    tenant_id: str,
+    requested_supplier_codes: list[str],
+) -> list[str]:
+    with conn.cursor() as cur:
+        cur.execute("BEGIN")
+        cur.execute("SELECT set_config('app.tenant_id', %s, true)", (tenant_id,))
+        cur.execute(
+            """
+            SELECT DISTINCT d.supplier_code
+            FROM suppliers_directory d
+            JOIN supplier_driver_manifests m
+              ON m.tenant_id = d.tenant_id
+             AND m.supplier_code = d.supplier_code
+            WHERE d.tenant_id = current_tenant_id()
+              AND d.enabled = TRUE
+              AND m.is_active = TRUE
+              AND m.validation_status = 'valid'
+              AND (
+                cardinality(%s::text[]) = 0
+                OR d.supplier_code = ANY(%s::text[])
+              )
+            ORDER BY d.supplier_code ASC
+            """,
+            (requested_supplier_codes, requested_supplier_codes),
+        )
+        rows = cur.fetchall()
+        cur.execute("COMMIT")
+
+    return [str(row[0]).strip().upper() for row in rows if str(row[0]).strip() != ""]
+
+
 def process_claimed_request(
     conn: psycopg.Connection,
     run_request: RunRequest,
@@ -749,11 +956,15 @@ def process_claimed_request(
 
     notes = f"requested_by={run_request.requested_by}; input_mode={run_request.input_mode}"
     supplier_codes = parse_supplier_codes(run_request.input_payload)
+    effective_supplier_codes = fetch_active_valid_supplier_codes(conn, run_request.tenant_id, supplier_codes)
+    if len(effective_supplier_codes) == 0:
+        raise ValueError("no active valid supplier manifests available for this tenant/request")
+    notes = f"{notes}; suppliers={','.join(effective_supplier_codes)}"
     if run_request.input_mode == "catalog":
         product_ids = parse_catalog_product_ids(run_request.input_payload)
         if len(product_ids) == 0:
             raise ValueError("catalog mode requires at least one catalogProductIds entry")
-        items = query_catalog_items(conn, run_request.tenant_id, product_ids, supplier_codes)
+        items = query_catalog_items(conn, run_request.tenant_id, product_ids, effective_supplier_codes)
     elif run_request.input_mode == "xlsx":
         xlsx_file_path = parse_xlsx_file_path(run_request.input_payload)
         product_ids = parse_catalog_product_ids(run_request.input_payload)
@@ -764,14 +975,14 @@ def process_claimed_request(
             {"catalogProductIds": run_request.input_payload.get("ambiguousScopeIdentifiers")}
         )
         if len(product_ids) > 0:
-            items = query_catalog_items(conn, run_request.tenant_id, product_ids, supplier_codes)
+            items = query_catalog_items(conn, run_request.tenant_id, product_ids, effective_supplier_codes)
             notes = (
                 f"{notes}; xlsx_path={xlsx_file_path or 'not_provided'}; "
                 f"mode=xlsx_resolved; resolved={len(product_ids)}; "
                 f"unresolved={len(unresolved_scope)}; ambiguous={len(ambiguous_scope)}"
             )
         else:
-            items = query_xlsx_fallback_items(conn, run_request.tenant_id, xlsx_fallback_limit, supplier_codes)
+            items = query_xlsx_fallback_items(conn, run_request.tenant_id, xlsx_fallback_limit, effective_supplier_codes)
             notes = f"{notes}; xlsx_path={xlsx_file_path or 'not_provided'}; mode=xlsx_fallback"
     else:
         raise ValueError(f"unsupported input_mode: {run_request.input_mode}")
@@ -811,6 +1022,10 @@ def run_queue_once(
     try:
         run_id, rows_written = process_claimed_request(conn, run_request, xlsx_fallback_limit)
     except Exception as exc:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
         mark_request_failed(conn, run_request.tenant_id, run_request.run_request_id, str(exc))
         log(
             "shopping_queue_failed",
@@ -869,6 +1084,10 @@ def run_event_once(
     try:
         run_id, rows_written = process_claimed_request(conn, run_request, xlsx_fallback_limit)
     except Exception as exc:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
         mark_request_failed(conn, run_request.tenant_id, run_request.run_request_id, str(exc))
         log(
             "shopping_event_failed",
