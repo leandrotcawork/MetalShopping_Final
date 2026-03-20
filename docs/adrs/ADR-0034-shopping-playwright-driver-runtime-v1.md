@@ -1,6 +1,6 @@
 # ADR-0034: Shopping Playwright Driver Runtime v1 (PDP-first, non-mock)
 
-- Status: draft
+- Status: accepted
 - Date: 2026-03-20
 
 ## Context
@@ -70,13 +70,13 @@ Rules:
     - `channel=PLAYWRIGHT`
     - `observed_price=123.45`
 
-Pending for acceptance:
-- end-to-end worker run with non-empty catalog scope for OBRA_FACIL in DB-backed smoke report (ADR-0033)
+Acceptance completed:
+- DB-backed run confirms Playwright execution with `item_status=OK` and `channel=PLAYWRIGHT` for OBRA_FACIL.
 
 ## Acceptance Evidence (for Status: accepted)
 
 - Smoke:
-  - OBRA_FACIL non-mock run produces at least 1 `item_status=OK` with `channel=PLAYWRIGHT` and non-zero price when the supplier returns data.
+  - DB run: `run_id=23289388-75b5-4c9f-89e4-5dcc6003eeea` (tenant `tenant_default`) includes `item_status=OK`, `channel=PLAYWRIGHT`, `http_status=200`.
 - Report:
   - included in the driver suite report (ADR-0033).
 
