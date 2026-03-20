@@ -131,8 +131,30 @@ For any Shopping evolution (Level 2+), the execution sequence is frozen:
   Skills: `metalshopping-adr-updates`, `metalshopping-openapi-contracts`, `metalshopping-contract-authoring`, `metalshopping-worker-scaffold`, `metalshopping-worker-patterns`, `metalshopping-observability-security`
   Contracts: OpenAPI + JSON Schema evolution for discovery lifecycle fields (optional governance policy)
   Goal: deterministic URL discovery scheduling with cooldowns for Playwright suppliers.
+  Status: accepted (evidence: `docs/adrs/ADR-0035-shopping-supplier-url-discovery-lifecycle-v1.md`)
+
+## Frontend parity ADRs (legacy visual, target architecture)
+
+- ADR-0036: Shopping Frontend Parity Baseline v1
+  Skills: `metalshopping-frontend-migration-guardrails`, `metalshopping-adr-updates`
+  Contracts: no contract changes; freezes UI baseline and package ownership rules for Shopping parity
+  Status: draft
+
+- ADR-0037: Shopping Upload UX v1 (Desktop Picker First)
+  Skills: `metalshopping-frontend-migration-guardrails`, `metalshopping-adr-updates`
+  Contracts: no contract changes; capability-based UI on top of existing `xlsxFilePath` model
+  Status: draft
+
+- ADR-0038: Shopping Supplier Selection Cards v1
+  Skills: `metalshopping-frontend-migration-guardrails`, `metalshopping-adr-updates`
+  Contracts: no contract changes
+  Status: draft
+
+- ADR-0039: Shopping Manual URL Panel v1 (Operational Table)
+  Skills: `metalshopping-frontend-migration-guardrails`, `metalshopping-adr-updates`
+  Contracts: no contract changes in v1; uses existing supplier signals endpoints
   Status: draft
 
 ## Rule
 
-Next gate before UI: complete backend driver framework parity ADRs (ADR-0031..ADR-0034) with objective smoke evidence for the legacy supplier set.
+Next gate before major UI investment: close backend parity gates (ADR-0031..ADR-0035) and then execute frontend parity ADRs (ADR-0036..ADR-0039) before introducing new Shopping workflow features.

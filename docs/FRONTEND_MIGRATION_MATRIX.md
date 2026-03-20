@@ -42,5 +42,5 @@ For each new surface:
 ## Current status
 
 - Home: in progress on this matrix
-- Shopping: pending classification and contract freeze
+- Shopping: classification and parity ADR tranche drafted (ADR-0036..ADR-0039)
 - Analytics: pending classification and contract freeze
