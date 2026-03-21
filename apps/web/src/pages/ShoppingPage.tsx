@@ -23,6 +23,7 @@ type WizardStep = 1 | 2 | 3;
 type InputMode = "xlsx" | "catalog";
 
 const catalogPageLimit = 30;
+const manualPageLimit = 10;
 const allOptionValue = "all";
 
 const statusOptions: Array<{ value: ShoppingRunStatus | "all"; label: string }> = [
@@ -204,24 +205,76 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     let cancelled = false;
 
     async function loadCandidates() {
+      const searchValue = manualSearch.trim();
+      const enabledSupplierCodes = (bootstrap?.suppliers ?? [])
+        .filter((supplier) => supplier.enabled)
+        .map((supplier) => supplier.supplierCode);
       if (manualSupplierCode === allOptionValue) {
-        setManualCandidates([]);
-        setManualTotal(0);
-        setManualReturned(0);
-        setManualLoadError(null);
-        return;
+        if (!searchValue) {
+          setManualCandidates([]);
+          setManualTotal(0);
+          setManualReturned(0);
+          setManualLoadError(null);
+          return;
+        }
+
+        if (enabledSupplierCodes.length === 0) {
+          setManualCandidates([]);
+          setManualTotal(0);
+          setManualReturned(0);
+          setManualLoadError("Nenhum fornecedor habilitado para consulta.");
+          return;
+        }
       }
 
       setManualLoading(true);
       setManualLoadError(null);
       try {
+        if (manualSupplierCode === allOptionValue) {
+          const limit = manualOffset + manualPageLimit;
+          const responses = await Promise.all(
+            enabledSupplierCodes.map((supplierCode) =>
+              shoppingApi.listManualUrlCandidates({
+                supplierCode,
+                search: searchValue || undefined,
+                brandName: manualBrand === allOptionValue ? undefined : manualBrand,
+                taxonomyLeaf0Name: manualTaxonomy === allOptionValue ? undefined : manualTaxonomy,
+                includeExisting: manualShowExisting,
+                limit,
+                offset: 0,
+              }),
+            ),
+          );
+          if (!cancelled) {
+            const mergedRows = responses
+              .flatMap((response) => response.rows)
+              .sort((left, right) => {
+                const supplierCompare = left.supplierCode.localeCompare(right.supplierCode);
+                if (supplierCompare !== 0) {
+                  return supplierCompare;
+                }
+                const skuCompare = (left.sku ?? "").localeCompare(right.sku ?? "");
+                if (skuCompare !== 0) {
+                  return skuCompare;
+                }
+                return left.productId.localeCompare(right.productId);
+              });
+            const total = responses.reduce((sum, response) => sum + response.paging.total, 0);
+            const slice = mergedRows.slice(manualOffset, manualOffset + manualPageLimit);
+            setManualCandidates(slice);
+            setManualTotal(total);
+            setManualReturned(slice.length);
+          }
+          return;
+        }
+
         const list = await shoppingApi.listManualUrlCandidates({
           supplierCode: manualSupplierCode,
-          search: manualSearch.trim() || undefined,
+          search: searchValue || undefined,
           brandName: manualBrand === allOptionValue ? undefined : manualBrand,
           taxonomyLeaf0Name: manualTaxonomy === allOptionValue ? undefined : manualTaxonomy,
           includeExisting: manualShowExisting,
-          limit: 10,
+          limit: manualPageLimit,
           offset: manualOffset,
         });
         if (!cancelled) {
@@ -256,6 +309,7 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     manualTaxonomy,
     manualShowExisting,
     manualOffset,
+    bootstrap,
     reloadTick,
   ]);
 
@@ -401,6 +455,7 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
         })),
     [bootstrap],
   );
+
 
   const manualBrandOptions = useMemo(
     () => catalogBrandOptions.filter((option) => option.value !== allOptionValue),
@@ -982,7 +1037,9 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
           ) : manualSupplierCode === allOptionValue ? (
             <tr>
               <td colSpan={5} className={styles.manualEmpty}>
-                Selecione um fornecedor para listar candidatos.
+                {manualSearch.trim()
+                  ? "Busque um SKU para consultar todos os fornecedores."
+                  : "Informe um SKU ou referencia para buscar em todos os fornecedores."}
               </td>
             </tr>
           ) : manualRows.length === 0 ? (
@@ -1040,7 +1097,7 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
           type="button"
           className={`${styles.btn} ${styles.btnGhost}`}
           disabled={manualOffset <= 0}
-          onClick={() => setManualOffset((current) => Math.max(0, current - 10))}
+          onClick={() => setManualOffset((current) => Math.max(0, current - manualPageLimit))}
         >
           ← Pagina anterior
         </button>
@@ -1048,7 +1105,7 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
           type="button"
           className={`${styles.btn} ${styles.btnGhost}`}
           disabled={manualOffset + manualReturned >= manualTotal}
-          onClick={() => setManualOffset((current) => current + 10)}
+          onClick={() => setManualOffset((current) => current + manualPageLimit)}
         >
           Proxima pagina →
         </button>
