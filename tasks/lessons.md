@@ -54,3 +54,24 @@ Layer:   Process
 
 ---
 <!-- Project-specific lessons below this line -->
+
+## Lesson 1 — ADR implementation must follow `$ms` plan + evidence
+Date: 2026-03-21 | Trigger: correction
+Wrong:   ADR checklist and acceptance evidence drift from `tasks/todo.md` and the `$ms` task workflow.
+Correct: Keep `tasks/todo.md` as the execution source of truth (T1–T6), and mark ADR `accepted` only after real evidence + close-out commit.
+Rule:    ADRs describe decisions; execution is tracked and verified via `$ms` tasks with evidence and commits.
+Layer:   Process
+
+## Lesson 2 — `tasks/todo.md` must match the `$ms` Phase 2 template
+Date: 2026-03-21 | Trigger: correction
+Wrong:   `tasks/todo.md` drifts (old formatting/encoding, missing Phase 2 framing, references to removed skills).
+Correct: Rewrite `tasks/todo.md` as the `$ms` plan of record (Phase 1 summary + Phase 2 tasks + acceptance tests) and keep it aligned with the ADR.
+Rule:    The plan that drives execution must be unambiguous, current, and skill-aligned.
+Layer:   Process
+
+## Lesson 3 — Cast Postgres placeholders used in string logic
+Date: 2026-03-21 | Trigger: correction
+Wrong:   Using `$3` (unknown type) in string checks like `$3 = ''` without an explicit cast.
+Correct: Cast placeholders when mixing null/empty-string logic, e.g. `NULLIF($3::text, '')` and `CASE WHEN NULLIF($3::text, '') IS NULL THEN ...`.
+Rule:    Ensure SQL placeholders have deterministic types when used in both value and predicate contexts.
+Layer:   Go adapter

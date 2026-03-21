@@ -38,6 +38,8 @@ Level 1 scope:
       commit: "feat(shopping): add manual URL candidates endpoint contract"
 - [x] T2: Go module - reader + handler + postgres adapter
       commit: "feat(shopping): implement manual URL candidates list endpoint"
+- [x] T2b: fix upsert supplier signals type casting
+      commit: "fix(shopping): make supplier signal upsert type-safe"
 - [x] T4: SDK - $metalshopping-sdk-generation
       commit: "chore(sdk): regenerate after shopping contract"
 - [x] T5: frontend - $metalshopping-frontend
@@ -46,9 +48,9 @@ Level 1 scope:
       commit: "docs(adr): ADR-0045 manual URL candidates - verified and closed"
 
 ## Acceptance tests
-- [ ] `go build ./...` passes
-- [ ] `npm.cmd run web:typecheck` passes
-- [ ] `npm.cmd run web:build` passes
-- [ ] With `shopping_supplier_product_signals` empty:
+- [x] `go build ./...` passes
+- [x] `npm.cmd run web:typecheck` passes
+- [x] `npm.cmd run web:build` passes
+- [x] With `shopping_supplier_product_signals` empty:
       `GET /api/v1/shopping/manual-url-candidates?supplier_code=DEXCO&limit=10&offset=0` returns catalog rows
 - [ ] In browser: Manual URL panel lists products even with empty signals; saving a URL creates signal and table reflects overlay
