@@ -22,6 +22,7 @@ OPERATION_IDS = [
     'listInventoryProductPositions',
     'listPricingProductPrices',
     'listProductsPortfolio',
+    'listShoppingManualUrlCandidates',
     'listShoppingRuns',
     'listShoppingSupplierSignals',
     'listSupplierDriverManifests',

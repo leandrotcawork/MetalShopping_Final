@@ -34,6 +34,8 @@ export const schemaIds = {
   "shopping_bootstrap_v1.schema": "https://schemas.metalshopping.local/api/shopping_bootstrap_v1.schema.json",
   "shopping_create_run_request_v1.schema": "https://schemas.metalshopping.local/api/shopping_create_run_request_v1.schema.json",
   "shopping_create_run_response_v1.schema": "https://schemas.metalshopping.local/api/shopping_create_run_response_v1.schema.json",
+  "shopping_manual_url_candidate_list_v1.schema": "https://schemas.metalshopping.local/api/shopping_manual_url_candidate_list_v1.schema.json",
+  "shopping_manual_url_candidate_v1.schema": "https://schemas.metalshopping.local/api/shopping_manual_url_candidate_v1.schema.json",
   "shopping_product_latest_v1.schema": "https://schemas.metalshopping.local/api/shopping_product_latest_v1.schema.json",
   "shopping_run_list_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_list_v1.schema.json",
   "shopping_run_request_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_request_v1.schema.json",
@@ -405,6 +407,37 @@ export type ShoppingCreateRunResponseV1 = {
   requestedBy: string;
 };
 
+export type ShoppingManualUrlCandidateListV1 = {
+  rows: Array<ShoppingManualUrlCandidateV1>;
+  paging: {
+    offset: number;
+    limit: number;
+    returned: number;
+    total: number;
+  };
+};
+
+export type ShoppingManualUrlCandidateV1 = {
+  productId: string;
+  supplierCode: string;
+  sku: string;
+  name: string;
+  brandName?: string | null;
+  taxonomyLeaf0Name?: string | null;
+  productUrl?: string | null;
+  urlStatus: "ACTIVE" | "STALE" | "INVALID";
+  lookupMode: "EAN" | "REFERENCE";
+  lookupModeSource: "INFERRED" | "MANUAL";
+  manualOverride: boolean;
+  lastCheckedAt?: string | null;
+  lastSuccessAt?: string | null;
+  lastHttpStatus?: number | null;
+  lastErrorMessage?: string | null;
+  nextDiscoveryAt?: string | null;
+  notFoundCount: number;
+  updatedAt: string;
+};
+
 export type ShoppingProductLatestV1 = {
   productId: string;
   runId: string;
@@ -513,10 +546,11 @@ export type ShoppingUpsertSupplierSignalRequestV1 = {
 };
 
 export type SupplierDriverManifestHttpV1 = {
-  strategy: "http.mock.v1" | "http.vtex_persisted_query.v1" | "http.html_search.v1";
+  strategy: "http.mock.v1" | "http.vtex_persisted_query.v1" | "http.html_search.v1" | "http.leroy_search_sellers.v1" | "http.html_dom_first_card.v1";
   baseUrl?: string;
   endpointTemplate?: string;
   searchUrlTemplate?: string;
+  sellersUrlTemplate?: string;
   operationName?: string;
   sha256Hash?: string;
   lookupVariableName?: string;
@@ -526,6 +560,14 @@ export type SupplierDriverManifestHttpV1 = {
   channelPath?: string;
   priceRegex?: string;
   sellerRegex?: string;
+  region?: string;
+  sellerPickStrategy?: "selected" | "min_sale";
+  cardRootHint?: string;
+  cardItemHint?: string;
+  titleHint?: string;
+  listPriceHint?: string;
+  calculatedPriceHint?: string;
+  pricePriority?: "calculated_first" | "sale_first";
   timeoutSeconds?: number;
   maxRetries?: number;
   maxConcurrency?: number;

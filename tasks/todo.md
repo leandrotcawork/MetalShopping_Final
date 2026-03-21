@@ -38,7 +38,7 @@ Level 1 scope:
       commit: "feat(shopping): add manual URL candidates endpoint contract"
 - [x] T2: Go module - reader + handler + postgres adapter
       commit: "feat(shopping): implement manual URL candidates list endpoint"
-- [ ] T4: SDK - $metalshopping-sdk-generation
+- [x] T4: SDK - $metalshopping-sdk-generation
       commit: "chore(sdk): regenerate after shopping contract"
 - [ ] T5: frontend - $metalshopping-frontend
       commit: "feat(web): manual URL panel uses candidates endpoint"

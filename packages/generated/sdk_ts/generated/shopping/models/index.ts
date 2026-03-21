@@ -9,6 +9,8 @@ export * from './ShoppingBootstrapV1SuppliersInner';
 export * from './ShoppingCreateRunRequestV1';
 export * from './ShoppingCreateRunRequestV1Advanced';
 export * from './ShoppingCreateRunResponseV1';
+export * from './ShoppingManualUrlCandidateListV1';
+export * from './ShoppingManualUrlCandidateV1';
 export * from './ShoppingProductLatestV1';
 export * from './ShoppingRunListV1';
 export * from './ShoppingRunListV1Paging';

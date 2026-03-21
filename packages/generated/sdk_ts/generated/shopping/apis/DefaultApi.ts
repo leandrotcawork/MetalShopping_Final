@@ -20,6 +20,7 @@ import type {
   ShoppingBootstrapV1,
   ShoppingCreateRunRequestV1,
   ShoppingCreateRunResponseV1,
+  ShoppingManualUrlCandidateListV1,
   ShoppingProductLatestV1,
   ShoppingRunListV1,
   ShoppingRunRequestV1,
@@ -40,6 +41,8 @@ import {
     ShoppingCreateRunRequestV1ToJSON,
     ShoppingCreateRunResponseV1FromJSON,
     ShoppingCreateRunResponseV1ToJSON,
+    ShoppingManualUrlCandidateListV1FromJSON,
+    ShoppingManualUrlCandidateListV1ToJSON,
     ShoppingProductLatestV1FromJSON,
     ShoppingProductLatestV1ToJSON,
     ShoppingRunListV1FromJSON,
@@ -72,6 +75,16 @@ export interface GetShoppingRunRequest {
 
 export interface GetShoppingRunRequestRequest {
     runRequestId: string;
+}
+
+export interface ListShoppingManualUrlCandidatesRequest {
+    supplierCode: string;
+    search?: string;
+    brandName?: string;
+    taxonomyLeaf0Name?: string;
+    includeExisting?: boolean;
+    limit?: number;
+    offset?: number;
 }
 
 export interface ListShoppingRunsRequest {
@@ -349,6 +362,78 @@ export class DefaultApi extends runtime.BaseAPI {
      */
     async getShoppingSummary(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ShoppingSummaryV1> {
         const response = await this.getShoppingSummaryRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for listShoppingManualUrlCandidates without sending the request
+     */
+    async listShoppingManualUrlCandidatesRequestOpts(requestParameters: ListShoppingManualUrlCandidatesRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['supplierCode'] == null) {
+            throw new runtime.RequiredError(
+                'supplierCode',
+                'Required parameter "supplierCode" was null or undefined when calling listShoppingManualUrlCandidates().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['supplierCode'] != null) {
+            queryParameters['supplier_code'] = requestParameters['supplierCode'];
+        }
+
+        if (requestParameters['search'] != null) {
+            queryParameters['search'] = requestParameters['search'];
+        }
+
+        if (requestParameters['brandName'] != null) {
+            queryParameters['brand_name'] = requestParameters['brandName'];
+        }
+
+        if (requestParameters['taxonomyLeaf0Name'] != null) {
+            queryParameters['taxonomy_leaf0_name'] = requestParameters['taxonomyLeaf0Name'];
+        }
+
+        if (requestParameters['includeExisting'] != null) {
+            queryParameters['include_existing'] = requestParameters['includeExisting'];
+        }
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
+
+        if (requestParameters['offset'] != null) {
+            queryParameters['offset'] = requestParameters['offset'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/shopping/manual-url-candidates`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * List catalog candidates with manual URL overlay for one supplier
+     */
+    async listShoppingManualUrlCandidatesRaw(requestParameters: ListShoppingManualUrlCandidatesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ShoppingManualUrlCandidateListV1>> {
+        const requestOptions = await this.listShoppingManualUrlCandidatesRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ShoppingManualUrlCandidateListV1FromJSON(jsonValue));
+    }
+
+    /**
+     * List catalog candidates with manual URL overlay for one supplier
+     */
+    async listShoppingManualUrlCandidates(requestParameters: ListShoppingManualUrlCandidatesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ShoppingManualUrlCandidateListV1> {
+        const response = await this.listShoppingManualUrlCandidatesRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
