@@ -450,6 +450,169 @@ LIMIT $3 OFFSET $4
 	}, nil
 }
 
+func (r *Reader) ListManualURLCandidates(ctx context.Context, tenantID string, filter ports.ManualURLCandidateFilter) (ports.ManualURLCandidateList, error) {
+	if strings.TrimSpace(filter.SupplierCode) == "" {
+		return ports.ManualURLCandidateList{}, fmt.Errorf("supplier_code is required")
+	}
+
+	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return ports.ManualURLCandidateList{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	limit := filter.Limit
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	offset := filter.Offset
+	if offset < 0 {
+		offset = 0
+	}
+
+	args := make([]any, 0, 6)
+	args = append(args, filter.SupplierCode)
+	argPos := 2
+
+	clauses := []string{"WHERE p.tenant_id = current_tenant_id()"}
+	if filter.Search != "" {
+		clauses = append(clauses, fmt.Sprintf(`AND (
+  p.sku ILIKE $%d
+  OR p.name ILIKE $%d
+  OR p.product_id ILIKE $%d
+)`, argPos, argPos, argPos))
+		args = append(args, "%"+filter.Search+"%")
+		argPos++
+	}
+	if filter.BrandName != "" {
+		clauses = append(clauses, fmt.Sprintf("AND p.brand_name = $%d", argPos))
+		args = append(args, filter.BrandName)
+		argPos++
+	}
+	if filter.TaxonomyLeaf0Name != "" {
+		clauses = append(clauses, fmt.Sprintf("AND txo.taxonomy_leaf0_name = $%d", argPos))
+		args = append(args, filter.TaxonomyLeaf0Name)
+		argPos++
+	}
+
+	includeExisting := filter.IncludeExisting
+	if !includeExisting {
+		clauses = append(clauses, "AND (s.product_url IS NULL OR BTRIM(s.product_url) = '')")
+	}
+
+	whereSQL := strings.Join(clauses, "\n")
+
+	const manualCandidatesCTE = `
+WITH RECURSIVE taxonomy_chain AS (
+  SELECT
+    taxonomy_node_id,
+    tenant_id,
+    parent_taxonomy_node_id,
+    name,
+    level,
+    taxonomy_node_id AS leaf_id
+  FROM catalog_taxonomy_nodes
+  WHERE tenant_id = current_tenant_id()
+  UNION ALL
+  SELECT
+    parent.taxonomy_node_id,
+    parent.tenant_id,
+    parent.parent_taxonomy_node_id,
+    parent.name,
+    parent.level,
+    chain.leaf_id
+  FROM taxonomy_chain chain
+  JOIN catalog_taxonomy_nodes parent
+    ON parent.tenant_id = current_tenant_id()
+   AND parent.taxonomy_node_id = chain.parent_taxonomy_node_id
+),
+taxonomy_lookup AS (
+  SELECT
+    leaf_id AS taxonomy_node_id,
+    MAX(CASE WHEN level = 0 THEN name END) AS taxonomy_leaf0_name
+  FROM taxonomy_chain
+  GROUP BY leaf_id
+)
+`
+
+	countSQL := manualCandidatesCTE + `
+SELECT COUNT(*)
+FROM catalog_products p
+LEFT JOIN taxonomy_lookup txo ON txo.taxonomy_node_id = p.primary_taxonomy_node_id
+LEFT JOIN shopping_supplier_product_signals s
+  ON s.tenant_id = current_tenant_id()
+ AND s.product_id = p.product_id
+ AND s.supplier_code = $1
+` + whereSQL
+
+	var total int64
+	if err := tx.QueryRowContext(ctx, countSQL, args...).Scan(&total); err != nil {
+		return ports.ManualURLCandidateList{}, fmt.Errorf("count shopping manual url candidates: %w", err)
+	}
+
+	querySQL := manualCandidatesCTE + `
+SELECT
+  p.product_id,
+  $1 AS supplier_code,
+  p.sku,
+  p.name,
+  p.brand_name,
+  txo.taxonomy_leaf0_name,
+  s.product_url,
+  COALESCE(s.url_status, 'STALE') AS url_status,
+  COALESCE(s.lookup_mode, 'REFERENCE') AS lookup_mode,
+  CASE
+    WHEN s.product_id IS NULL THEN 'INFERRED'
+    ELSE s.lookup_mode_source
+  END AS lookup_mode_source,
+  COALESCE(s.manual_override, FALSE) AS manual_override,
+  s.last_checked_at,
+  s.last_success_at,
+  s.last_http_status,
+  s.last_error_message,
+  s.next_discovery_at,
+  COALESCE(s.not_found_count, 0) AS not_found_count,
+  COALESCE(s.updated_at, p.updated_at) AS updated_at
+FROM catalog_products p
+LEFT JOIN taxonomy_lookup txo ON txo.taxonomy_node_id = p.primary_taxonomy_node_id
+LEFT JOIN shopping_supplier_product_signals s
+  ON s.tenant_id = current_tenant_id()
+ AND s.product_id = p.product_id
+ AND s.supplier_code = $1
+` + whereSQL + `
+ORDER BY p.name ASC, p.sku ASC
+LIMIT $` + fmt.Sprintf("%d", argPos) + ` OFFSET $` + fmt.Sprintf("%d", argPos+1)
+
+	rows, err := tx.QueryContext(ctx, querySQL, append(args, limit, offset)...)
+	if err != nil {
+		return ports.ManualURLCandidateList{}, fmt.Errorf("list shopping manual url candidates: %w", err)
+	}
+	defer rows.Close()
+
+	items := make([]ports.ManualURLCandidate, 0, limit)
+	for rows.Next() {
+		item, scanErr := scanManualURLCandidate(rows)
+		if scanErr != nil {
+			return ports.ManualURLCandidateList{}, scanErr
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return ports.ManualURLCandidateList{}, fmt.Errorf("iterate shopping manual url candidates: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return ports.ManualURLCandidateList{}, fmt.Errorf("commit shopping manual url candidates: %w", err)
+	}
+
+	return ports.ManualURLCandidateList{
+		Rows:   items,
+		Offset: offset,
+		Limit:  limit,
+		Total:  total,
+	}, nil
+}
+
 func extractString(value any) string {
 	switch typed := value.(type) {
 	case string:
@@ -550,6 +713,83 @@ func scanSupplierSignal(s scanner) (ports.SupplierSignal, error) {
 	if lastErrorMessage.Valid {
 		value := lastErrorMessage.String
 		item.LastErrorMessage = &value
+	}
+	if nextDiscoveryAt.Valid {
+		value := nextDiscoveryAt.Time.UTC()
+		item.NextDiscoveryAt = &value
+	}
+	item.UpdatedAt = item.UpdatedAt.UTC()
+	return item, nil
+}
+
+func scanManualURLCandidate(s scanner) (ports.ManualURLCandidate, error) {
+	var item ports.ManualURLCandidate
+	var brandName sql.NullString
+	var taxonomyLeaf0Name sql.NullString
+	var productURL sql.NullString
+	var lastCheckedAt sql.NullTime
+	var lastSuccessAt sql.NullTime
+	var lastHTTPStatus sql.NullInt64
+	var lastErrorMessage sql.NullString
+	var nextDiscoveryAt sql.NullTime
+	if err := s.Scan(
+		&item.ProductID,
+		&item.SupplierCode,
+		&item.SKU,
+		&item.Name,
+		&brandName,
+		&taxonomyLeaf0Name,
+		&productURL,
+		&item.URLStatus,
+		&item.LookupMode,
+		&item.LookupModeSource,
+		&item.ManualOverride,
+		&lastCheckedAt,
+		&lastSuccessAt,
+		&lastHTTPStatus,
+		&lastErrorMessage,
+		&nextDiscoveryAt,
+		&item.NotFoundCount,
+		&item.UpdatedAt,
+	); err != nil {
+		return ports.ManualURLCandidate{}, fmt.Errorf("scan shopping manual url candidate: %w", err)
+	}
+
+	if brandName.Valid {
+		value := strings.TrimSpace(brandName.String)
+		if value != "" {
+			item.BrandName = &value
+		}
+	}
+	if taxonomyLeaf0Name.Valid {
+		value := strings.TrimSpace(taxonomyLeaf0Name.String)
+		if value != "" {
+			item.TaxonomyLeaf0Name = &value
+		}
+	}
+	if productURL.Valid {
+		value := strings.TrimSpace(productURL.String)
+		if value != "" {
+			item.ProductURL = &value
+		}
+	}
+	if lastCheckedAt.Valid {
+		value := lastCheckedAt.Time.UTC()
+		item.LastCheckedAt = &value
+	}
+	if lastSuccessAt.Valid {
+		value := lastSuccessAt.Time.UTC()
+		item.LastSuccessAt = &value
+	}
+	if lastHTTPStatus.Valid {
+		value := lastHTTPStatus.Int64
+		item.LastHTTPStatus = &value
+	}
+	if lastErrorMessage.Valid {
+		value := strings.TrimSpace(lastErrorMessage.String)
+		if value != "" {
+			item.LastErrorMessage = &value
+		}
 	}
 	if nextDiscoveryAt.Valid {
 		value := nextDiscoveryAt.Time.UTC()

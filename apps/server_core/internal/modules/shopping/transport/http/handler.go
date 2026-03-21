@@ -32,6 +32,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/shopping/products/", h.handleProductLatest)
 	mux.HandleFunc("/api/v1/shopping/run-requests/", h.handleRunRequestByID)
 	mux.HandleFunc("/api/v1/shopping/supplier-signals", h.handleSupplierSignals)
+	mux.HandleFunc("/api/v1/shopping/manual-url-candidates", h.handleManualURLCandidates)
 }
 
 func (h *Handler) handleBootstrap(w http.ResponseWriter, r *http.Request) {
@@ -552,6 +553,83 @@ func (h *Handler) handleSupplierSignals(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, mapSupplierSignal(signal))
 }
 
+func (h *Handler) handleManualURLCandidates(w http.ResponseWriter, r *http.Request) {
+	startedAt := time.Now()
+	traceID := requestTraceID(r)
+	statusCode := http.StatusOK
+	reqResult := "success"
+	defer logRequest("shopping.list_manual_url_candidates", traceID, &statusCode, &reqResult, startedAt)
+
+	if r.Method != http.MethodGet {
+		statusCode = http.StatusMethodNotAllowed
+		reqResult = "method_not_allowed"
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	tenantID, ok := authenticatedTenantID(w, r)
+	if !ok {
+		statusCode = http.StatusUnauthorized
+		reqResult = "auth_or_tenant_error"
+		return
+	}
+
+	supplierCode := strings.TrimSpace(r.URL.Query().Get("supplier_code"))
+	if supplierCode == "" {
+		statusCode = http.StatusBadRequest
+		reqResult = "validation_error"
+		writeShoppingError(w, http.StatusBadRequest, "SHOPPING_MANUAL_URL_CANDIDATES_INVALID", "supplier_code is required", traceID)
+		return
+	}
+
+	limit := parseQueryInt64(r, "limit", 50)
+	offset := parseQueryInt64(r, "offset", 0)
+	includeExisting := r.URL.Query().Get("include_existing")
+
+	parsedIncludeExisting := true
+	if strings.TrimSpace(includeExisting) != "" {
+		value, err := strconv.ParseBool(includeExisting)
+		if err != nil {
+			statusCode = http.StatusBadRequest
+			reqResult = "validation_error"
+			writeShoppingError(w, http.StatusBadRequest, "SHOPPING_MANUAL_URL_CANDIDATES_INVALID", "include_existing must be boolean", traceID)
+			return
+		}
+		parsedIncludeExisting = value
+	}
+
+	candidates, err := h.service.ListManualURLCandidates(r.Context(), tenantID, ports.ManualURLCandidateFilter{
+		SupplierCode:      supplierCode,
+		Search:            strings.TrimSpace(r.URL.Query().Get("search")),
+		BrandName:         strings.TrimSpace(r.URL.Query().Get("brand_name")),
+		TaxonomyLeaf0Name: strings.TrimSpace(r.URL.Query().Get("taxonomy_leaf0_name")),
+		IncludeExisting:   parsedIncludeExisting,
+		Limit:             limit,
+		Offset:            offset,
+	})
+	if err != nil {
+		statusCode = http.StatusInternalServerError
+		reqResult = "internal_error"
+		writeShoppingError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to list shopping manual URL candidates", traceID)
+		return
+	}
+
+	rows := make([]map[string]any, 0, len(candidates.Rows))
+	for _, item := range candidates.Rows {
+		rows = append(rows, mapManualURLCandidate(item))
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"rows": rows,
+		"paging": map[string]any{
+			"offset":   candidates.Offset,
+			"limit":    candidates.Limit,
+			"returned": len(rows),
+			"total":    candidates.Total,
+		},
+	})
+}
+
 func mapRun(run ports.Run) map[string]any {
 	var finishedAt any
 	if run.FinishedAt != nil {
@@ -598,6 +676,54 @@ func mapSupplierSignal(item ports.SupplierSignal) map[string]any {
 		"nextDiscoveryAt":  nil,
 		"notFoundCount":    item.NotFoundCount,
 		"updatedAt":        item.UpdatedAt.UTC().Format(time.RFC3339),
+	}
+	if item.ProductURL != nil {
+		payload["productUrl"] = *item.ProductURL
+	}
+	if item.LastCheckedAt != nil {
+		payload["lastCheckedAt"] = item.LastCheckedAt.UTC().Format(time.RFC3339)
+	}
+	if item.LastSuccessAt != nil {
+		payload["lastSuccessAt"] = item.LastSuccessAt.UTC().Format(time.RFC3339)
+	}
+	if item.LastHTTPStatus != nil {
+		payload["lastHttpStatus"] = *item.LastHTTPStatus
+	}
+	if item.LastErrorMessage != nil {
+		payload["lastErrorMessage"] = *item.LastErrorMessage
+	}
+	if item.NextDiscoveryAt != nil {
+		payload["nextDiscoveryAt"] = item.NextDiscoveryAt.UTC().Format(time.RFC3339)
+	}
+	return payload
+}
+
+func mapManualURLCandidate(item ports.ManualURLCandidate) map[string]any {
+	payload := map[string]any{
+		"productId":         item.ProductID,
+		"supplierCode":      item.SupplierCode,
+		"sku":               item.SKU,
+		"name":              item.Name,
+		"brandName":         nil,
+		"taxonomyLeaf0Name": nil,
+		"productUrl":        nil,
+		"urlStatus":         item.URLStatus,
+		"lookupMode":        item.LookupMode,
+		"lookupModeSource":  item.LookupModeSource,
+		"manualOverride":    item.ManualOverride,
+		"lastCheckedAt":     nil,
+		"lastSuccessAt":     nil,
+		"lastHttpStatus":    nil,
+		"lastErrorMessage":  nil,
+		"nextDiscoveryAt":   nil,
+		"notFoundCount":     item.NotFoundCount,
+		"updatedAt":         item.UpdatedAt.UTC().Format(time.RFC3339),
+	}
+	if item.BrandName != nil {
+		payload["brandName"] = *item.BrandName
+	}
+	if item.TaxonomyLeaf0Name != nil {
+		payload["taxonomyLeaf0Name"] = *item.TaxonomyLeaf0Name
 	}
 	if item.ProductURL != nil {
 		payload["productUrl"] = *item.ProductURL
