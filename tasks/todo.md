@@ -40,7 +40,7 @@ Level 1 scope:
       commit: "feat(shopping): implement manual URL candidates list endpoint"
 - [x] T4: SDK - $metalshopping-sdk-generation
       commit: "chore(sdk): regenerate after shopping contract"
-- [ ] T5: frontend - $metalshopping-frontend
+- [x] T5: frontend - $metalshopping-frontend
       commit: "feat(web): manual URL panel uses candidates endpoint"
 - [ ] T6: ADR close-out - capture evidence and accept ADR-0045
       commit: "docs(adr): ADR-0045 manual URL candidates - verified and closed"

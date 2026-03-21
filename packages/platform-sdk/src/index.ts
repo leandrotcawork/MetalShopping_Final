@@ -7,6 +7,8 @@ import type {
   ShoppingBootstrapV1,
   ShoppingCreateRunRequestV1,
   ShoppingCreateRunResponseV1,
+  ShoppingManualUrlCandidateListV1,
+  ShoppingManualUrlCandidateV1,
   ShoppingRunRequestV1,
   ShoppingProductLatestV1,
   ShoppingRunListV1,
@@ -92,6 +94,16 @@ export type ListShoppingSupplierSignalsQueryParams = {
   offset?: number;
 };
 
+export type ListShoppingManualUrlCandidatesQueryParams = {
+  supplierCode: string;
+  search?: string;
+  brandName?: string;
+  taxonomyLeaf0Name?: string;
+  includeExisting?: boolean;
+  limit?: number;
+  offset?: number;
+};
+
 export type ServerCoreSdk = {
   home: {
     getSummary(): Promise<HomeSummaryV1>;
@@ -105,6 +117,9 @@ export type ServerCoreSdk = {
     getRun(runId: string): Promise<ShoppingRunV1>;
     getProductLatest(productId: string): Promise<ShoppingProductLatestV1>;
     listSupplierSignals(query?: ListShoppingSupplierSignalsQueryParams): Promise<ShoppingSupplierSignalListV1>;
+    listManualUrlCandidates(
+      query: ListShoppingManualUrlCandidatesQueryParams,
+    ): Promise<ShoppingManualUrlCandidateListV1>;
     upsertSupplierSignal(payload: ShoppingUpsertSupplierSignalRequestV1): Promise<ShoppingSupplierSignalV1>;
   };
   authSession: {
@@ -565,6 +580,101 @@ function parseShoppingSupplierSignalList(raw: unknown): ShoppingSupplierSignalLi
   };
 }
 
+function parseShoppingManualUrlCandidate(raw: unknown): ShoppingManualUrlCandidateV1 {
+  if (!isRecord(raw)) {
+    throw new Error("[sdk-runtime] ShoppingManualUrlCandidateV1 response must be an object");
+  }
+  assertString(raw.productId, "ShoppingManualUrlCandidateV1.productId");
+  assertString(raw.supplierCode, "ShoppingManualUrlCandidateV1.supplierCode");
+  assertString(raw.sku, "ShoppingManualUrlCandidateV1.sku");
+  assertString(raw.name, "ShoppingManualUrlCandidateV1.name");
+  assertString(raw.urlStatus, "ShoppingManualUrlCandidateV1.urlStatus");
+  assertString(raw.lookupMode, "ShoppingManualUrlCandidateV1.lookupMode");
+  assertString(raw.lookupModeSource, "ShoppingManualUrlCandidateV1.lookupModeSource");
+  if (typeof raw.manualOverride !== "boolean") {
+    throw new Error("[sdk-runtime] ShoppingManualUrlCandidateV1.manualOverride must be boolean");
+  }
+  assertNumber(raw.notFoundCount, "ShoppingManualUrlCandidateV1.notFoundCount");
+  const updatedAt = normalizeDateTime(raw.updatedAt, "ShoppingManualUrlCandidateV1.updatedAt");
+
+  if (raw.productUrl !== undefined && raw.productUrl !== null) {
+    assertString(raw.productUrl, "ShoppingManualUrlCandidateV1.productUrl");
+  }
+  if (raw.brandName !== undefined && raw.brandName !== null) {
+    assertString(raw.brandName, "ShoppingManualUrlCandidateV1.brandName");
+  }
+  if (raw.taxonomyLeaf0Name !== undefined && raw.taxonomyLeaf0Name !== null) {
+    assertString(raw.taxonomyLeaf0Name, "ShoppingManualUrlCandidateV1.taxonomyLeaf0Name");
+  }
+
+  const lastCheckedAt =
+    raw.lastCheckedAt === null || raw.lastCheckedAt === undefined
+      ? null
+      : normalizeDateTime(raw.lastCheckedAt, "ShoppingManualUrlCandidateV1.lastCheckedAt");
+  const lastSuccessAt =
+    raw.lastSuccessAt === null || raw.lastSuccessAt === undefined
+      ? null
+      : normalizeDateTime(raw.lastSuccessAt, "ShoppingManualUrlCandidateV1.lastSuccessAt");
+  if (raw.lastHttpStatus !== undefined && raw.lastHttpStatus !== null) {
+    assertNumber(raw.lastHttpStatus, "ShoppingManualUrlCandidateV1.lastHttpStatus");
+  }
+  if (raw.lastErrorMessage !== undefined && raw.lastErrorMessage !== null) {
+    assertString(raw.lastErrorMessage, "ShoppingManualUrlCandidateV1.lastErrorMessage");
+  }
+  const nextDiscoveryAt =
+    raw.nextDiscoveryAt === null || raw.nextDiscoveryAt === undefined
+      ? null
+      : normalizeDateTime(raw.nextDiscoveryAt, "ShoppingManualUrlCandidateV1.nextDiscoveryAt");
+
+  return {
+    productId: raw.productId,
+    supplierCode: raw.supplierCode,
+    sku: raw.sku,
+    name: raw.name,
+    brandName: (raw.brandName as string | null | undefined) ?? null,
+    taxonomyLeaf0Name: (raw.taxonomyLeaf0Name as string | null | undefined) ?? null,
+    productUrl: (raw.productUrl as string | null | undefined) ?? null,
+    urlStatus: raw.urlStatus as ShoppingManualUrlCandidateV1["urlStatus"],
+    lookupMode: raw.lookupMode as ShoppingManualUrlCandidateV1["lookupMode"],
+    lookupModeSource: raw.lookupModeSource as ShoppingManualUrlCandidateV1["lookupModeSource"],
+    manualOverride: raw.manualOverride,
+    lastCheckedAt: lastCheckedAt === null ? null : lastCheckedAt,
+    lastSuccessAt: lastSuccessAt === null ? null : lastSuccessAt,
+    lastHttpStatus: (raw.lastHttpStatus as number | null | undefined) ?? null,
+    lastErrorMessage: (raw.lastErrorMessage as string | null | undefined) ?? null,
+    nextDiscoveryAt: nextDiscoveryAt === null ? null : nextDiscoveryAt,
+    notFoundCount: raw.notFoundCount,
+    updatedAt,
+  };
+}
+
+function parseShoppingManualUrlCandidateList(raw: unknown): ShoppingManualUrlCandidateListV1 {
+  if (!isRecord(raw)) {
+    throw new Error("[sdk-runtime] ShoppingManualUrlCandidateListV1 response must be an object");
+  }
+  if (!Array.isArray(raw.rows)) {
+    throw new Error("[sdk-runtime] ShoppingManualUrlCandidateListV1.rows must be an array");
+  }
+  const rows = raw.rows.map((item) => parseShoppingManualUrlCandidate(item));
+  if (!isRecord(raw.paging)) {
+    throw new Error("[sdk-runtime] ShoppingManualUrlCandidateListV1.paging must be an object");
+  }
+  assertNumber(raw.paging.offset, "ShoppingManualUrlCandidateListV1.paging.offset");
+  assertNumber(raw.paging.limit, "ShoppingManualUrlCandidateListV1.paging.limit");
+  assertNumber(raw.paging.returned, "ShoppingManualUrlCandidateListV1.paging.returned");
+  assertNumber(raw.paging.total, "ShoppingManualUrlCandidateListV1.paging.total");
+
+  return {
+    rows,
+    paging: {
+      offset: raw.paging.offset,
+      limit: raw.paging.limit,
+      returned: raw.paging.returned,
+      total: raw.paging.total,
+    },
+  };
+}
+
 async function parseCommonError(response: Response) {
   const raw = (await response.clone().json().catch(() => null)) as unknown;
   if (!isRecord(raw) || !isRecord(raw.error)) {
@@ -767,6 +877,20 @@ export function createServerCoreSdk(client: GeneratedHttpClient): ServerCoreSdk 
           }),
         );
         return parseShoppingSupplierSignalList(raw);
+      },
+      async listManualUrlCandidates(query) {
+        const raw = await runGeneratedCall(() =>
+          shoppingApi.listShoppingManualUrlCandidates({
+            supplierCode: query.supplierCode,
+            search: query.search,
+            brandName: query.brandName,
+            taxonomyLeaf0Name: query.taxonomyLeaf0Name,
+            includeExisting: query.includeExisting,
+            limit: query.limit,
+            offset: query.offset,
+          }),
+        );
+        return parseShoppingManualUrlCandidateList(raw);
       },
       async upsertSupplierSignal(payload) {
         const raw = await runGeneratedCall(() =>

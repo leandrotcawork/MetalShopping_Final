@@ -8,7 +8,7 @@ import type {
   ShoppingCreateRunRequestV1,
   ShoppingRunRequestV1,
   ShoppingRunV1,
-  ShoppingSupplierSignalV1,
+  ShoppingManualUrlCandidateV1,
 } from "@metalshopping/sdk-types";
 import { AppFrame, Checkbox, FilterDropdown, type SelectMenuOption } from "@metalshopping/ui";
 
@@ -114,16 +114,18 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
   const [advancedPlaywrightWorkers, setAdvancedPlaywrightWorkers] = useState(7);
   const [advancedTopN, setAdvancedTopN] = useState(5);
   const [manualSignalSaving, setManualSignalSaving] = useState(false);
-  const [manualSignals, setManualSignals] = useState<ShoppingSupplierSignalV1[]>([]);
-  const [manualFilterProductId, setManualFilterProductId] = useState("");
-  const [manualFilterSuppliers, setManualFilterSuppliers] = useState<string[]>([]);
-  const [manualFilterBrands, setManualFilterBrands] = useState<string[]>([]);
-  const [manualFilterTaxonomies, setManualFilterTaxonomies] = useState<string[]>([]);
+  const [manualCandidates, setManualCandidates] = useState<ShoppingManualUrlCandidateV1[]>([]);
+  const [manualSearch, setManualSearch] = useState("");
+  const [manualSupplierCode, setManualSupplierCode] = useState(allOptionValue);
+  const [manualBrand, setManualBrand] = useState(allOptionValue);
+  const [manualTaxonomy, setManualTaxonomy] = useState(allOptionValue);
   const [manualShowExisting, setManualShowExisting] = useState(true);
   const [manualOffset, setManualOffset] = useState(0);
   const [manualTotal, setManualTotal] = useState(0);
   const [manualReturned, setManualReturned] = useState(0);
   const [manualEditUrls, setManualEditUrls] = useState<Record<string, string>>({});
+  const [manualLoading, setManualLoading] = useState(false);
+  const [manualLoadError, setManualLoadError] = useState<string | null>(null);
 
   const [catalogSearch, setCatalogSearch] = useState("");
   const [catalogBrand, setCatalogBrand] = useState(allOptionValue);
@@ -200,32 +202,62 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
 
   useEffect(() => {
     let cancelled = false;
-    async function loadSignals() {
+
+    async function loadCandidates() {
+      if (manualSupplierCode === allOptionValue) {
+        setManualCandidates([]);
+        setManualTotal(0);
+        setManualReturned(0);
+        setManualLoadError(null);
+        return;
+      }
+
+      setManualLoading(true);
+      setManualLoadError(null);
       try {
-        const list = await shoppingApi.listSupplierSignals({
-          productId: manualFilterProductId.trim() || undefined,
-          supplierCode: manualFilterSuppliers.length === 1 ? manualFilterSuppliers[0] : undefined,
+        const list = await shoppingApi.listManualUrlCandidates({
+          supplierCode: manualSupplierCode,
+          search: manualSearch.trim() || undefined,
+          brandName: manualBrand === allOptionValue ? undefined : manualBrand,
+          taxonomyLeaf0Name: manualTaxonomy === allOptionValue ? undefined : manualTaxonomy,
+          includeExisting: manualShowExisting,
           limit: 10,
           offset: manualOffset,
         });
         if (!cancelled) {
-          setManualSignals(list.rows);
+          setManualCandidates(list.rows);
           setManualTotal(list.paging.total);
           setManualReturned(list.paging.returned);
         }
-      } catch {
+      } catch (loadError) {
         if (!cancelled) {
-          setManualSignals([]);
+          const message =
+            loadError instanceof Error ? loadError.message : "Falha ao carregar candidatos de URL manual.";
+          setManualLoadError(message);
+          setManualCandidates([]);
           setManualTotal(0);
           setManualReturned(0);
         }
+      } finally {
+        if (!cancelled) {
+          setManualLoading(false);
+        }
       }
     }
-    void loadSignals();
+    void loadCandidates();
     return () => {
       cancelled = true;
     };
-  }, [shoppingApi, manualFilterProductId, manualFilterSuppliers, manualOffset, reloadTick]);
+  }, [
+    shoppingApi,
+    manualSupplierCode,
+    manualSearch,
+    manualBrand,
+    manualTaxonomy,
+    manualShowExisting,
+    manualOffset,
+    reloadTick,
+  ]);
 
   useEffect(() => {
     if (inputMode !== "catalog") {
@@ -380,16 +412,7 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     [catalogLeaf0Options],
   );
 
-  const manualVisibleSignals = useMemo(() => {
-    let rows = manualSignals;
-    if (!manualShowExisting) {
-      rows = rows.filter((signal) => !signal.productUrl);
-    }
-    if (manualFilterSuppliers.length > 0) {
-      rows = rows.filter((signal) => manualFilterSuppliers.includes(signal.supplierCode));
-    }
-    return rows;
-  }, [manualSignals, manualShowExisting, manualFilterSuppliers]);
+  const manualRows = useMemo(() => manualCandidates, [manualCandidates]);
 
   async function handleRunSelect(runId: string) {
     setError(null);
@@ -828,9 +851,9 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
           <input
             className={styles.filterWidgetInput}
             type="text"
-            value={manualFilterProductId}
+            value={manualSearch}
             onChange={(event) => {
-              setManualFilterProductId(event.target.value);
+              setManualSearch(event.target.value);
               setManualOffset(0);
             }}
             placeholder="Produto, SKU ou referencia"
@@ -842,19 +865,17 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                         id="manual-filter-supplier"
                         options={manualSupplierOptions}
                         allLabel="Todos fornecedores"
-                        values={manualFilterSuppliers}
-                        selectionMode="duo"
+                        value={manualSupplierCode}
+                        selectionMode="one"
                         onSelect={(value) => {
                           if (value === allOptionValue) {
-                            setManualFilterSuppliers([]);
+                            setManualSupplierCode(allOptionValue);
                             setManualOffset(0);
                             return;
                           }
-                          setManualFilterSuppliers((current) =>
-                            current.includes(value) ? current.filter((item) => item !== value) : [...current, value],
-                          );
-              setManualOffset(0);
-            }}
+                          setManualSupplierCode(value);
+                          setManualOffset(0);
+                        }}
                         classNamesOverrides={{
                           wrap: styles.filterWidgetDropdownWrap,
                           trigger: styles.filterWidgetDropdownTrigger,
@@ -868,17 +889,17 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                         id="manual-filter-brand"
                         options={manualBrandOptions}
                         allLabel="Todas marcas"
-                        values={manualFilterBrands}
-                        selectionMode="duo"
+                        value={manualBrand}
+                        selectionMode="one"
                         onSelect={(value) => {
                           if (value === allOptionValue) {
-                            setManualFilterBrands([]);
+                            setManualBrand(allOptionValue);
+                            setManualOffset(0);
                             return;
                           }
-                          setManualFilterBrands((current) =>
-                            current.includes(value) ? current.filter((item) => item !== value) : [...current, value],
-                          );
-            }}
+                          setManualBrand(value);
+                          setManualOffset(0);
+                        }}
                         classNamesOverrides={{
                           wrap: styles.filterWidgetDropdownWrap,
                           trigger: styles.filterWidgetDropdownTrigger,
@@ -892,17 +913,17 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                         id="manual-filter-taxonomy"
                         options={manualTaxonomyOptions}
                         allLabel={`Todos os ${catalogLeaf0Label.toLowerCase()}s`}
-                        values={manualFilterTaxonomies}
-                        selectionMode="duo"
+                        value={manualTaxonomy}
+                        selectionMode="one"
                         onSelect={(value) => {
                           if (value === allOptionValue) {
-                            setManualFilterTaxonomies([]);
+                            setManualTaxonomy(allOptionValue);
+                            setManualOffset(0);
                             return;
                           }
-                          setManualFilterTaxonomies((current) =>
-                            current.includes(value) ? current.filter((item) => item !== value) : [...current, value],
-                          );
-            }}
+                          setManualTaxonomy(value);
+                          setManualOffset(0);
+                        }}
                         classNamesOverrides={{
                           wrap: styles.filterWidgetDropdownWrap,
                           trigger: styles.filterWidgetDropdownTrigger,
@@ -946,27 +967,47 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
           </tr>
         </thead>
         <tbody>
-          {manualVisibleSignals.length === 0 ? (
+          {manualLoading ? (
+            <tr>
+              <td colSpan={5} className={styles.manualEmpty}>
+                Carregando candidatos...
+              </td>
+            </tr>
+          ) : manualLoadError ? (
+            <tr>
+              <td colSpan={5} className={styles.manualEmpty}>
+                {manualLoadError}
+              </td>
+            </tr>
+          ) : manualSupplierCode === allOptionValue ? (
+            <tr>
+              <td colSpan={5} className={styles.manualEmpty}>
+                Selecione um fornecedor para listar candidatos.
+              </td>
+            </tr>
+          ) : manualRows.length === 0 ? (
             <tr>
               <td colSpan={5} className={styles.manualEmpty}>
                 Nenhum sinal encontrado.
               </td>
             </tr>
           ) : (
-            manualVisibleSignals.map((signal) => {
-              const rowKey = manualRowKey(signal.productId, signal.supplierCode);
-              const draftUrl = manualEditUrls[rowKey] ?? signal.productUrl ?? "";
-              const nextDiscovery = signal.nextDiscoveryAt ? formatDateTime(signal.nextDiscoveryAt) : "--";
-              const notFoundCount = signal.notFoundCount ?? 0;
+            manualRows.map((candidate) => {
+              const rowKey = manualRowKey(candidate.productId, candidate.supplierCode);
+              const draftUrl = manualEditUrls[rowKey] ?? candidate.productUrl ?? "";
+              const nextDiscovery = candidate.nextDiscoveryAt ? formatDateTime(candidate.nextDiscoveryAt) : "--";
+              const notFoundCount = candidate.notFoundCount ?? 0;
               return (
                 <tr key={rowKey}>
                   <td>
                     <div className={styles.manualProductCell}>
-                      <strong>{signal.productId}</strong>
-                      <small>NotFound {notFoundCount}</small>
+                      <strong>{candidate.name}</strong>
+                      <small>
+                        {candidate.sku} | NotFound {notFoundCount}
+                      </small>
                     </div>
                   </td>
-                  <td>{signal.supplierCode}</td>
+                  <td>{candidate.supplierCode}</td>
                   <td>
                     <input
                       type="text"
@@ -980,7 +1021,7 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                       placeholder="https://fornecedor/pdp/produto"
                     />
                   </td>
-                  <td>{signal.urlStatus}</td>
+                  <td>{candidate.urlStatus}</td>
                   <td>{nextDiscovery}</td>
                 </tr>
               );
@@ -992,7 +1033,7 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
 
     <div className={styles.manualFooterRow}>
       <span className={styles.manualFooterSummary}>
-        Mostrando {manualShowExisting ? manualReturned : manualVisibleSignals.length} de {manualTotal}
+        Mostrando {manualReturned} de {manualTotal}
       </span>
       <div className={styles.manualFooterPagination}>
         <button
