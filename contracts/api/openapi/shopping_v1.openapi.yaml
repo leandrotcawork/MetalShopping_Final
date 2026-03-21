@@ -379,5 +379,79 @@ paths:
             application/json:
               schema:
                 $ref: "../jsonschema/common_error_v1.schema.json"
+  /api/v1/shopping/manual-url-candidates:
+    get:
+      operationId: listShoppingManualUrlCandidates
+      summary: "List catalog candidates with manual URL overlay for one supplier"
+      parameters:
+        - name: supplier_code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: brand_name
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: taxonomy_leaf0_name
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: include_existing
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        "200":
+          description: "Candidates list returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/shopping_manual_url_candidate_list_v1.schema.json"
+        "400":
+          description: "Validation failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Tenant context required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
 components:
   schemas: {}

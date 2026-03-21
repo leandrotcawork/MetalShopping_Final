@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.metalshopping.local/api/shopping_manual_url_candidate_v1.schema.json",
+  "title": "ShoppingManualUrlCandidateV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "productId",
+    "supplierCode",
+    "sku",
+    "name",
+    "urlStatus",
+    "lookupMode",
+    "lookupModeSource",
+    "manualOverride",
+    "notFoundCount",
+    "updatedAt"
+  ],
+  "properties": {
+    "productId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "supplierCode": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sku": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "brandName": {
+      "type": ["string", "null"]
+    },
+    "taxonomyLeaf0Name": {
+      "type": ["string", "null"]
+    },
+    "productUrl": {
+      "type": ["string", "null"]
+    },
+    "urlStatus": {
+      "type": "string",
+      "enum": ["ACTIVE", "STALE", "INVALID"]
+    },
+    "lookupMode": {
+      "type": "string",
+      "enum": ["EAN", "REFERENCE"]
+    },
+    "lookupModeSource": {
+      "type": "string",
+      "enum": ["INFERRED", "MANUAL"]
+    },
+    "manualOverride": {
+      "type": "boolean"
+    },
+    "lastCheckedAt": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "lastSuccessAt": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "lastHttpStatus": {
+      "type": ["integer", "null"]
+    },
+    "lastErrorMessage": {
+      "type": ["string", "null"]
+    },
+    "nextDiscoveryAt": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "notFoundCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}
