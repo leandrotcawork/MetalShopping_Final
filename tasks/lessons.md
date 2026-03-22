@@ -160,3 +160,10 @@ Correct: Bind those KPI cards to per-run item counts grouped by `shopping_price_
 Rule:    UI labels must reflect the metric source; run-level and item-level counters are not interchangeable.
 Layer:   Frontend + Backend
 
+## Lesson 16 — Playwright price parsing must use document HTML and price bounds
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Using `page.content()` after `waitUntil=commit`, causing a minimal DOM snapshot and regex matching arbitrary digits, leading to wrong prices and DB numeric overflow.
+Correct: Prefer `response.text()` (document HTML) and fallback to `page.content()` only when needed; reject out-of-range prices before writing to Postgres.
+Rule:    Playwright PDP parsing must use the actual document HTML and enforce sane numeric bounds to keep writes safe.
+Layer:   Python worker
+

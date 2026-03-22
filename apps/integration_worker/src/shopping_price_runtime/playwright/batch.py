@@ -9,7 +9,12 @@ from typing import Any
 from ..lookup import select_lookup_term
 from ..models import LookupInputs, RuntimeObservation, SupplierRuntimeConfig, SupplierSignal
 from ..shared.parsing import safe_float, safe_int, safe_str
-from .strategies import _build_candidate_urls, _detect_block_reason, _price_from_text
+from .strategies import (
+    _build_candidate_urls,
+    _detect_block_reason,
+    _extract_price_text_from_html,
+    _price_from_text,
+)
 
 
 @dataclass(frozen=True)
@@ -86,6 +91,9 @@ async def _execute_single(
 
     last_observation: RuntimeObservation | None = None
     selector_timeout_ms = int(max(200, min(1500, timeout_seconds * 1000 * 0.1)))
+    max_observed_price = safe_float(config.config_json.get("maxObservedPrice"), 1_000_000.0)
+    if max_observed_price <= 0:
+        max_observed_price = 1_000_000.0
 
     for attempt in range(1, max_retries + 1):
         for url in candidate_urls:
@@ -98,7 +106,14 @@ async def _execute_single(
                 response = await page.goto(url, timeout=timeout_seconds * 1000, wait_until=wait_until)
                 if response is not None:
                     response_status = int(response.status)
-                html_text = await page.content()
+                html_text = ""
+                if response is not None:
+                    try:
+                        html_text = await response.text()
+                    except Exception:
+                        html_text = ""
+                if html_text == "":
+                    html_text = await page.content()
                 nav_s = time.perf_counter() - nav_start
 
                 block_reason = _detect_block_reason(html_text, await page.title())
@@ -122,10 +137,7 @@ async def _execute_single(
                     continue
 
                 sel_start = time.perf_counter()
-                price_text = ""
-                match = price_regex.search(html_text)
-                if match is not None:
-                    price_text = safe_str(match.group(1), "")
+                price_text = _extract_price_text_from_html(html_text, price_regex)
                 if price_text == "":
                     price_text = await _selector_text(
                         page,
@@ -145,6 +157,24 @@ async def _execute_single(
                 sel_s = time.perf_counter() - sel_start
 
                 observed_price = _price_from_text(price_text, 0.0)
+                if observed_price > max_observed_price:
+                    last_observation = RuntimeObservation(
+                        "ERROR",
+                        safe_float(item.base_price, item.base_price),
+                        safe_str(seller_text, seller_default),
+                        safe_str(channel_text, "PLAYWRIGHT").upper(),
+                        response_status,
+                        _with_perf(
+                            f"playwright_price_out_of_range:attempt={attempt}",
+                            nav_s,
+                            sel_s,
+                            time.perf_counter() - total_start,
+                            selector_timeout_ms,
+                        ),
+                        strategy,
+                        item.lookup_term,
+                    )
+                    continue
                 if observed_price <= 0:
                     last_observation = RuntimeObservation(
                         "NOT_FOUND",
@@ -256,12 +286,12 @@ async def _run_batch_async(
 
     price_regex_raw = safe_str(
         config.config_json.get("priceRegex"),
-        r"(\d{1,3}(?:\.\d{3})*,\d{2}|\d+(?:\.\d{2})?)",
+        r"(\d{1,3}(?:\.\d{3})*,\d{2}|\d{1,7}(?:[\.,]\d{2})?)",
     )
     try:
         price_regex = re.compile(price_regex_raw, flags=re.IGNORECASE | re.MULTILINE)
     except Exception:
-        price_regex = re.compile(r"(\d{1,3}(?:\.\d{3})*,\d{2}|\d+(?:\.\d{2})?)", flags=re.IGNORECASE | re.MULTILINE)
+        price_regex = re.compile(r"(\d{1,3}(?:\.\d{3})*,\d{2}|\d{1,7}(?:[\.,]\d{2})?)", flags=re.IGNORECASE | re.MULTILINE)
 
     selectors = config.config_json.get("pdpSelectors")
     if not isinstance(selectors, dict):

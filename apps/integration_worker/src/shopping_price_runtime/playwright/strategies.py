@@ -10,6 +10,49 @@ from ..models import SupplierSignal
 from ..shared.parsing import safe_float, safe_int, safe_str
 
 
+_META_PRICE_AMOUNT_RE = re.compile(
+    r"<meta[^>]+property=['\"]product:price:amount['\"][^>]+content=['\"](?P<v>\d+(?:\.\d+)?)['\"]",
+    re.IGNORECASE,
+)
+_LDJSON_PRICE_RE = re.compile(
+    r"\"price\"\s*:\s*\"?(?P<v>\d+(?:\.\d+)?)\"?",
+    re.IGNORECASE,
+)
+_BRL_TEXT_RE = re.compile(
+    r"R\$\s*(?P<v>\d[\d\.\,]{0,24})",
+    re.IGNORECASE,
+)
+
+
+def _extract_price_text_from_html(html_text: str, price_regex: re.Pattern[str]) -> str:
+    html_s = safe_str(html_text, "")
+    if html_s == "":
+        return ""
+
+    meta = _META_PRICE_AMOUNT_RE.search(html_s)
+    if meta is not None:
+        return safe_str(meta.group("v"), "")
+
+    ld = _LDJSON_PRICE_RE.search(html_s)
+    if ld is not None:
+        return safe_str(ld.group("v"), "")
+
+    brl = _BRL_TEXT_RE.search(html_s)
+    if brl is not None:
+        return safe_str(brl.group("v"), "")
+
+    match = price_regex.search(html_s)
+    if match is not None:
+        candidate = safe_str(match.group(1), "")
+        # Avoid matching arbitrary IDs (e.g. long digit runs).
+        digits = "".join(ch for ch in candidate if ch.isdigit())
+        if len(digits) > 12:
+            return ""
+        return candidate
+
+    return ""
+
+
 def execute_playwright_runtime(
     *,
     config: SupplierRuntimeConfig,
@@ -76,17 +119,20 @@ def _execute_playwright_pdp_first_non_mock(
     headless = bool(config.config_json.get("headless", True))
     wait_until = safe_str(config.config_json.get("waitUntil"), "domcontentloaded")
     locale = safe_str(config.config_json.get("locale"), "pt-BR")
+    max_observed_price = safe_float(config.config_json.get("maxObservedPrice"), 1_000_000.0)
+    if max_observed_price <= 0:
+        max_observed_price = 1_000_000.0
     fallback_enabled = bool(config.config_json.get("fallbackSearchEnabled", False))
     if signal is not None and not signal.allow_url_discovery and safe_str(signal.product_url, "").strip() == "":
         fallback_enabled = False
     price_regex_raw = safe_str(
         config.config_json.get("priceRegex"),
-        r"(\d{1,3}(?:\.\d{3})*,\d{2}|\d+(?:\.\d{2})?)",
+        r"(\d{1,3}(?:\.\d{3})*,\d{2}|\d{1,7}(?:[\.,]\d{2})?)",
     )
     try:
         price_regex = re.compile(price_regex_raw, flags=re.IGNORECASE | re.MULTILINE)
     except Exception:
-        price_regex = re.compile(r"(\d{1,3}(?:\.\d{3})*,\d{2}|\d+(?:\.\d{2})?)", flags=re.IGNORECASE | re.MULTILINE)
+        price_regex = re.compile(r"(\d{1,3}(?:\.\d{3})*,\d{2}|\d{1,7}(?:[\.,]\d{2})?)", flags=re.IGNORECASE | re.MULTILINE)
 
     selectors = config.config_json.get("pdpSelectors")
     if not isinstance(selectors, dict):
@@ -144,7 +190,14 @@ def _execute_playwright_pdp_first_non_mock(
                     response = page.goto(url, timeout=timeout_seconds * 1000, wait_until=wait_until)
                     if response is not None:
                         response_status = int(response.status)
-                    html_text = page.content()
+                    html_text = ""
+                    if response is not None:
+                        try:
+                            html_text = response.text()
+                        except Exception:
+                            html_text = ""
+                    if html_text == "":
+                        html_text = page.content()
                     nav_s = time.perf_counter() - nav_start
                     block_reason = _detect_block_reason(html_text, page.title())
                     if block_reason != "":
@@ -167,10 +220,7 @@ def _execute_playwright_pdp_first_non_mock(
                         continue
 
                     sel_start = time.perf_counter()
-                    price_text = ""
-                    match = price_regex.search(html_text)
-                    if match is not None:
-                        price_text = safe_str(match.group(1), "")
+                    price_text = _extract_price_text_from_html(html_text, price_regex)
                     if price_text == "":
                         price_text = _selector_text(
                             page,
@@ -190,6 +240,24 @@ def _execute_playwright_pdp_first_non_mock(
                     sel_s = time.perf_counter() - sel_start
 
                     observed_price = _price_from_text(price_text, 0.0)
+                    if observed_price > max_observed_price:
+                        last_observation = RuntimeObservation(
+                            "ERROR",
+                            safe_float(base_price, base_price),
+                            safe_str(seller_text, seller_default),
+                            safe_str(channel_text, "PLAYWRIGHT").upper(),
+                            response_status,
+                            _with_perf(
+                                f"playwright_price_out_of_range:attempt={attempt}",
+                                nav_s,
+                                sel_s,
+                                time.perf_counter() - total_start,
+                                selector_timeout_ms,
+                            ),
+                            strategy,
+                            lookup_term,
+                        )
+                        continue
                     if observed_price <= 0:
                         last_observation = RuntimeObservation(
                             "NOT_FOUND",
