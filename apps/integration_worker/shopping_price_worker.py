@@ -25,6 +25,10 @@ from uuid import uuid4
 
 import psycopg
 from src.shopping_price_runtime.dispatcher import execute as runtime_execute
+from src.shopping_price_runtime.playwright.batch import (
+    build_batch_items,
+    execute_playwright_pdp_first_batch,
+)
 from src.shopping_price_runtime.models import LookupInputs, RuntimeObservation, SupplierRuntimeConfig, SupplierSignal
 
 
@@ -810,6 +814,8 @@ def execute_runtime_tasks_parallel(
     if len(tasks) == 0:
         return []
 
+    indexed_tasks: list[tuple[int, RuntimeTask]] = list(enumerate(tasks))
+
     semaphores: dict[str, threading.Semaphore] = {}
     rate_limiters: dict[str, TokenBucket] = {}
     max_workers_sum = 0
@@ -828,6 +834,20 @@ def execute_runtime_tasks_parallel(
     max_workers = max(1, max_workers)
 
     results: list[RunItem | None] = [None] * len(tasks)
+
+    playwright_batches: dict[str, list[tuple[int, RuntimeTask]]] = {}
+    regular_tasks: list[tuple[int, RuntimeTask]] = []
+    for index, task in indexed_tasks:
+        config = runtime_configs.get(task.supplier_code.upper())
+        if config is None:
+            regular_tasks.append((index, task))
+            continue
+        if config.family == "playwright":
+            strategy = str(config.config_json.get("strategy") or "").strip().lower()
+            if strategy == "playwright.pdp_first.v1":
+                playwright_batches.setdefault(config.supplier_code.upper(), []).append((index, task))
+                continue
+        regular_tasks.append((index, task))
 
     def run_single(task: RuntimeTask) -> RunItem:
         supplier_code = task.supplier_code.upper()
@@ -858,15 +878,98 @@ def execute_runtime_tasks_parallel(
             except Exception as exc:
                 return _default_runtime_error_item(task, config.family, f"runtime_exception:{str(exc)[:240]}")
 
+    def run_playwright_batch(
+        supplier_code: str,
+        batch_tasks: list[tuple[int, RuntimeTask]],
+    ) -> list[tuple[int, RunItem]]:
+        config = runtime_configs.get(supplier_code)
+        if config is None:
+            return [(idx, _default_runtime_error_item(task, "runtime", "runtime_config_missing")) for idx, task in batch_tasks]
+
+        tabs = _max_workers_for_config(config)
+        batch_inputs: list[tuple[int, LookupInputs, float, SupplierSignal | None]] = []
+        for index, task in batch_tasks:
+            batch_inputs.append(
+                (
+                    index,
+                    LookupInputs(
+                        product_id=task.product_id,
+                        product_reference=task.product_reference,
+                        product_ean=task.product_ean,
+                    ),
+                    task.base_price,
+                    task.signal,
+                )
+            )
+        items = build_batch_items(config=config, inputs=batch_inputs)
+        try:
+            batch_results = execute_playwright_pdp_first_batch(config=config, items=items, tabs=tabs)
+        except Exception as exc:
+            fallback: list[tuple[int, RunItem]] = []
+            for index, task in batch_tasks:
+                fallback.append(
+                    (
+                        index,
+                        _default_runtime_error_item(task, config.family, f"playwright_batch_exception:{str(exc)[:200]}"),
+                    )
+                )
+            return fallback
+
+        mapped: dict[int, RuntimeTask] = {index: task for index, task in batch_tasks}
+        output: list[tuple[int, RunItem]] = []
+        for result in batch_results:
+            task = mapped.get(result.index)
+            if task is None:
+                continue
+            observation = result.observation
+            output.append(
+                (
+                    result.index,
+                    RunItem(
+                        product_id=task.product_id,
+                        supplier_code=config.supplier_code,
+                        item_status=observation.item_status,
+                        seller_name=observation.seller_name,
+                        channel=observation.channel,
+                        observed_price=_safe_float(observation.observed_price, task.base_price),
+                        currency_code=task.currency_code.upper(),
+                        observed_at=task.observed_at,
+                        product_url=task.signal.product_url if task.signal is not None else None,
+                        http_status=observation.http_status,
+                        elapsed_s=result.elapsed_s,
+                        chosen_seller_json={
+                            "supplier_code": config.supplier_code,
+                            "family": config.family,
+                            "strategy": observation.strategy,
+                            "lookup_policy": config.lookup_policy,
+                            "execution_kind": config.execution_kind,
+                            "lookup_term": observation.lookup_term,
+                        },
+                        notes=observation.notes,
+                    ),
+                )
+            )
+        return output
+
     with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="shopping-runtime") as executor:
         pending: dict[Future[RunItem], int] = {}
-        for index, task in enumerate(tasks):
+        batch_futures: dict[Future[list[tuple[int, RunItem]]], list[int]] = {}
+        for supplier_code, batch_tasks in playwright_batches.items():
+            future = executor.submit(run_playwright_batch, supplier_code, batch_tasks)
+            batch_futures[future] = [idx for idx, _ in batch_tasks]
+        for index, task in regular_tasks:
             pending[executor.submit(run_single, task)] = index
         for future in as_completed(pending):
             index = pending[future]
             results[index] = future.result()
             if on_item_completed is not None:
                 on_item_completed(tasks[index])
+        for future in as_completed(batch_futures):
+            batch_results = future.result()
+            for index, item in batch_results:
+                results[index] = item
+                if on_item_completed is not None:
+                    on_item_completed(tasks[index])
 
     return [item for item in results if item is not None]
 
