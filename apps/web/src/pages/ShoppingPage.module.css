@@ -1109,12 +1109,33 @@
   gap: 8px;
 }
 
-.runListScroll { 
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto; 
-  padding-right: 4px; 
-} 
+.runListScroll {  
+  flex: 1; 
+  min-height: 0; 
+  overflow-y: auto;  
+  padding-right: 4px;  
+  scrollbar-width: thin;
+  scrollbar-color: var(--wine-700) var(--neutral-100);
+}  
+
+.runListScroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.runListScroll::-webkit-scrollbar-track {
+  background: var(--neutral-100);
+  border-radius: 999px;
+}
+
+.runListScroll::-webkit-scrollbar-thumb {
+  background: var(--wine-700);
+  border-radius: 999px;
+  border: 2px solid var(--neutral-100);
+}
+
+.runListScroll::-webkit-scrollbar-thumb:hover {
+  background: var(--wine-500);
+}
 
 .runListFooter {
   margin-top: 10px;
