@@ -122,6 +122,7 @@ def _seeds() -> list[ManifestSeed]:
                 "strategy": "playwright.pdp_first.v1",
                 "timeoutSeconds": 30,
                 "maxRetries": 2,
+                "tabs": 7,
                 "sellerName": _seller_name("OBRA_FACIL"),
                 # Minimum to avoid playwright_runtime_url_missing. PDP URLs are expected to
                 # come from persisted signals (shopping_supplier_product_signals) when available.

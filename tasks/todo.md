@@ -164,7 +164,7 @@ Level 1 scope:
       commit: "fix(worker): remove selector-timeout bottleneck in playwright strategy"
 - [x] T3: Playwright batch runtime reuse (browser/context reuse with tab workers)
       commit: "feat(worker): add tab-based playwright batch execution"
-- [ ] T4: supplier config parity (`OBRA_FACIL` tabs defaults + safe knobs)
+- [x] T4: supplier config parity (`OBRA_FACIL` tabs defaults + safe knobs)
       commit: "chore(shopping): tune obrafacil playwright runtime config"
 - [ ] T5: validation + evidence (smoke run comparison vs HTTP and previous Playwright baseline)
       commit: "docs(perf): capture playwright run performance evidence"
