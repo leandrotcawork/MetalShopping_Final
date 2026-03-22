@@ -1,0 +1,6 @@
+interface:
+  display_name: "MS OpenAPI"
+  short_description: "Create or review OpenAPI contracts. One bounded-context file per surface, schema reuse, versioning policy."
+  default_prompt: "Use $metalshopping-openapi-contracts to create or review the OpenAPI contract."
+policy:
+  allow_implicit_invocation: true

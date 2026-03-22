@@ -508,19 +508,19 @@ func buildProductsPortfolioWhereClause(filter catalogreadmodel.ProductsPortfolio
 		args = append(args, "%"+filter.Search+"%")
 		argPos++
 	}
-	if filter.BrandName != "" {
-		clauses = append(clauses, fmt.Sprintf("AND p.brand_name = $%d", argPos))
-		args = append(args, filter.BrandName)
+	if len(filter.BrandNames) > 0 {
+		clauses = append(clauses, fmt.Sprintf("AND p.brand_name = ANY($%d)", argPos))
+		args = append(args, filter.BrandNames)
 		argPos++
 	}
-	if filter.TaxonomyLeaf0Name != "" {
-		clauses = append(clauses, fmt.Sprintf("AND txo.taxonomy_leaf0_name = $%d", argPos))
-		args = append(args, filter.TaxonomyLeaf0Name)
+	if len(filter.TaxonomyLeaf0Names) > 0 {
+		clauses = append(clauses, fmt.Sprintf("AND txo.taxonomy_leaf0_name = ANY($%d)", argPos))
+		args = append(args, filter.TaxonomyLeaf0Names)
 		argPos++
 	}
-	if filter.Status != "" {
-		clauses = append(clauses, fmt.Sprintf("AND p.status = $%d", argPos))
-		args = append(args, filter.Status)
+	if len(filter.Statuses) > 0 {
+		clauses = append(clauses, fmt.Sprintf("AND p.status = ANY($%d)", argPos))
+		args = append(args, filter.Statuses)
 	}
 
 	return strings.Join(clauses, "\n"), args

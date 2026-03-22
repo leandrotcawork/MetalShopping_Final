@@ -27,15 +27,27 @@ paths:
         - in: query
           name: brand_name
           schema:
-            type: string
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
         - in: query
           name: taxonomy_leaf0_name
           schema:
-            type: string
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
         - in: query
           name: status
           schema:
-            type: string
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
         - in: query
           name: sort_key
           schema:

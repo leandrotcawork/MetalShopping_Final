@@ -27,9 +27,9 @@ import {
 
 export interface ListProductsPortfolioRequest {
     search?: string;
-    brandName?: string;
-    taxonomyLeaf0Name?: string;
-    status?: string;
+    brandName?: Array<string>;
+    taxonomyLeaf0Name?: Array<string>;
+    status?: Array<string>;
     sortKey?: ListProductsPortfolioSortKeyEnum;
     sortDirection?: ListProductsPortfolioSortDirectionEnum;
     limit?: number;

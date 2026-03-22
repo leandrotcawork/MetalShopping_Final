@@ -1,0 +1,6 @@
+interface:
+  display_name: "MS SDK"
+  short_description: "Generate SDK and type artifacts from contracts/. Run after any contract change before writing frontend code."
+  default_prompt: "Use $metalshopping-sdk-generation to regenerate the SDK after a contract change."
+policy:
+  allow_implicit_invocation: true

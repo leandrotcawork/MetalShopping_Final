@@ -15,9 +15,9 @@ const (
 
 type ProductsPortfolioFilter struct {
 	Search            string
-	BrandName         string
-	TaxonomyLeaf0Name string
-	Status            string
+	BrandNames        []string
+	TaxonomyLeaf0Names []string
+	Statuses          []string
 	SortKey           string
 	SortDirection     string
 	Limit             int
@@ -85,9 +85,9 @@ func (s *ProductsPortfolioService) ListProductsPortfolio(ctx context.Context, te
 
 func normalizeProductsPortfolioFilter(filter ProductsPortfolioFilter) ProductsPortfolioFilter {
 	filter.Search = strings.TrimSpace(filter.Search)
-	filter.BrandName = strings.TrimSpace(filter.BrandName)
-	filter.TaxonomyLeaf0Name = strings.TrimSpace(filter.TaxonomyLeaf0Name)
-	filter.Status = strings.ToLower(strings.TrimSpace(filter.Status))
+	filter.BrandNames = normalizeStringList(filter.BrandNames)
+	filter.TaxonomyLeaf0Names = normalizeStringList(filter.TaxonomyLeaf0Names)
+	filter.Statuses = normalizeLowerStringList(filter.Statuses)
 	filter.SortKey = strings.ToLower(strings.TrimSpace(filter.SortKey))
 	filter.SortDirection = strings.ToLower(strings.TrimSpace(filter.SortDirection))
 
@@ -108,4 +108,39 @@ func normalizeProductsPortfolioFilter(filter ProductsPortfolioFilter) ProductsPo
 	}
 
 	return filter
+}
+
+func normalizeStringList(values []string) []string {
+	out := make([]string, 0, len(values))
+	seen := map[string]struct{}{}
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			continue
+		}
+		if _, exists := seen[trimmed]; exists {
+			continue
+		}
+		seen[trimmed] = struct{}{}
+		out = append(out, trimmed)
+	}
+	return out
+}
+
+func normalizeLowerStringList(values []string) []string {
+	out := make([]string, 0, len(values))
+	seen := map[string]struct{}{}
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			continue
+		}
+		normalized := strings.ToLower(trimmed)
+		if _, exists := seen[normalized]; exists {
+			continue
+		}
+		seen[normalized] = struct{}{}
+		out = append(out, normalized)
+	}
+	return out
 }

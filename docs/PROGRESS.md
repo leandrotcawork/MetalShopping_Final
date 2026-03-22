@@ -125,6 +125,7 @@
 ## Next
 
 - keep ADR set complete and stable
+- implement manual URL candidates listing from catalog (ADR-0045) so the panel works when signals are empty
 - execute Shopping frontend parity ADR tranche (ADR-0036..ADR-0039) before expanding Shopping UX/features
 - execute Shopping legacy suppliers driver pack ADR tranche (ADR-0040..ADR-0042) to add `TELHA_NORTE`, `LEROY`, `ABC` under governed manifests (complete)
 - freeze and follow the Shopping Price Level 2 ADR set (ADR-0017 .. ADR-0024) before implementation work starts

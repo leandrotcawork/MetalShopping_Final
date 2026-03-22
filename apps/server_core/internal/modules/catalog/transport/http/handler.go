@@ -341,12 +341,12 @@ func taxonomyNodeFilterFromRequest(r *http.Request) (ports.TaxonomyNodeFilter, e
 
 func productsPortfolioFilterFromRequest(r *http.Request) (catalogreadmodel.ProductsPortfolioFilter, error) {
 	filter := catalogreadmodel.ProductsPortfolioFilter{
-		Search:            r.URL.Query().Get("search"),
-		BrandName:         r.URL.Query().Get("brand_name"),
-		TaxonomyLeaf0Name: r.URL.Query().Get("taxonomy_leaf0_name"),
-		Status:            r.URL.Query().Get("status"),
-		SortKey:           r.URL.Query().Get("sort_key"),
-		SortDirection:     r.URL.Query().Get("sort_direction"),
+		Search:             r.URL.Query().Get("search"),
+		BrandNames:         parseMultiQuery(r, "brand_name"),
+		TaxonomyLeaf0Names: parseMultiQuery(r, "taxonomy_leaf0_name"),
+		Statuses:           parseMultiQuery(r, "status"),
+		SortKey:            r.URL.Query().Get("sort_key"),
+		SortDirection:      r.URL.Query().Get("sort_direction"),
 	}
 
 	limitRaw := strings.TrimSpace(r.URL.Query().Get("limit"))
@@ -382,6 +382,29 @@ func productsPortfolioFilterFromRequest(r *http.Request) (catalogreadmodel.Produ
 	}
 
 	return filter, nil
+}
+
+func parseMultiQuery(r *http.Request, key string) []string {
+	values := r.URL.Query()[key]
+	if len(values) == 0 {
+		raw := strings.TrimSpace(r.URL.Query().Get(key))
+		if raw == "" {
+			return nil
+		}
+		values = []string{raw}
+	}
+
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		for _, part := range strings.Split(value, ",") {
+			trimmed := strings.TrimSpace(part)
+			if trimmed == "" {
+				continue
+			}
+			out = append(out, trimmed)
+		}
+	}
+	return out
 }
 
 func mapProduct(product domain.Product) map[string]any {

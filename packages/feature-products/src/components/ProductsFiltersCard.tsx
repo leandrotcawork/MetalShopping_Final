@@ -3,6 +3,16 @@ import { Button, FilterDropdown, type SelectMenuOption, SurfaceCard } from "@met
 import type { ProductsPortfolioQuery } from "../api";
 import styles from "../ProductsPortfolioPage.module.css";
 
+function toggleMultiSelection(current: string[], next: string): string[] {
+  if (next === "") {
+    return [];
+  }
+  if (current.includes(next)) {
+    return current.filter((value) => value !== next);
+  }
+  return [...current, next];
+}
+
 export function ProductsFiltersCard(props: {
   searchDraft: string;
   onSearchDraftChange: (value: string) => void;
@@ -36,12 +46,13 @@ export function ProductsFiltersCard(props: {
           <span className={styles.label}>Marca</span>
           <FilterDropdown
             id="products-brand-filter"
-            value={props.query.brand_name}
+            values={props.query.brand_name}
+            selectionMode="duo"
             options={props.brandOptions}
             onSelect={(value) =>
               props.onChangeQuery({
                 ...props.query,
-                brand_name: value,
+                brand_name: toggleMultiSelection(props.query.brand_name, value),
                 offset: 0,
               })
             }
@@ -52,12 +63,13 @@ export function ProductsFiltersCard(props: {
           <span className={styles.label}>Status</span>
           <FilterDropdown
             id="products-status-filter"
-            value={props.query.status}
+            values={props.query.status}
+            selectionMode="duo"
             options={props.statusOptions}
             onSelect={(value) =>
               props.onChangeQuery({
                 ...props.query,
-                status: value,
+                status: toggleMultiSelection(props.query.status, value),
                 offset: 0,
               })
             }
@@ -68,12 +80,13 @@ export function ProductsFiltersCard(props: {
           <span className={styles.label}>{props.taxonomyLeaf0Label}</span>
           <FilterDropdown
             id="products-taxonomy-filter"
-            value={props.query.taxonomy_leaf0_name}
+            values={props.query.taxonomy_leaf0_name}
+            selectionMode="duo"
             options={props.taxonomyOptions}
             onSelect={(value) =>
               props.onChangeQuery({
                 ...props.query,
-                taxonomy_leaf0_name: value,
+                taxonomy_leaf0_name: toggleMultiSelection(props.query.taxonomy_leaf0_name, value),
                 offset: 0,
               })
             }
@@ -96,7 +109,7 @@ export function ProductsFiltersCard(props: {
 
                   props.onChangeQuery({
                     ...props.query,
-                    [filter.key]: "",
+                    [filter.key]: filter.key === "search" ? "" : [],
                     offset: 0,
                   } as ProductsPortfolioQuery);
                 }}

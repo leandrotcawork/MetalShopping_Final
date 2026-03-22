@@ -42,6 +42,24 @@ export interface ShoppingManualUrlCandidateV1 {
      * @type {string}
      * @memberof ShoppingManualUrlCandidateV1
      */
+    pnInterno?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof ShoppingManualUrlCandidateV1
+     */
+    reference?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof ShoppingManualUrlCandidateV1
+     */
+    ean?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof ShoppingManualUrlCandidateV1
+     */
     name: string;
     /**
      * 
@@ -189,6 +207,9 @@ export function ShoppingManualUrlCandidateV1FromJSONTyped(json: any, ignoreDiscr
         'productId': json['productId'],
         'supplierCode': json['supplierCode'],
         'sku': json['sku'],
+        'pnInterno': json['pnInterno'] == null ? undefined : json['pnInterno'],
+        'reference': json['reference'] == null ? undefined : json['reference'],
+        'ean': json['ean'] == null ? undefined : json['ean'],
         'name': json['name'],
         'brandName': json['brandName'] == null ? undefined : json['brandName'],
         'taxonomyLeaf0Name': json['taxonomyLeaf0Name'] == null ? undefined : json['taxonomyLeaf0Name'],
@@ -221,6 +242,9 @@ export function ShoppingManualUrlCandidateV1ToJSONTyped(value?: ShoppingManualUr
         'productId': value['productId'],
         'supplierCode': value['supplierCode'],
         'sku': value['sku'],
+        'pnInterno': value['pnInterno'],
+        'reference': value['reference'],
+        'ean': value['ean'],
         'name': value['name'],
         'brandName': value['brandName'],
         'taxonomyLeaf0Name': value['taxonomyLeaf0Name'],

@@ -29,6 +29,15 @@
       "type": "string",
       "minLength": 1
     },
+    "pnInterno": {
+      "type": ["string", "null"]
+    },
+    "reference": {
+      "type": ["string", "null"]
+    },
+    "ean": {
+      "type": ["string", "null"]
+    },
     "name": {
       "type": "string",
       "minLength": 1

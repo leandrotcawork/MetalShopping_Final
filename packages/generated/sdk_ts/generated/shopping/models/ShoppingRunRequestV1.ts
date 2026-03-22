@@ -87,6 +87,42 @@ export interface ShoppingRunRequestV1 {
     errorMessage?: string | null;
     /**
      * 
+     * @type {number}
+     * @memberof ShoppingRunRequestV1
+     */
+    totalItems?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof ShoppingRunRequestV1
+     */
+    processedItems?: number | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof ShoppingRunRequestV1
+     */
+    currentSupplierCode?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof ShoppingRunRequestV1
+     */
+    currentProductId?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof ShoppingRunRequestV1
+     */
+    currentProductLabel?: string | null;
+    /**
+     * 
+     * @type {Date}
+     * @memberof ShoppingRunRequestV1
+     */
+    progressUpdatedAt?: Date | null;
+    /**
+     * 
      * @type {Array<string>}
      * @memberof ShoppingRunRequestV1
      */
@@ -180,6 +216,12 @@ export function ShoppingRunRequestV1FromJSONTyped(json: any, ignoreDiscriminator
         'workerId': json['workerId'] == null ? undefined : json['workerId'],
         'runId': json['runId'] == null ? undefined : json['runId'],
         'errorMessage': json['errorMessage'] == null ? undefined : json['errorMessage'],
+        'totalItems': json['totalItems'] == null ? undefined : json['totalItems'],
+        'processedItems': json['processedItems'] == null ? undefined : json['processedItems'],
+        'currentSupplierCode': json['currentSupplierCode'] == null ? undefined : json['currentSupplierCode'],
+        'currentProductId': json['currentProductId'] == null ? undefined : json['currentProductId'],
+        'currentProductLabel': json['currentProductLabel'] == null ? undefined : json['currentProductLabel'],
+        'progressUpdatedAt': json['progressUpdatedAt'] == null ? undefined : (new Date(json['progressUpdatedAt'])),
         'catalogProductIds': json['catalogProductIds'] == null ? undefined : json['catalogProductIds'],
         'xlsxFilePath': json['xlsxFilePath'] == null ? undefined : json['xlsxFilePath'],
         'xlsxScopeIdentifiers': json['xlsxScopeIdentifiers'] == null ? undefined : json['xlsxScopeIdentifiers'],
@@ -211,6 +253,12 @@ export function ShoppingRunRequestV1ToJSONTyped(value?: ShoppingRunRequestV1 | n
         'workerId': value['workerId'],
         'runId': value['runId'],
         'errorMessage': value['errorMessage'],
+        'totalItems': value['totalItems'],
+        'processedItems': value['processedItems'],
+        'currentSupplierCode': value['currentSupplierCode'],
+        'currentProductId': value['currentProductId'],
+        'currentProductLabel': value['currentProductLabel'],
+        'progressUpdatedAt': value['progressUpdatedAt'] == null ? value['progressUpdatedAt'] : value['progressUpdatedAt'].toISOString(),
         'catalogProductIds': value['catalogProductIds'],
         'xlsxFilePath': value['xlsxFilePath'],
         'xlsxScopeIdentifiers': value['xlsxScopeIdentifiers'],

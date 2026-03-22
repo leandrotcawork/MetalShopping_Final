@@ -103,11 +103,11 @@ export function ProductsPortfolioPage(props: { api: ProductsPortfolioApi }) {
 
   const activeFilters = [
     query.search.trim() !== "" ? { key: "search", label: `Busca: ${query.search.trim()}` } : null,
-    query.brand_name.trim() !== "" ? { key: "brand_name", label: `Marca: ${query.brand_name.trim()}` } : null,
-    query.taxonomy_leaf0_name.trim() !== ""
-      ? { key: "taxonomy_leaf0_name", label: `${taxonomyLeaf0Label}: ${query.taxonomy_leaf0_name.trim()}` }
+    query.brand_name.length > 0 ? { key: "brand_name", label: `Marca: ${query.brand_name.join(", ")}` } : null,
+    query.taxonomy_leaf0_name.length > 0
+      ? { key: "taxonomy_leaf0_name", label: `${taxonomyLeaf0Label}: ${query.taxonomy_leaf0_name.join(", ")}` }
       : null,
-    query.status.trim() !== "" ? { key: "status", label: `Status: ${query.status.trim()}` } : null,
+    query.status.length > 0 ? { key: "status", label: `Status: ${query.status.join(", ")}` } : null,
   ].filter((item): item is { key: string; label: string } => item !== null);
 
   const brandOptions = useMemo(

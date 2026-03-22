@@ -2,9 +2,9 @@ import type { ProductsPortfolioQuery, ProductsPortfolioSortKey } from "./api";
 
 export const defaultProductsPortfolioQuery: ProductsPortfolioQuery = {
   search: "",
-  brand_name: "",
-  taxonomy_leaf0_name: "",
-  status: "",
+  brand_name: [],
+  taxonomy_leaf0_name: [],
+  status: [],
   sort_key: "pn_interno",
   sort_direction: "asc",
   limit: 50,
@@ -22,9 +22,9 @@ export function readProductsPortfolioQueryFromUrl(): ProductsPortfolioQuery {
 
   return {
     search: params.get("search") ?? defaultProductsPortfolioQuery.search,
-    brand_name: params.get("brand_name") ?? defaultProductsPortfolioQuery.brand_name,
-    taxonomy_leaf0_name: params.get("taxonomy_leaf0_name") ?? defaultProductsPortfolioQuery.taxonomy_leaf0_name,
-    status: params.get("status") ?? defaultProductsPortfolioQuery.status,
+    brand_name: readMultiParam(params, "brand_name"),
+    taxonomy_leaf0_name: readMultiParam(params, "taxonomy_leaf0_name"),
+    status: readMultiParam(params, "status"),
     sort_key: (params.get("sort_key") ?? defaultProductsPortfolioQuery.sort_key) as ProductsPortfolioQuery["sort_key"],
     sort_direction: (params.get("sort_direction") ?? defaultProductsPortfolioQuery.sort_direction) as ProductsPortfolioQuery["sort_direction"],
     limit: Number.isFinite(limit) && limit > 0 ? limit : defaultProductsPortfolioQuery.limit,
@@ -39,9 +39,9 @@ export function writeProductsPortfolioQueryToUrl(query: ProductsPortfolioQuery) 
 
   const params = new URLSearchParams();
   if (query.search.trim() !== "") params.set("search", query.search.trim());
-  if (query.brand_name.trim() !== "") params.set("brand_name", query.brand_name.trim());
-  if (query.taxonomy_leaf0_name.trim() !== "") params.set("taxonomy_leaf0_name", query.taxonomy_leaf0_name.trim());
-  if (query.status.trim() !== "") params.set("status", query.status.trim());
+  appendMultiParam(params, "brand_name", query.brand_name);
+  appendMultiParam(params, "taxonomy_leaf0_name", query.taxonomy_leaf0_name);
+  appendMultiParam(params, "status", query.status);
   if (query.sort_key !== defaultProductsPortfolioQuery.sort_key) params.set("sort_key", query.sort_key);
   if (query.sort_direction !== defaultProductsPortfolioQuery.sort_direction) params.set("sort_direction", query.sort_direction);
   if (query.limit !== defaultProductsPortfolioQuery.limit) params.set("limit", String(query.limit));
@@ -50,6 +50,30 @@ export function writeProductsPortfolioQueryToUrl(query: ProductsPortfolioQuery) 
   const nextSearch = params.toString();
   const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}`;
   window.history.replaceState(null, "", nextUrl);
+}
+
+function readMultiParam(params: URLSearchParams, key: string): string[] {
+  const values = params.getAll(key);
+  const out: string[] = [];
+  for (const value of values) {
+    if (value.includes(",")) {
+      for (const part of value.split(",")) {
+        const trimmed = part.trim();
+        if (trimmed) out.push(trimmed);
+      }
+      continue;
+    }
+    const trimmed = value.trim();
+    if (trimmed) out.push(trimmed);
+  }
+  return out;
+}
+
+function appendMultiParam(params: URLSearchParams, key: string, values: string[]) {
+  for (const value of values) {
+    const trimmed = value.trim();
+    if (trimmed) params.append(key, trimmed);
+  }
 }
 
 export function toggleProductsPortfolioSort(
