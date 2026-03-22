@@ -1,8 +1,8 @@
 # ADR-0045: Shopping Manual URL Candidates From Catalog v1
 
-- Status: draft
+- Status: accepted
 - Date: 2026-03-20
-- Updated: 2026-03-21
+- Updated: 2026-03-22
 
 ## Context
 
@@ -121,7 +121,10 @@ Build evidence:
 
 UI evidence:
 
-- Pending user confirmation in browser (manual panel lists candidates when signals empty and reflects saved URL).
+- Confirmed in browser on 2026-03-22 (local `:5173`, API `:8080`, tenant_default):
+  - Manual URL panel lists candidate products even when signals are empty.
+  - Saving a URL persists and the row reflects the signal overlay.
+  - Panel refresh does not flicker/layout-jump; supplier=all and "Mostrar URLs cadastradas" behave as expected.
 
 ## Alternatives considered
 
