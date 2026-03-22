@@ -285,6 +285,194 @@ ORDER BY COUNT(*) DESC, item_status ASC
 	}, nil
 }
 
+func (r *Reader) GetRunSupplierItemStatusSummary(
+	ctx context.Context,
+	tenantID string,
+	runID string,
+) (ports.RunSupplierItemStatusSummary, error) {
+	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return ports.RunSupplierItemStatusSummary{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	const runExistsQuery = `
+SELECT 1
+FROM shopping_price_runs
+WHERE tenant_id = current_tenant_id()
+  AND run_id = $1
+LIMIT 1
+`
+	var one int
+	if err := tx.QueryRowContext(ctx, runExistsQuery, runID).Scan(&one); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ports.RunSupplierItemStatusSummary{}, ErrRunNotFound
+		}
+		return ports.RunSupplierItemStatusSummary{}, fmt.Errorf("check shopping run exists: %w", err)
+	}
+
+	const query = `
+SELECT
+  supplier_code,
+  COUNT(*) AS total,
+  COUNT(*) FILTER (WHERE item_status = 'OK') AS ok,
+  COUNT(*) FILTER (WHERE item_status = 'NOT_FOUND') AS not_found,
+  COUNT(*) FILTER (WHERE item_status = 'AMBIGUOUS') AS ambiguous,
+  COUNT(*) FILTER (WHERE item_status = 'ERROR') AS error
+FROM shopping_price_run_items
+WHERE tenant_id = current_tenant_id()
+  AND run_id = $1
+GROUP BY supplier_code
+ORDER BY supplier_code ASC
+`
+
+	rows, err := tx.QueryContext(ctx, query, runID)
+	if err != nil {
+		return ports.RunSupplierItemStatusSummary{}, fmt.Errorf("query shopping run supplier status summary: %w", err)
+	}
+	defer rows.Close()
+
+	items := make([]ports.RunSupplierItemStatusCount, 0, 16)
+	for rows.Next() {
+		var item ports.RunSupplierItemStatusCount
+		if err := rows.Scan(
+			&item.SupplierCode,
+			&item.Total,
+			&item.Ok,
+			&item.NotFound,
+			&item.Ambiguous,
+			&item.Error,
+		); err != nil {
+			return ports.RunSupplierItemStatusSummary{}, fmt.Errorf("scan shopping run supplier status summary: %w", err)
+		}
+		item.SupplierCode = strings.TrimSpace(item.SupplierCode)
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return ports.RunSupplierItemStatusSummary{}, fmt.Errorf("iterate shopping run supplier status summary: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return ports.RunSupplierItemStatusSummary{}, fmt.Errorf("commit shopping run supplier status summary read: %w", err)
+	}
+
+	return ports.RunSupplierItemStatusSummary{
+		RunID:          runID,
+		TotalSuppliers: int64(len(items)),
+		Rows:           items,
+	}, nil
+}
+
+func (r *Reader) ListRunItems(
+	ctx context.Context,
+	tenantID string,
+	runID string,
+	filter ports.RunItemListFilter,
+) (ports.RunItemList, error) {
+	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return ports.RunItemList{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	const runExistsQuery = `
+SELECT 1
+FROM shopping_price_runs
+WHERE tenant_id = current_tenant_id()
+  AND run_id = $1
+LIMIT 1
+`
+	var one int
+	if err := tx.QueryRowContext(ctx, runExistsQuery, runID).Scan(&one); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ports.RunItemList{}, ErrRunNotFound
+		}
+		return ports.RunItemList{}, fmt.Errorf("check shopping run exists: %w", err)
+	}
+
+	limit := filter.Limit
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	offset := filter.Offset
+	if offset < 0 {
+		offset = 0
+	}
+	supplierCode := strings.TrimSpace(filter.SupplierCode)
+	itemStatus := strings.TrimSpace(filter.ItemStatus)
+
+	const countQuery = `
+SELECT COUNT(*)
+FROM shopping_price_run_items
+WHERE tenant_id = current_tenant_id()
+  AND run_id = $1
+  AND ($2 = '' OR supplier_code = $2)
+  AND ($3 = '' OR item_status = $3)
+`
+	var total int64
+	if err := tx.QueryRowContext(ctx, countQuery, runID, supplierCode, itemStatus).Scan(&total); err != nil {
+		return ports.RunItemList{}, fmt.Errorf("count shopping run items: %w", err)
+	}
+
+	const listQuery = `
+SELECT
+  i.run_item_id,
+  i.run_id,
+  i.product_id,
+  p.name,
+  i.supplier_code,
+  i.item_status,
+  i.observed_price,
+  i.currency_code,
+  i.observed_at,
+  i.seller_name,
+  i.channel,
+  i.product_url,
+  i.http_status,
+  i.elapsed_s,
+  i.chosen_seller_json->>'lookup_term',
+  i.notes
+FROM shopping_price_run_items i
+JOIN catalog_products p
+  ON p.tenant_id = i.tenant_id
+ AND p.product_id = i.product_id
+WHERE i.tenant_id = current_tenant_id()
+  AND i.run_id = $1
+  AND ($2 = '' OR i.supplier_code = $2)
+  AND ($3 = '' OR i.item_status = $3)
+ORDER BY i.observed_at DESC, i.created_at DESC
+LIMIT $4 OFFSET $5
+`
+	rows, err := tx.QueryContext(ctx, listQuery, runID, supplierCode, itemStatus, limit, offset)
+	if err != nil {
+		return ports.RunItemList{}, fmt.Errorf("list shopping run items: %w", err)
+	}
+	defer rows.Close()
+
+	items := make([]ports.RunItem, 0, limit)
+	for rows.Next() {
+		item, scanErr := scanRunItem(rows)
+		if scanErr != nil {
+			return ports.RunItemList{}, scanErr
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return ports.RunItemList{}, fmt.Errorf("iterate shopping run items: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return ports.RunItemList{}, fmt.Errorf("commit shopping run items read: %w", err)
+	}
+
+	return ports.RunItemList{
+		Rows:   items,
+		Offset: offset,
+		Limit:  limit,
+		Total:  total,
+	}, nil
+}
+
 func (r *Reader) GetProductLatest(ctx context.Context, tenantID, productID string) (ports.ProductLatest, error) {
 	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
@@ -798,6 +986,66 @@ func scanRun(s scanner) (ports.Run, error) {
 	if finishedAt.Valid {
 		value := finishedAt.Time.UTC()
 		item.FinishedAt = &value
+	}
+	return item, nil
+}
+
+func scanRunItem(s scanner) (ports.RunItem, error) {
+	var item ports.RunItem
+	var observedAt time.Time
+	var productURL sql.NullString
+	var httpStatus sql.NullInt64
+	var elapsedSeconds sql.NullFloat64
+	var lookupTerm sql.NullString
+	var notes sql.NullString
+	if err := s.Scan(
+		&item.RunItemID,
+		&item.RunID,
+		&item.ProductID,
+		&item.ProductLabel,
+		&item.SupplierCode,
+		&item.ItemStatus,
+		&item.ObservedPrice,
+		&item.Currency,
+		&observedAt,
+		&item.SellerName,
+		&item.Channel,
+		&productURL,
+		&httpStatus,
+		&elapsedSeconds,
+		&lookupTerm,
+		&notes,
+	); err != nil {
+		return ports.RunItem{}, fmt.Errorf("scan shopping run item: %w", err)
+	}
+	item.ObservedAt = observedAt.UTC()
+	item.SupplierCode = strings.TrimSpace(item.SupplierCode)
+	item.ItemStatus = strings.TrimSpace(item.ItemStatus)
+	if productURL.Valid {
+		value := strings.TrimSpace(productURL.String)
+		if value != "" {
+			item.ProductURL = &value
+		}
+	}
+	if httpStatus.Valid {
+		value := httpStatus.Int64
+		item.HTTPStatus = &value
+	}
+	if elapsedSeconds.Valid {
+		value := elapsedSeconds.Float64
+		item.ElapsedSeconds = &value
+	}
+	if lookupTerm.Valid {
+		value := strings.TrimSpace(lookupTerm.String)
+		if value != "" {
+			item.LookupTerm = &value
+		}
+	}
+	if notes.Valid {
+		value := strings.TrimSpace(notes.String)
+		if value != "" {
+			item.Notes = &value
+		}
 	}
 	return item, nil
 }

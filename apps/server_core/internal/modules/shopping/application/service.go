@@ -37,6 +37,16 @@ func (s *Service) GetRunItemStatusSummary(ctx context.Context, tenantID, runID s
 	return s.reader.GetRunItemStatusSummary(ctx, strings.TrimSpace(tenantID), strings.TrimSpace(runID))
 }
 
+func (s *Service) GetRunSupplierItemStatusSummary(ctx context.Context, tenantID, runID string) (ports.RunSupplierItemStatusSummary, error) {
+	return s.reader.GetRunSupplierItemStatusSummary(ctx, strings.TrimSpace(tenantID), strings.TrimSpace(runID))
+}
+
+func (s *Service) ListRunItems(ctx context.Context, tenantID, runID string, filter ports.RunItemListFilter) (ports.RunItemList, error) {
+	filter.SupplierCode = strings.ToUpper(strings.TrimSpace(filter.SupplierCode))
+	filter.ItemStatus = strings.ToUpper(strings.TrimSpace(filter.ItemStatus))
+	return s.reader.ListRunItems(ctx, strings.TrimSpace(tenantID), strings.TrimSpace(runID), filter)
+}
+
 func (s *Service) GetProductLatest(ctx context.Context, tenantID, productID string) (ports.ProductLatest, error) {
 	return s.reader.GetProductLatest(ctx, strings.TrimSpace(tenantID), strings.TrimSpace(productID))
 }

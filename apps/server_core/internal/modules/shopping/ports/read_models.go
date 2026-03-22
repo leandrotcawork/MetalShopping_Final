@@ -41,6 +41,54 @@ type RunItemStatusSummary struct {
 	Rows       []RunItemStatusCount
 }
 
+type RunSupplierItemStatusCount struct {
+	SupplierCode string
+	Total        int64
+	Ok           int64
+	NotFound     int64
+	Ambiguous    int64
+	Error        int64
+}
+
+type RunSupplierItemStatusSummary struct {
+	RunID          string
+	TotalSuppliers int64
+	Rows           []RunSupplierItemStatusCount
+}
+
+type RunItem struct {
+	RunItemID      string
+	RunID          string
+	ProductID      string
+	ProductLabel   string
+	SupplierCode   string
+	ItemStatus     string
+	ObservedPrice  float64
+	Currency       string
+	ObservedAt     time.Time
+	SellerName     string
+	Channel        string
+	ProductURL     *string
+	HTTPStatus     *int64
+	ElapsedSeconds *float64
+	LookupTerm     *string
+	Notes          *string
+}
+
+type RunItemList struct {
+	Rows   []RunItem
+	Offset int64
+	Limit  int64
+	Total  int64
+}
+
+type RunItemListFilter struct {
+	SupplierCode string
+	ItemStatus   string
+	Limit        int64
+	Offset       int64
+}
+
 type ProductLatest struct {
 	ProductID     string
 	RunID         string
@@ -146,6 +194,8 @@ type Reader interface {
 	ListRuns(ctx context.Context, tenantID string, filter RunListFilter) (RunList, error)
 	GetRun(ctx context.Context, tenantID, runID string) (Run, error)
 	GetRunItemStatusSummary(ctx context.Context, tenantID, runID string) (RunItemStatusSummary, error)
+	GetRunSupplierItemStatusSummary(ctx context.Context, tenantID, runID string) (RunSupplierItemStatusSummary, error)
+	ListRunItems(ctx context.Context, tenantID, runID string, filter RunItemListFilter) (RunItemList, error)
 	GetProductLatest(ctx context.Context, tenantID, productID string) (ProductLatest, error)
 	GetRunRequest(ctx context.Context, tenantID, runRequestID string) (RunRequest, error)
 	ListSupplierSignals(ctx context.Context, tenantID string, filter SupplierSignalListFilter) (SupplierSignalList, error)

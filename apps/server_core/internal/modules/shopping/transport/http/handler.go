@@ -324,6 +324,138 @@ func (h *Handler) handleRunByID(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	if strings.HasSuffix(runIDPath, "/supplier-item-status-summary") {
+		runID := strings.TrimSuffix(runIDPath, "/supplier-item-status-summary")
+		runID = strings.TrimSpace(strings.TrimSuffix(runID, "/"))
+		if runID == "" || strings.Contains(runID, "/") {
+			statusCode = http.StatusNotFound
+			reqResult = "not_found"
+			writeShoppingError(w, http.StatusNotFound, "SHOPPING_RUN_NOT_FOUND", "Shopping run not found", traceID)
+			return
+		}
+		summary, err := h.service.GetRunSupplierItemStatusSummary(r.Context(), tenantID, runID)
+		if err != nil {
+			if errors.Is(err, postgres.ErrRunNotFound) {
+				statusCode = http.StatusNotFound
+				reqResult = "not_found"
+				writeShoppingError(w, http.StatusNotFound, "SHOPPING_RUN_NOT_FOUND", "Shopping run not found", traceID)
+				return
+			}
+			statusCode = http.StatusInternalServerError
+			reqResult = "internal_error"
+			writeShoppingError(
+				w,
+				http.StatusInternalServerError,
+				"INTERNAL_ERROR",
+				"Failed to load shopping run supplier status summary",
+				traceID,
+			)
+			return
+		}
+		rows := make([]map[string]any, 0, len(summary.Rows))
+		for _, item := range summary.Rows {
+			rows = append(rows, map[string]any{
+				"supplierCode": item.SupplierCode,
+				"total":        item.Total,
+				"ok":           item.Ok,
+				"notFound":     item.NotFound,
+				"ambiguous":    item.Ambiguous,
+				"error":        item.Error,
+			})
+		}
+		writeJSON(w, http.StatusOK, map[string]any{
+			"runId":          summary.RunID,
+			"totalSuppliers": summary.TotalSuppliers,
+			"rows":           rows,
+		})
+		return
+	}
+	if strings.HasSuffix(runIDPath, "/items") {
+		runID := strings.TrimSuffix(runIDPath, "/items")
+		runID = strings.TrimSpace(strings.TrimSuffix(runID, "/"))
+		if runID == "" || strings.Contains(runID, "/") {
+			statusCode = http.StatusNotFound
+			reqResult = "not_found"
+			writeShoppingError(w, http.StatusNotFound, "SHOPPING_RUN_NOT_FOUND", "Shopping run not found", traceID)
+			return
+		}
+		limit := parseQueryInt64(r, "limit", 50)
+		offset := parseQueryInt64(r, "offset", 0)
+		supplierCode := strings.TrimSpace(r.URL.Query().Get("supplier_code"))
+		itemStatus := strings.TrimSpace(r.URL.Query().Get("item_status"))
+
+		items, err := h.service.ListRunItems(r.Context(), tenantID, runID, ports.RunItemListFilter{
+			SupplierCode: supplierCode,
+			ItemStatus:   itemStatus,
+			Limit:        limit,
+			Offset:       offset,
+		})
+		if err != nil {
+			if errors.Is(err, postgres.ErrRunNotFound) {
+				statusCode = http.StatusNotFound
+				reqResult = "not_found"
+				writeShoppingError(w, http.StatusNotFound, "SHOPPING_RUN_NOT_FOUND", "Shopping run not found", traceID)
+				return
+			}
+			statusCode = http.StatusInternalServerError
+			reqResult = "internal_error"
+			writeShoppingError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to list shopping run items", traceID)
+			return
+		}
+
+		rows := make([]map[string]any, 0, len(items.Rows))
+		for _, item := range items.Rows {
+			var observedAt string
+			if !item.ObservedAt.IsZero() {
+				observedAt = item.ObservedAt.UTC().Format(time.RFC3339)
+			}
+			row := map[string]any{
+				"runItemId":      item.RunItemID,
+				"runId":          item.RunID,
+				"productId":      item.ProductID,
+				"productLabel":   item.ProductLabel,
+				"supplierCode":   item.SupplierCode,
+				"itemStatus":     item.ItemStatus,
+				"observedPrice":  item.ObservedPrice,
+				"currencyCode":   item.Currency,
+				"observedAt":     observedAt,
+				"sellerName":     item.SellerName,
+				"channel":        item.Channel,
+				"productUrl":     nil,
+				"httpStatus":     nil,
+				"elapsedSeconds": nil,
+				"lookupTerm":     nil,
+				"notes":          nil,
+			}
+			if item.ProductURL != nil {
+				row["productUrl"] = *item.ProductURL
+			}
+			if item.HTTPStatus != nil {
+				row["httpStatus"] = *item.HTTPStatus
+			}
+			if item.ElapsedSeconds != nil {
+				row["elapsedSeconds"] = *item.ElapsedSeconds
+			}
+			if item.LookupTerm != nil {
+				row["lookupTerm"] = *item.LookupTerm
+			}
+			if item.Notes != nil {
+				row["notes"] = *item.Notes
+			}
+			rows = append(rows, row)
+		}
+
+		writeJSON(w, http.StatusOK, map[string]any{
+			"rows": rows,
+			"paging": map[string]any{
+				"offset":   items.Offset,
+				"limit":    items.Limit,
+				"returned": len(items.Rows),
+				"total":    items.Total,
+			},
+		})
+		return
+	}
 
 	runID := runIDPath
 	if runID == "" || strings.Contains(runID, "/") {
