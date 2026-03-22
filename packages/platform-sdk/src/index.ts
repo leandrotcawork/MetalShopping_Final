@@ -9,12 +9,15 @@ import type {
   ShoppingCreateRunResponseV1,
   ShoppingManualUrlCandidateListV1,
   ShoppingManualUrlCandidateV1,
+  ShoppingRunItemListV1,
   ShoppingRunRequestV1,
   ShoppingRunItemStatusSummaryV1,
+  ShoppingRunSupplierItemStatusSummaryV1,
   ShoppingProductLatestV1,
   ShoppingRunListV1,
   ShoppingSupplierSignalListV1,
   ShoppingSupplierSignalV1,
+  ShoppingRunItemV1,
   ShoppingRunV1,
   ShoppingSummaryV1,
   ShoppingUpsertSupplierSignalRequestV1,
@@ -88,6 +91,15 @@ export type ListShoppingRunsQueryParams = {
   offset?: number;
 };
 
+export type ShoppingRunItemStatus = "OK" | "NOT_FOUND" | "AMBIGUOUS" | "ERROR";
+
+export type ListShoppingRunItemsQueryParams = {
+  supplierCode?: string;
+  itemStatus?: ShoppingRunItemStatus;
+  limit?: number;
+  offset?: number;
+};
+
 export type ListShoppingSupplierSignalsQueryParams = {
   supplierCode?: string;
   productId?: string;
@@ -118,6 +130,8 @@ export type ServerCoreSdk = {
     listRuns(query?: ListShoppingRunsQueryParams): Promise<ShoppingRunListV1>;
     getRun(runId: string): Promise<ShoppingRunV1>;
     getRunItemStatusSummary(runId: string): Promise<ShoppingRunItemStatusSummaryV1>;
+    getRunSupplierItemStatusSummary(runId: string): Promise<ShoppingRunSupplierItemStatusSummaryV1>;
+    listRunItems(runId: string, query?: ListShoppingRunItemsQueryParams): Promise<ShoppingRunItemListV1>;
     getProductLatest(productId: string): Promise<ShoppingProductLatestV1>;
     listSupplierSignals(query?: ListShoppingSupplierSignalsQueryParams): Promise<ShoppingSupplierSignalListV1>;
     listManualUrlCandidates(
@@ -379,6 +393,113 @@ function parseShoppingRunItemStatusSummary(raw: unknown): ShoppingRunItemStatusS
     assertNumber(row.total, "ShoppingRunItemStatusSummaryV1.rows.total");
   }
   return raw as ShoppingRunItemStatusSummaryV1;
+}
+
+function parseShoppingRunSupplierItemStatusSummary(raw: unknown): ShoppingRunSupplierItemStatusSummaryV1 {
+  if (!isRecord(raw)) {
+    throw new Error("[sdk-runtime] ShoppingRunSupplierItemStatusSummaryV1 response must be an object");
+  }
+  assertString(raw.runId, "ShoppingRunSupplierItemStatusSummaryV1.runId");
+  assertNumber(raw.totalSuppliers, "ShoppingRunSupplierItemStatusSummaryV1.totalSuppliers");
+  if (!Array.isArray(raw.rows)) {
+    throw new Error("[sdk-runtime] ShoppingRunSupplierItemStatusSummaryV1.rows must be an array");
+  }
+  for (const row of raw.rows) {
+    if (!isRecord(row)) {
+      throw new Error("[sdk-runtime] ShoppingRunSupplierItemStatusSummaryV1.rows entries must be objects");
+    }
+    assertString(row.supplierCode, "ShoppingRunSupplierItemStatusSummaryV1.rows.supplierCode");
+    assertNumber(row.total, "ShoppingRunSupplierItemStatusSummaryV1.rows.total");
+    assertNumber(row.ok, "ShoppingRunSupplierItemStatusSummaryV1.rows.ok");
+    assertNumber(row.notFound, "ShoppingRunSupplierItemStatusSummaryV1.rows.notFound");
+    assertNumber(row.ambiguous, "ShoppingRunSupplierItemStatusSummaryV1.rows.ambiguous");
+    assertNumber(row.error, "ShoppingRunSupplierItemStatusSummaryV1.rows.error");
+  }
+  return raw as ShoppingRunSupplierItemStatusSummaryV1;
+}
+
+function parseShoppingRunItem(raw: unknown): ShoppingRunItemV1 {
+  if (!isRecord(raw)) {
+    throw new Error("[sdk-runtime] ShoppingRunItemV1 response must be an object");
+  }
+  assertString(raw.runItemId, "ShoppingRunItemV1.runItemId");
+  assertString(raw.runId, "ShoppingRunItemV1.runId");
+  assertString(raw.productId, "ShoppingRunItemV1.productId");
+  assertString(raw.productLabel, "ShoppingRunItemV1.productLabel");
+  assertString(raw.supplierCode, "ShoppingRunItemV1.supplierCode");
+  assertString(raw.itemStatus, "ShoppingRunItemV1.itemStatus");
+  assertNumber(raw.observedPrice, "ShoppingRunItemV1.observedPrice");
+  assertString(raw.currencyCode, "ShoppingRunItemV1.currencyCode");
+  const observedAt = normalizeDateTime(raw.observedAt, "ShoppingRunItemV1.observedAt");
+  assertString(raw.sellerName, "ShoppingRunItemV1.sellerName");
+  assertString(raw.channel, "ShoppingRunItemV1.channel");
+
+  if (raw.productUrl !== undefined && raw.productUrl !== null) {
+    assertString(raw.productUrl, "ShoppingRunItemV1.productUrl");
+  }
+  const productUrl = (raw.productUrl as string | null | undefined) ?? null;
+  if (raw.httpStatus !== undefined && raw.httpStatus !== null) {
+    assertNumber(raw.httpStatus, "ShoppingRunItemV1.httpStatus");
+  }
+  const httpStatus = (raw.httpStatus as number | null | undefined) ?? null;
+  if (raw.elapsedSeconds !== undefined && raw.elapsedSeconds !== null) {
+    assertNumber(raw.elapsedSeconds, "ShoppingRunItemV1.elapsedSeconds");
+  }
+  const elapsedSeconds = (raw.elapsedSeconds as number | null | undefined) ?? null;
+  if (raw.lookupTerm !== undefined && raw.lookupTerm !== null) {
+    assertString(raw.lookupTerm, "ShoppingRunItemV1.lookupTerm");
+  }
+  const lookupTerm = (raw.lookupTerm as string | null | undefined) ?? null;
+  if (raw.notes !== undefined && raw.notes !== null) {
+    assertString(raw.notes, "ShoppingRunItemV1.notes");
+  }
+  const notes = (raw.notes as string | null | undefined) ?? null;
+
+  return {
+    runItemId: raw.runItemId,
+    runId: raw.runId,
+    productId: raw.productId,
+    productLabel: raw.productLabel,
+    supplierCode: raw.supplierCode,
+    itemStatus: raw.itemStatus as ShoppingRunItemV1["itemStatus"],
+    observedPrice: raw.observedPrice,
+    currencyCode: raw.currencyCode,
+    observedAt,
+    sellerName: raw.sellerName,
+    channel: raw.channel,
+    productUrl: productUrl === null ? null : productUrl,
+    httpStatus: httpStatus === null ? null : httpStatus,
+    elapsedSeconds: elapsedSeconds === null ? null : elapsedSeconds,
+    lookupTerm: lookupTerm === null ? null : lookupTerm,
+    notes: notes === null ? null : notes,
+  };
+}
+
+function parseShoppingRunItemList(raw: unknown): ShoppingRunItemListV1 {
+  if (!isRecord(raw)) {
+    throw new Error("[sdk-runtime] ShoppingRunItemListV1 response must be an object");
+  }
+  if (!Array.isArray(raw.rows)) {
+    throw new Error("[sdk-runtime] ShoppingRunItemListV1.rows must be an array");
+  }
+  if (!isRecord(raw.paging)) {
+    throw new Error("[sdk-runtime] ShoppingRunItemListV1.paging must be an object");
+  }
+  const paging = raw.paging;
+  assertNumber(paging.offset, "ShoppingRunItemListV1.paging.offset");
+  assertNumber(paging.limit, "ShoppingRunItemListV1.paging.limit");
+  assertNumber(paging.returned, "ShoppingRunItemListV1.paging.returned");
+  assertNumber(paging.total, "ShoppingRunItemListV1.paging.total");
+
+  return {
+    rows: raw.rows.map(parseShoppingRunItem),
+    paging: {
+      offset: paging.offset,
+      limit: paging.limit,
+      returned: paging.returned,
+      total: paging.total,
+    },
+  };
 }
 
 function parseShoppingSummary(raw: unknown): ShoppingSummaryV1 {
@@ -925,6 +1046,22 @@ export function createServerCoreSdk(client: GeneratedHttpClient): ServerCoreSdk 
       async getRunItemStatusSummary(runId) {
         const raw = await runGeneratedCall(() => shoppingApi.getShoppingRunItemStatusSummary({ runId }));
         return parseShoppingRunItemStatusSummary(raw);
+      },
+      async getRunSupplierItemStatusSummary(runId) {
+        const raw = await runGeneratedCall(() => shoppingApi.getShoppingRunSupplierItemStatusSummary({ runId }));
+        return parseShoppingRunSupplierItemStatusSummary(raw);
+      },
+      async listRunItems(runId, query = {}) {
+        const raw = await runGeneratedCall(() =>
+          shoppingApi.listShoppingRunItems({
+            runId,
+            supplierCode: query.supplierCode,
+            itemStatus: query.itemStatus,
+            limit: query.limit,
+            offset: query.offset,
+          }),
+        );
+        return parseShoppingRunItemList(raw);
       },
       async getProductLatest(productId) {
         const raw = await runGeneratedCall(() => shoppingApi.getShoppingProductLatest({ productId }));

@@ -37,10 +37,13 @@ export const schemaIds = {
   "shopping_manual_url_candidate_list_v1.schema": "https://schemas.metalshopping.local/api/shopping_manual_url_candidate_list_v1.schema.json",
   "shopping_manual_url_candidate_v1.schema": "https://schemas.metalshopping.local/api/shopping_manual_url_candidate_v1.schema.json",
   "shopping_product_latest_v1.schema": "https://schemas.metalshopping.local/api/shopping_product_latest_v1.schema.json",
+  "shopping_run_item_list_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_item_list_v1.schema.json",
   "shopping_run_item_status_summary_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_item_status_summary_v1.schema.json",
+  "shopping_run_item_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_item_v1.schema.json",
   "shopping_run_list_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_list_v1.schema.json",
   "shopping_run_request_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_request_v1.schema.json",
   "shopping_run_requested_payload_v1.schema": "https://contracts.metalshopping.local/schema/shopping/run_requested_payload/v1",
+  "shopping_run_supplier_item_status_summary_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_supplier_item_status_summary_v1.schema.json",
   "shopping_run_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_v1.schema.json",
   "shopping_summary_v1.schema": "https://schemas.metalshopping.local/api/shopping_summary_v1.schema.json",
   "shopping_supplier_signal_list_v1.schema": "https://schemas.metalshopping.local/api/shopping_supplier_signal_list_v1.schema.json",
@@ -452,6 +455,16 @@ export type ShoppingProductLatestV1 = {
   currency: string;
 };
 
+export type ShoppingRunItemListV1 = {
+  rows: Array<ShoppingRunItemV1>;
+  paging: {
+    offset: number;
+    limit: number;
+    returned: number;
+    total: number;
+  };
+};
+
 export type ShoppingRunItemStatusSummaryV1 = {
   runId: string;
   totalItems: number;
@@ -459,6 +472,25 @@ export type ShoppingRunItemStatusSummaryV1 = {
     itemStatus: string;
     total: number;
   }>;
+};
+
+export type ShoppingRunItemV1 = {
+  runItemId: string;
+  runId: string;
+  productId: string;
+  productLabel: string;
+  supplierCode: string;
+  itemStatus: "OK" | "NOT_FOUND" | "AMBIGUOUS" | "ERROR";
+  observedPrice: number;
+  currencyCode: string;
+  observedAt: string;
+  sellerName: string;
+  channel: string;
+  productUrl?: string | null;
+  httpStatus?: number | null;
+  elapsedSeconds?: number | null;
+  lookupTerm?: string | null;
+  notes?: string | null;
 };
 
 export type ShoppingRunListV1 = {
@@ -508,6 +540,19 @@ export type ShoppingRunRequestedPayloadV1 = {
   xlsx_file_path?: string;
   xlsx_scope_identifiers?: Array<string>;
   notes?: string;
+};
+
+export type ShoppingRunSupplierItemStatusSummaryV1 = {
+  runId: string;
+  totalSuppliers: number;
+  rows: Array<{
+    supplierCode: string;
+    total: number;
+    ok: number;
+    notFound: number;
+    ambiguous: number;
+    error: number;
+  }>;
 };
 
 export type ShoppingRunV1 = {

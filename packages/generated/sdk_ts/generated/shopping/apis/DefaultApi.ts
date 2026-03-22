@@ -22,9 +22,11 @@ import type {
   ShoppingCreateRunResponseV1,
   ShoppingManualUrlCandidateListV1,
   ShoppingProductLatestV1,
+  ShoppingRunItemListV1,
   ShoppingRunItemStatusSummaryV1,
   ShoppingRunListV1,
   ShoppingRunRequestV1,
+  ShoppingRunSupplierItemStatusSummaryV1,
   ShoppingRunV11,
   ShoppingSummaryV1,
   ShoppingSupplierSignalListV1,
@@ -46,12 +48,16 @@ import {
     ShoppingManualUrlCandidateListV1ToJSON,
     ShoppingProductLatestV1FromJSON,
     ShoppingProductLatestV1ToJSON,
+    ShoppingRunItemListV1FromJSON,
+    ShoppingRunItemListV1ToJSON,
     ShoppingRunItemStatusSummaryV1FromJSON,
     ShoppingRunItemStatusSummaryV1ToJSON,
     ShoppingRunListV1FromJSON,
     ShoppingRunListV1ToJSON,
     ShoppingRunRequestV1FromJSON,
     ShoppingRunRequestV1ToJSON,
+    ShoppingRunSupplierItemStatusSummaryV1FromJSON,
+    ShoppingRunSupplierItemStatusSummaryV1ToJSON,
     ShoppingRunV11FromJSON,
     ShoppingRunV11ToJSON,
     ShoppingSummaryV1FromJSON,
@@ -84,6 +90,10 @@ export interface GetShoppingRunRequestRequest {
     runRequestId: string;
 }
 
+export interface GetShoppingRunSupplierItemStatusSummaryRequest {
+    runId: string;
+}
+
 export interface ListShoppingManualUrlCandidatesRequest {
     supplierCode: string;
     search?: string;
@@ -91,6 +101,14 @@ export interface ListShoppingManualUrlCandidatesRequest {
     taxonomyLeaf0Name?: string;
     includeExisting?: boolean;
     onlyWithUrl?: boolean;
+    limit?: number;
+    offset?: number;
+}
+
+export interface ListShoppingRunItemsRequest {
+    runId: string;
+    supplierCode?: string;
+    itemStatus?: ListShoppingRunItemsItemStatusEnum;
     limit?: number;
     offset?: number;
 }
@@ -382,6 +400,51 @@ export class DefaultApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for getShoppingRunSupplierItemStatusSummary without sending the request
+     */
+    async getShoppingRunSupplierItemStatusSummaryRequestOpts(requestParameters: GetShoppingRunSupplierItemStatusSummaryRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['runId'] == null) {
+            throw new runtime.RequiredError(
+                'runId',
+                'Required parameter "runId" was null or undefined when calling getShoppingRunSupplierItemStatusSummary().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/shopping/runs/{run_id}/supplier-item-status-summary`;
+        urlPath = urlPath.replace(`{${"run_id"}}`, encodeURIComponent(String(requestParameters['runId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Get shopping run item counts grouped by supplier
+     */
+    async getShoppingRunSupplierItemStatusSummaryRaw(requestParameters: GetShoppingRunSupplierItemStatusSummaryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ShoppingRunSupplierItemStatusSummaryV1>> {
+        const requestOptions = await this.getShoppingRunSupplierItemStatusSummaryRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ShoppingRunSupplierItemStatusSummaryV1FromJSON(jsonValue));
+    }
+
+    /**
+     * Get shopping run item counts grouped by supplier
+     */
+    async getShoppingRunSupplierItemStatusSummary(requestParameters: GetShoppingRunSupplierItemStatusSummaryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ShoppingRunSupplierItemStatusSummaryV1> {
+        const response = await this.getShoppingRunSupplierItemStatusSummaryRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for getShoppingSummary without sending the request
      */
     async getShoppingSummaryRequestOpts(): Promise<runtime.RequestOpts> {
@@ -491,6 +554,67 @@ export class DefaultApi extends runtime.BaseAPI {
      */
     async listShoppingManualUrlCandidates(requestParameters: ListShoppingManualUrlCandidatesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ShoppingManualUrlCandidateListV1> {
         const response = await this.listShoppingManualUrlCandidatesRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for listShoppingRunItems without sending the request
+     */
+    async listShoppingRunItemsRequestOpts(requestParameters: ListShoppingRunItemsRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['runId'] == null) {
+            throw new runtime.RequiredError(
+                'runId',
+                'Required parameter "runId" was null or undefined when calling listShoppingRunItems().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['supplierCode'] != null) {
+            queryParameters['supplier_code'] = requestParameters['supplierCode'];
+        }
+
+        if (requestParameters['itemStatus'] != null) {
+            queryParameters['item_status'] = requestParameters['itemStatus'];
+        }
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
+
+        if (requestParameters['offset'] != null) {
+            queryParameters['offset'] = requestParameters['offset'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/shopping/runs/{run_id}/items`;
+        urlPath = urlPath.replace(`{${"run_id"}}`, encodeURIComponent(String(requestParameters['runId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * List shopping run items
+     */
+    async listShoppingRunItemsRaw(requestParameters: ListShoppingRunItemsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ShoppingRunItemListV1>> {
+        const requestOptions = await this.listShoppingRunItemsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ShoppingRunItemListV1FromJSON(jsonValue));
+    }
+
+    /**
+     * List shopping run items
+     */
+    async listShoppingRunItems(requestParameters: ListShoppingRunItemsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ShoppingRunItemListV1> {
+        const response = await this.listShoppingRunItemsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -645,6 +769,16 @@ export class DefaultApi extends runtime.BaseAPI {
 
 }
 
+/**
+ * @export
+ */
+export const ListShoppingRunItemsItemStatusEnum = {
+    OK: 'OK',
+    NOT_FOUND: 'NOT_FOUND',
+    AMBIGUOUS: 'AMBIGUOUS',
+    ERROR: 'ERROR'
+} as const;
+export type ListShoppingRunItemsItemStatusEnum = typeof ListShoppingRunItemsItemStatusEnum[keyof typeof ListShoppingRunItemsItemStatusEnum];
 /**
  * @export
  */
