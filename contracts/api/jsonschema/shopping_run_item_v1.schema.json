@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.metalshopping.local/api/shopping_run_item_v1.schema.json",
+  "title": "ShoppingRunItemV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "runItemId",
+    "runId",
+    "productId",
+    "productLabel",
+    "supplierCode",
+    "itemStatus",
+    "observedPrice",
+    "currencyCode",
+    "observedAt",
+    "sellerName",
+    "channel"
+  ],
+  "properties": {
+    "runItemId": {
+      "type": "string"
+    },
+    "runId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "productId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "productLabel": {
+      "type": "string"
+    },
+    "supplierCode": {
+      "type": "string"
+    },
+    "itemStatus": {
+      "type": "string",
+      "enum": ["OK", "NOT_FOUND", "AMBIGUOUS", "ERROR"]
+    },
+    "observedPrice": {
+      "type": "number"
+    },
+    "currencyCode": {
+      "type": "string"
+    },
+    "observedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sellerName": {
+      "type": "string"
+    },
+    "channel": {
+      "type": "string"
+    },
+    "productUrl": {
+      "type": ["string", "null"]
+    },
+    "httpStatus": {
+      "type": ["integer", "null"],
+      "minimum": 100,
+      "maximum": 599
+    },
+    "elapsedSeconds": {
+      "type": ["number", "null"],
+      "minimum": 0
+    },
+    "lookupTerm": {
+      "type": ["string", "null"]
+    },
+    "notes": {
+      "type": ["string", "null"]
+    }
+  }
+}
