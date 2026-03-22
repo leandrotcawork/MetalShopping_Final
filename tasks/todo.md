@@ -34,7 +34,7 @@ Level 1 scope:
 ## Phase 2 - Plan (wait for approval, then execute T1..T6)
 
 ## Tasks
-- [ ] T1: contract - $metalshopping-openapi-contracts
+- [x] T1: contract - $metalshopping-openapi-contracts
       commit: "feat(shopping): add manual URL candidates endpoint contract"
 - [x] T2: Go module - reader + handler + postgres adapter
       commit: "feat(shopping): implement manual URL candidates list endpoint"
@@ -99,7 +99,7 @@ Level 1 scope:
       commit: "feat(worker): persist shopping run progress"
 - [x] T3b: worker - add per-item logs for debugging
       commit: "feat(worker): add per-item shopping run logs"
-- [ ] T3c: worker - keep alive polling mode for queue
+- [x] T3c: worker - keep alive polling mode for queue
       commit: "feat(worker): keep alive when queue is empty"
 - [x] T4: SDK - $metalshopping-sdk-generation
       commit: "chore(sdk): regenerate after shopping progress contract"
@@ -174,4 +174,4 @@ Level 1 scope:
 - [x] Worker smoke with `OBRA_FACIL` completes with real items (non-zero rows written)
 - [x] For equal product sample, median `OBRA_FACIL` item latency improves materially vs current baseline (`docs/SHOPPING_OBRAFACIL_PERF_EVIDENCE.md`)
 - [ ] Progress UI keeps updating during run (no regression)
-- [ ] Existing HTTP suppliers (DEXCO/CONDEC/ABC/LEROY/TELHA_NORTE) show no regression in smoke
+- [x] Existing HTTP suppliers (DEXCO/CONDEC/ABC/LEROY/TELHA_NORTE) show no regression in smoke
