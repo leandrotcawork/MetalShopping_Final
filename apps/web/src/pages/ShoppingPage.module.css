@@ -1099,6 +1099,12 @@
   gap: 8px;
 }
 
+.runListScroll {
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
 .runListFooter {
   margin-top: 10px;
   display: flex;
@@ -1121,6 +1127,35 @@
 
 .runButton:hover {
   border-color: #94a3b8;
+}
+
+.supplierSummary {
+  margin-top: 16px;
+}
+
+.supplierSummary h4 {
+  margin: 0 0 8px;
+  color: var(--neutral-900);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.supplierSummaryTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.supplierSummaryTable th,
+.supplierSummaryTable td {
+  border-bottom: 1px solid var(--neutral-200);
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.supplierSummaryTable th {
+  color: var(--neutral-500);
+  font-weight: 800;
 }
 
 .runMain {
@@ -1260,6 +1295,67 @@
   color: var(--neutral-700);
   font-size: 12px;
   font-family: "Consolas", "JetBrains Mono", monospace;
+}
+
+.logItems {
+  display: grid;
+  gap: 8px;
+}
+
+.logItems h4 {
+  margin: 0;
+  color: var(--neutral-900);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.logList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.logList li {
+  border: 1px solid var(--neutral-200);
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: grid;
+  gap: 4px;
+  background: var(--neutral-50);
+}
+
+.logItemMain {
+  display: grid;
+  gap: 2px;
+  color: var(--neutral-900);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.logItemMain small {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--neutral-500);
+}
+
+.logItemMeta {
+  font-size: 11px;
+  color: var(--neutral-500);
+}
+
+.logMuted {
+  color: var(--neutral-500);
+  font-size: 12px;
+}
+
+.logError {
+  color: var(--error);
+  font-size: 12px;
 }
 
 .empty {

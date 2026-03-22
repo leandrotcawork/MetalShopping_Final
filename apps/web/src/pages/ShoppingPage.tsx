@@ -9,6 +9,8 @@ import type {
   ShoppingRunRequestV1,
   ShoppingRunV1,
   ShoppingRunItemStatusSummaryV1,
+  ShoppingRunItemListV1,
+  ShoppingRunSupplierItemStatusSummaryV1,
   ShoppingManualUrlCandidateV1,
 } from "@metalshopping/sdk-types";
 import { AppFrame, Checkbox, FilterDropdown, type SelectMenuOption } from "@metalshopping/ui";
@@ -113,6 +115,13 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
   const [runs, setRuns] = useState<ShoppingRunV1[]>([]);
   const [selectedRun, setSelectedRun] = useState<ShoppingRunV1 | null>(null);
   const [selectedRunItemSummary, setSelectedRunItemSummary] = useState<ShoppingRunItemStatusSummaryV1 | null>(null);
+  const [selectedRunSupplierSummary, setSelectedRunSupplierSummary] =
+    useState<ShoppingRunSupplierItemStatusSummaryV1 | null>(null);
+  const [supplierSummaryLoading, setSupplierSummaryLoading] = useState(false);
+  const [supplierSummaryError, setSupplierSummaryError] = useState<string | null>(null);
+  const [runItemsLog, setRunItemsLog] = useState<ShoppingRunItemListV1 | null>(null);
+  const [runItemsLogLoading, setRunItemsLogLoading] = useState(false);
+  const [runItemsLogError, setRunItemsLogError] = useState<string | null>(null);
   const [loadingShopping, setLoadingShopping] = useState(true);
   const [creatingRun, setCreatingRun] = useState(false);
   const [createRunInfo, setCreateRunInfo] = useState<string | null>(null);
@@ -172,10 +181,15 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
       setLoadingShopping(true);
       setError(null);
       try {
+        const runQuery = {
+          limit: 20,
+          offset: 0,
+          ...(selectedStatus === "all" ? {} : { status: selectedStatus }),
+        };
         const [nextSummary, nextBootstrap, nextRuns] = await Promise.all([
           shoppingApi.getSummary(),
           shoppingApi.getBootstrap(),
-          shoppingApi.listRuns(selectedStatus === "all" ? {} : { status: selectedStatus, limit: 20, offset: 0 }),
+          shoppingApi.listRuns(runQuery),
         ]);
         if (cancelled) {
           return;
@@ -453,6 +467,76 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
       cancelled = true;
     };
   }, [shoppingApi, selectedRun?.runId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSupplierSummary() {
+      if (!selectedRun) {
+        setSelectedRunSupplierSummary(null);
+        setSupplierSummaryError(null);
+        return;
+      }
+      setSupplierSummaryLoading(true);
+      setSupplierSummaryError(null);
+      try {
+        const summary = await shoppingApi.getRunSupplierItemStatusSummary(selectedRun.runId);
+        if (!cancelled) {
+          setSelectedRunSupplierSummary(summary);
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          const message = loadError instanceof Error ? loadError.message : "Falha ao carregar resumo por fornecedor.";
+          setSupplierSummaryError(message);
+          setSelectedRunSupplierSummary(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setSupplierSummaryLoading(false);
+        }
+      }
+    }
+
+    void loadSupplierSummary();
+    return () => {
+      cancelled = true;
+    };
+  }, [shoppingApi, selectedRun?.runId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadRunItemLog() {
+      if (!showLog || !selectedRun) {
+        setRunItemsLog(null);
+        setRunItemsLogError(null);
+        return;
+      }
+      setRunItemsLogLoading(true);
+      setRunItemsLogError(null);
+      try {
+        const list = await shoppingApi.listRunItems(selectedRun.runId, { limit: 200, offset: 0 });
+        if (!cancelled) {
+          setRunItemsLog(list);
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          const message = loadError instanceof Error ? loadError.message : "Falha ao carregar log detalhado.";
+          setRunItemsLogError(message);
+          setRunItemsLog(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setRunItemsLogLoading(false);
+        }
+      }
+    }
+
+    void loadRunItemLog();
+    return () => {
+      cancelled = true;
+    };
+  }, [shoppingApi, selectedRun?.runId, showLog]);
 
   function applyCatalogResponse(response: ProductsPortfolioListV1) {
     const filters = response.filters;
@@ -1434,19 +1518,21 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                 {runs.length === 0 ? (
                   <p className={styles.empty}>Nenhum run encontrado para o filtro atual.</p>
                 ) : (
-                  <ul className={styles.runList}>
-                    {recentRuns.map((run) => (
-                      <li key={run.runId}>
-                        <button type="button" className={styles.runButton} onClick={() => void handleRunSelect(run.runId)}>
-                          <span className={styles.runMain}>
-                            <strong className={styles.runId}>{run.runId}</strong>
-                          <small className={styles.runTime}>{formatDateTime(run.startedAt)}</small>
-                        </span>
-                        <span className={`${styles.statusPill} ${statusClass(styles, run.status)}`.trim()}>{run.status}</span>
-                      </button>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className={styles.runListScroll}>
+                    <ul className={styles.runList}>
+                      {recentRuns.map((run) => (
+                        <li key={run.runId}>
+                          <button type="button" className={styles.runButton} onClick={() => void handleRunSelect(run.runId)}>
+                            <span className={styles.runMain}>
+                              <strong className={styles.runId}>{run.runId}</strong>
+                            <small className={styles.runTime}>{formatDateTime(run.startedAt)}</small>
+                          </span>
+                          <span className={`${styles.statusPill} ${statusClass(styles, run.status)}`.trim()}>{run.status}</span>
+                        </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
                 {runs.length > maxRecentRuns ? (
                   <div className={styles.runListFooter}>
@@ -1465,32 +1551,69 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
               {!selectedRun ? (
                 <p className={styles.empty}>Selecione um run para visualizar os detalhes.</p>
               ) : (
-                <dl className={styles.detailGrid}>
-                  <div>
-                    <dt>Run ID</dt>
-                    <dd>{selectedRun.runId}</dd>
+                <>
+                  <dl className={styles.detailGrid}>
+                    <div>
+                      <dt>Run ID</dt>
+                      <dd>{selectedRun.runId}</dd>
+                    </div>
+                    <div>
+                      <dt>Status</dt>
+                      <dd>{selectedRun.status}</dd>
+                    </div>
+                    <div>
+                      <dt>Inicio</dt>
+                      <dd>{formatDateTime(selectedRun.startedAt)}</dd>
+                    </div>
+                    <div>
+                      <dt>Fim</dt>
+                      <dd>{formatDateTime(selectedRun.finishedAt ?? null)}</dd>
+                    </div>
+                    <div>
+                      <dt>Itens processados</dt>
+                      <dd>{selectedRun.processedItems}</dd>
+                    </div>
+                    <div>
+                      <dt>Total de itens</dt>
+                      <dd>{selectedRun.totalItems}</dd>
+                    </div>
+                  </dl>
+                  <div className={styles.supplierSummary}>
+                    <h4>Resumo por fornecedor</h4>
+                    {supplierSummaryLoading ? (
+                      <p className={styles.logMuted}>Carregando resumo por fornecedor...</p>
+                    ) : supplierSummaryError ? (
+                      <p className={styles.logError}>{supplierSummaryError}</p>
+                    ) : selectedRunSupplierSummary && selectedRunSupplierSummary.rows.length > 0 ? (
+                      <table className={styles.supplierSummaryTable}>
+                        <thead>
+                          <tr>
+                            <th>Fornecedor</th>
+                            <th>OK</th>
+                            <th>NF</th>
+                            <th>Amb</th>
+                            <th>Error</th>
+                            <th>Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedRunSupplierSummary.rows.map((row) => (
+                            <tr key={row.supplierCode}>
+                              <td>{row.supplierCode}</td>
+                              <td>{row.ok}</td>
+                              <td>{row.notFound}</td>
+                              <td>{row.ambiguous}</td>
+                              <td>{row.error}</td>
+                              <td>{row.total}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <p className={styles.empty}>Sem dados por fornecedor para este run.</p>
+                    )}
                   </div>
-                  <div>
-                    <dt>Status</dt>
-                    <dd>{selectedRun.status}</dd>
-                  </div>
-                  <div>
-                    <dt>Inicio</dt>
-                    <dd>{formatDateTime(selectedRun.startedAt)}</dd>
-                  </div>
-                  <div>
-                    <dt>Fim</dt>
-                    <dd>{formatDateTime(selectedRun.finishedAt ?? null)}</dd>
-                  </div>
-                  <div>
-                    <dt>Itens processados</dt>
-                    <dd>{selectedRun.processedItems}</dd>
-                  </div>
-                  <div>
-                    <dt>Total de itens</dt>
-                    <dd>{selectedRun.totalItems}</dd>
-                  </div>
-                </dl>
+                </>
               )}
             </div>
           </div>
@@ -1520,6 +1643,33 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
               ) : (
                 <p>[RUN] sem run selecionado</p>
               )}
+              <div className={styles.logItems}>
+                <h4>Itens processados</h4>
+                {runItemsLogLoading ? (
+                  <p className={styles.logMuted}>Carregando log detalhado...</p>
+                ) : runItemsLogError ? (
+                  <p className={styles.logError}>{runItemsLogError}</p>
+                ) : runItemsLog && runItemsLog.rows.length > 0 ? (
+                  <ul className={styles.logList}>
+                    {runItemsLog.rows.map((item) => (
+                      <li key={item.runItemId}>
+                        <span className={styles.logItemMain}>
+                          <strong>{item.productLabel}</strong>
+                          <small>
+                            Fornecedor: {item.supplierCode} | Status: {item.itemStatus} | Lookup: {item.lookupTerm ?? "-"}
+                          </small>
+                        </span>
+                        <span className={styles.logItemMeta}>
+                          URL: {item.productUrl ?? "-"} | HTTP: {item.httpStatus ?? "-"} | Tempo:{" "}
+                          {item.elapsedSeconds ?? "-"}s
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className={styles.logMuted}>Nenhum item encontrado para este run.</p>
+                )}
+              </div>
             </div>
           ) : null}
         </article>
