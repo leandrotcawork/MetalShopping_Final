@@ -160,7 +160,7 @@ Level 1 scope:
 ## Tasks
 - [x] T1: worker observability baseline (elapsed + stage notes for runtime)
       commit: "feat(worker): add playwright runtime latency telemetry"
-- [ ] T2: Playwright strategy fast path (avoid blocking selector timeout; parse-first fallback)
+- [x] T2: Playwright strategy fast path (avoid blocking selector timeout; parse-first fallback)
       commit: "fix(worker): remove selector-timeout bottleneck in playwright strategy"
 - [ ] T3: Playwright batch runtime reuse (browser/context reuse with tab workers)
       commit: "feat(worker): add tab-based playwright batch execution"
