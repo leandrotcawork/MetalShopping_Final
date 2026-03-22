@@ -1057,14 +1057,14 @@ func scanRunItem(s scanner) (ports.RunItem, error) {
 		}
 	}
 	if item.ProductURL == nil && item.LookupTerm != nil && runtimeConfigJSON.Valid {
-		if computed := deriveSearchURLFromRuntimeConfig(runtimeConfigJSON.String, *item.LookupTerm); computed != "" {
+		if computed := deriveSearchURLFromRuntimeConfig(runtimeConfigJSON.String, item.SupplierCode, item.ProductID, *item.LookupTerm); computed != "" {
 			item.ProductURL = &computed
 		}
 	}
 	return item, nil
 }
 
-func deriveSearchURLFromRuntimeConfig(rawConfigJSON, lookupTerm string) string {
+func deriveSearchURLFromRuntimeConfig(rawConfigJSON, supplierCode, productID, lookupTerm string) string {
 	trimmedLookup := strings.TrimSpace(lookupTerm)
 	if trimmedLookup == "" {
 		return ""
@@ -1074,25 +1074,40 @@ func deriveSearchURLFromRuntimeConfig(rawConfigJSON, lookupTerm string) string {
 		return ""
 	}
 	candidates := []string{
+		extractString(config["searchUrlTemplate"]),
 		extractString(config["searchUrl"]),
 		extractString(config["endpointTemplate"]),
 		extractString(config["startUrl"]),
 	}
 	for _, candidate := range candidates {
-		rendered := renderSearchURLTemplate(candidate, trimmedLookup)
+		rendered := renderSearchURLTemplate(candidate, supplierCode, productID, trimmedLookup)
 		if rendered != "" {
 			return rendered
 		}
 	}
+	if vtexURL := deriveVTEXSearchURL(config, trimmedLookup); vtexURL != "" {
+		return vtexURL
+	}
+	baseURL := strings.TrimSpace(extractString(config["baseUrl"]))
+	if strings.HasPrefix(baseURL, "http://") || strings.HasPrefix(baseURL, "https://") {
+		return baseURL
+	}
 	return ""
 }
 
-func renderSearchURLTemplate(template, lookupTerm string) string {
+func renderSearchURLTemplate(template, supplierCode, productID, lookupTerm string) string {
 	trimmed := strings.TrimSpace(template)
 	if trimmed == "" {
 		return ""
 	}
 	encoded := url.QueryEscape(lookupTerm)
+	encodedProductID := url.QueryEscape(strings.TrimSpace(productID))
+	lookupMode := "REFERENCE"
+	if isLikelyEAN(lookupTerm) {
+		lookupMode = "EAN"
+	}
+	encodedLookupMode := url.QueryEscape(lookupMode)
+	encodedSupplier := url.QueryEscape(strings.TrimSpace(supplierCode))
 	replaced := false
 	placeholders := []string{
 		"{term}",
@@ -1102,13 +1117,26 @@ func renderSearchURLTemplate(template, lookupTerm string) string {
 		"{ean}",
 		"{reference}",
 		"{sku}",
+		"{product_id}",
+		"{productId}",
+		"{lookup_mode}",
+		"{supplier_code}",
 		"{{term}}",
 		"{{lookup_term}}",
 		"{{lookupTerm}}",
 	}
 	for _, placeholder := range placeholders {
 		if strings.Contains(trimmed, placeholder) {
-			trimmed = strings.ReplaceAll(trimmed, placeholder, encoded)
+			switch placeholder {
+			case "{product_id}", "{productId}":
+				trimmed = strings.ReplaceAll(trimmed, placeholder, encodedProductID)
+			case "{lookup_mode}":
+				trimmed = strings.ReplaceAll(trimmed, placeholder, encodedLookupMode)
+			case "{supplier_code}":
+				trimmed = strings.ReplaceAll(trimmed, placeholder, encodedSupplier)
+			default:
+				trimmed = strings.ReplaceAll(trimmed, placeholder, encoded)
+			}
 			replaced = true
 		}
 	}
@@ -1123,6 +1151,121 @@ func renderSearchURLTemplate(template, lookupTerm string) string {
 		return trimmed
 	}
 	return ""
+}
+
+func deriveVTEXSearchURL(config map[string]any, lookupTerm string) string {
+	baseURL := strings.TrimSpace(extractString(config["baseUrl"]))
+	operationName := strings.TrimSpace(extractString(config["operationName"]))
+	sha256Hash := strings.TrimSpace(extractString(config["sha256Hash"]))
+	if baseURL == "" || operationName == "" || sha256Hash == "" {
+		return ""
+	}
+
+	skusFilter := strings.TrimSpace(extractString(config["skusFilter"]))
+	if skusFilter == "" {
+		skusFilter = "FIRST_AVAILABLE"
+	}
+	toN := extractInt(config["toN"], 11)
+	if toN < 1 {
+		toN = 11
+	}
+	includeVariant := extractBool(config["includeVariant"], false)
+
+	values := url.Values{}
+	values.Set("workspace", "master")
+	values.Set("maxAge", "short")
+	values.Set("appsEtag", "remove")
+	values.Set("domain", "store")
+	values.Set("locale", "pt-BR")
+	values.Set("__bindingId", "933c1279-a878-4f45-8bb1-d84d09dba761")
+	values.Set("operationName", operationName)
+	variablesPayload, err := buildVTEXVariablesJSON(lookupTerm, skusFilter, toN, includeVariant)
+	if err != nil {
+		return ""
+	}
+	values.Set("variables", variablesPayload)
+	values.Set("extensions", fmt.Sprintf(`{"persistedQuery":{"version":1,"sha256Hash":"%s","sender":"vtex.store-resources@0.x","provider":"vtex.search-graphql@0.x"}}`, sha256Hash))
+	return fmt.Sprintf("%s?%s", baseURL, values.Encode())
+}
+
+func buildVTEXVariablesJSON(lookupTerm, skusFilter string, toN int, includeVariant bool) (string, error) {
+	payload := map[string]any{
+		"hideUnavailableItems": false,
+		"skusFilter":           skusFilter,
+		"simulationBehavior":   "default",
+		"installmentCriteria":  "MAX_WITHOUT_INTEREST",
+		"productOriginVtex":    false,
+		"map":                  "ft",
+		"query":                lookupTerm,
+		"orderBy":              "OrderByScoreDESC",
+		"from":                 0,
+		"to":                   toN,
+		"selectedFacets": []map[string]string{
+			{"key": "ft", "value": lookupTerm},
+		},
+		"operator":             "and",
+		"fuzzy":                "0",
+		"searchState":          nil,
+		"facetsBehavior":       "Static",
+		"categoryTreeBehavior": "default",
+		"withFacets":           includeVariant,
+		"advertisementOptions": map[string]any{
+			"showSponsored":           true,
+			"sponsoredCount":          3,
+			"repeatSponsoredProducts": true,
+		},
+		"fullText":           lookupTerm,
+		"autocompleteField":  "ft",
+		"source":             "autocomplete",
+		"searchCorrection":   true,
+		"spellCheck":         true,
+		"hideSponsoredItems": false,
+		"fuzzyProductSearch": false,
+	}
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		return "", err
+	}
+	return string(raw), nil
+}
+
+func extractInt(value any, fallback int) int {
+	switch typed := value.(type) {
+	case int:
+		return typed
+	case int32:
+		return int(typed)
+	case int64:
+		return int(typed)
+	case float32:
+		return int(typed)
+	case float64:
+		return int(typed)
+	default:
+		return fallback
+	}
+}
+
+func extractBool(value any, fallback bool) bool {
+	switch typed := value.(type) {
+	case bool:
+		return typed
+	default:
+		return fallback
+	}
+}
+
+func isLikelyEAN(term string) bool {
+	trimmed := strings.TrimSpace(term)
+	if len(trimmed) != 13 && len(trimmed) != 14 {
+		return false
+	}
+	for _, char := range trimmed {
+		if char < '0' || char > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 func scanSupplierSignal(s scanner) (ports.SupplierSignal, error) {

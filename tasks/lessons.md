@@ -202,3 +202,10 @@ Correct: Compute the search URL from active manifest templates (`searchUrl`/`end
 Rule:    Debug-only lookup URLs should be derived from runtime config, not persisted as durable data.
 Layer:   Go adapter
 
+## Lesson 22 — Search URL derivation must mirror runtime strategy keys
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Deriving URLs from partial keys and ignoring `searchUrlTemplate` and VTEX (`baseUrl + persisted query params`), causing only Leroy URLs to appear.
+Correct: Derive using the same strategy-facing config keys as the worker (`searchUrlTemplate`, template placeholders, and VTEX URL builder semantics).
+Rule:    Debug projections must follow runtime contract keys, not ad-hoc subsets.
+Layer:   Go adapter
+
