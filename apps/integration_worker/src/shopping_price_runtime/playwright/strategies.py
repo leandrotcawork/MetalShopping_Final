@@ -122,18 +122,29 @@ def _execute_playwright_pdp_first_non_mock(
 
     last_observation: RuntimeObservation | None = None
 
+    def _with_perf(note: str, nav_s: float, sel_s: float, total_s: float) -> str:
+        suffix = f" t_nav_s={nav_s:.3f} t_sel_s={sel_s:.3f} t_total_s={total_s:.3f}"
+        if note:
+            return f"{note} |{suffix}"
+        return suffix.strip()
+
     for attempt in range(1, max_retries + 1):
         for url in candidate_urls:
+            total_start = time.perf_counter()
+            nav_s = 0.0
+            sel_s = 0.0
             with sync_playwright() as playwright:
                 browser = playwright.chromium.launch(headless=headless)
                 context = browser.new_context(locale=locale)
                 page = context.new_page()
                 response_status: int | None = None
                 try:
+                    nav_start = time.perf_counter()
                     response = page.goto(url, timeout=timeout_seconds * 1000, wait_until=wait_until)
                     if response is not None:
                         response_status = int(response.status)
                     html_text = page.content()
+                    nav_s = time.perf_counter() - nav_start
                     block_reason = _detect_block_reason(html_text, page.title())
                     if block_reason != "":
                         last_observation = RuntimeObservation(
@@ -142,15 +153,17 @@ def _execute_playwright_pdp_first_non_mock(
                             seller_default,
                             "PLAYWRIGHT",
                             response_status,
-                            f"playwright_blocked:{block_reason}:attempt={attempt}",
+                            _with_perf(f"playwright_blocked:{block_reason}:attempt={attempt}", nav_s, sel_s, time.perf_counter() - total_start),
                             strategy,
                             lookup_term,
                         )
                         continue
 
+                    sel_start = time.perf_counter()
                     price_text = _selector_text(page, safe_str(selectors.get("price"), ""), timeout_seconds)
                     seller_text = _selector_text(page, safe_str(selectors.get("seller"), ""), timeout_seconds)
                     channel_text = _selector_text(page, safe_str(selectors.get("channel"), ""), timeout_seconds)
+                    sel_s = time.perf_counter() - sel_start
 
                     if price_text == "":
                         match = price_regex.search(html_text)
@@ -165,7 +178,7 @@ def _execute_playwright_pdp_first_non_mock(
                             safe_str(seller_text, seller_default),
                             safe_str(channel_text, "PLAYWRIGHT").upper(),
                             response_status,
-                            f"playwright_price_not_found:attempt={attempt}",
+                            _with_perf(f"playwright_price_not_found:attempt={attempt}", nav_s, sel_s, time.perf_counter() - total_start),
                             strategy,
                             lookup_term,
                         )
@@ -177,7 +190,7 @@ def _execute_playwright_pdp_first_non_mock(
                         safe_str(seller_text, seller_default),
                         safe_str(channel_text, "PLAYWRIGHT").upper(),
                         response_status,
-                        f"playwright_pdp_runtime:attempt={attempt}",
+                        _with_perf(f"playwright_pdp_runtime:attempt={attempt}", nav_s, sel_s, time.perf_counter() - total_start),
                         strategy,
                         lookup_term,
                     )
@@ -188,7 +201,7 @@ def _execute_playwright_pdp_first_non_mock(
                         seller_default,
                         "PLAYWRIGHT",
                         response_status,
-                        f"playwright_timeout:attempt={attempt}",
+                        _with_perf(f"playwright_timeout:attempt={attempt}", nav_s, sel_s, time.perf_counter() - total_start),
                         strategy,
                         lookup_term,
                     )
@@ -199,7 +212,7 @@ def _execute_playwright_pdp_first_non_mock(
                         seller_default,
                         "PLAYWRIGHT",
                         response_status,
-                        f"playwright_error:{str(exc)[:220]}:attempt={attempt}",
+                        _with_perf(f"playwright_error:{str(exc)[:220]}:attempt={attempt}", nav_s, sel_s, time.perf_counter() - total_start),
                         strategy,
                         lookup_term,
                     )

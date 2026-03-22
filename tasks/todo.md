@@ -117,3 +117,61 @@ Level 1 scope:
 - [ ] In browser: KPI cards reflect selected run item counts (OK/NOT_FOUND/AMBIGUOUS/ERROR)
 - [ ] In browser: "Historico recente" shows max N with "Ver tudo"
 - [ ] In dev: worker keeps running with empty queue when enabled
+
+---
+
+## Feature: Obra Fácil Playwright performance hardening
+Type: scraping | Events: no | ADR: no
+
+## Phase 1 - Architectural thinking
+
+Module type:
+- scraping (Python worker runtime strategy + supplier manifest tuning)
+
+Module location:
+- `apps/integration_worker/src/shopping_price_runtime/playwright/strategies.py`
+- `apps/integration_worker/shopping_price_worker.py`
+- `scripts/seed_tenant_default_driver_manifests.py`
+
+Legacy references analyzed:
+- `C:\Users\leandro.theodoro.MN-NTB-LEANDROT\Documents\Nova pasta\MetalShopping\drivers\obrafacil_driver.py`
+- `C:\Users\leandro.theodoro.MN-NTB-LEANDROT\Documents\Nova pasta\MetalShopping\drivers\framework\playwright\runtime.py`
+- `C:\Users\leandro.theodoro.MN-NTB-LEANDROT\Documents\Nova pasta\MetalShopping\drivers\framework\playwright\pipelines.py`
+- `C:\Users\leandro.theodoro.MN-NTB-LEANDROT\Documents\Nova pasta\MetalShopping\drivers\common\playwright_pdp.py`
+
+Measured evidence (2026-03-22):
+- Active manifest for `OBRA_FACIL` has no `tabs` configured, so current runtime defaults to `tabs=1` (serial per supplier).
+- Current strategy (sync Playwright + current selector) benchmark: ~`28.1s/item` (2 runs).
+- Current strategy without selector wait (`pdpSelectors.price=''`, regex fallback): ~`7.0-9.0s/item` (2 runs).
+- Reused browser/context benchmark (legacy-like tabs runtime): ~`2.2s` first item and ~`1.4-2.3s` subsequent item.
+- Direct selector validation for `div.col-des div.price-box p span`: timeout at `30.0s`, confirming timeout-driven latency.
+
+Primary bottlenecks:
+- Browser/context startup per item/attempt/url in current `playwright.pdp_first.v1` path.
+- Price selector mismatch causes full `timeoutSeconds` wait before regex fallback.
+- `OBRA_FACIL` running with implicit `tabs=1`, unlike legacy `tabs_default=7`.
+- No stage-level elapsed persisted for runtime observations, reducing performance debuggability.
+
+Level 1 scope:
+- Restore near-legacy throughput for `OBRA_FACIL` without changing business semantics (same statuses + same URL lifecycle).
+
+## Phase 2 - Plan (wait for approval, then execute T1..T5)
+
+## Tasks
+- [x] T1: worker observability baseline (elapsed + stage notes for runtime)
+      commit: "feat(worker): add playwright runtime latency telemetry"
+- [ ] T2: Playwright strategy fast path (avoid blocking selector timeout; parse-first fallback)
+      commit: "fix(worker): remove selector-timeout bottleneck in playwright strategy"
+- [ ] T3: Playwright batch runtime reuse (browser/context reuse with tab workers)
+      commit: "feat(worker): add tab-based playwright batch execution"
+- [ ] T4: supplier config parity (`OBRA_FACIL` tabs defaults + safe knobs)
+      commit: "chore(shopping): tune obrafacil playwright runtime config"
+- [ ] T5: validation + evidence (smoke run comparison vs HTTP and previous Playwright baseline)
+      commit: "docs(perf): capture playwright run performance evidence"
+
+## Acceptance tests
+- [ ] `go build ./...` passes
+- [ ] Worker smoke with `OBRA_FACIL` completes with real items (non-zero rows written)
+- [ ] For equal product sample, median `OBRA_FACIL` item latency improves materially vs current baseline
+- [ ] Progress UI keeps updating during run (no regression)
+- [ ] Existing HTTP suppliers (DEXCO/CONDEC/ABC/LEROY/TELHA_NORTE) show no regression in smoke

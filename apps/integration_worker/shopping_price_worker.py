@@ -1235,6 +1235,7 @@ def execute_supplier_runtime(
     observed_at: str,
     signal: SupplierSignal | None,
 ) -> RunItem:
+    started_at = time.perf_counter()
     observation: RuntimeObservation = runtime_execute(
         config=config,
         inputs=LookupInputs(
@@ -1245,6 +1246,7 @@ def execute_supplier_runtime(
         base_price=base_price,
         signal=signal,
     )
+    elapsed_s = round(time.perf_counter() - started_at, 3)
 
     return RunItem(
         product_id=product_id,
@@ -1257,6 +1259,7 @@ def execute_supplier_runtime(
         observed_at=observed_at,
         product_url=signal.product_url if signal is not None else None,
         http_status=observation.http_status,
+        elapsed_s=elapsed_s,
         chosen_seller_json={
             "supplier_code": config.supplier_code,
             "family": config.family,
