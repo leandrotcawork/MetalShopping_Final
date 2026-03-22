@@ -40,6 +40,13 @@ Correct: Check packages/ui/src/index.ts first. Extend before creating new.
 Rule:    Always check packages/ui exports before any new presentational component.
 Layer:   Frontend
 
+## Lesson 17 — Normalize trailing slashes in sub-resource routes
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Parsing /runs/{id}/items/ without trimming trailing slash, causing run lookup to fail.
+Correct: Trim trailing slash on run path before suffix matching.
+Rule:    Normalize trailing slashes before route suffix parsing.
+Layer:   Go handler
+
 ## Lesson G â€” ADR done only when acceptance test passes and committed
 Wrong:   Mark ADR Accepted after writing the document
 Correct: Write â†’ implement â†’ run acceptance test â†’ commit "docs(adr): ADR-XXXX â€” verified and closed"

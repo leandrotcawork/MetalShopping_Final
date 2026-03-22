@@ -282,6 +282,7 @@ func (h *Handler) handleRunByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	runIDPath := strings.TrimSpace(strings.TrimPrefix(r.URL.Path, "/api/v1/shopping/runs/"))
+	runIDPath = strings.TrimSuffix(runIDPath, "/")
 	if strings.HasSuffix(runIDPath, "/item-status-summary") {
 		runID := strings.TrimSuffix(runIDPath, "/item-status-summary")
 		runID = strings.TrimSpace(strings.TrimSuffix(runID, "/"))
