@@ -47,6 +47,13 @@ Correct: Trim trailing slash on run path before suffix matching.
 Rule:    Normalize trailing slashes before route suffix parsing.
 Layer:   Go handler
 
+## Lesson 18 — Do not let inferred lookup_mode override lookup_policy
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Using stored lookup_mode to force REFERENCE even when supplier policy is EAN_FIRST.
+Correct: Honor lookup_mode only for manual/URL-backed signals; otherwise follow lookup_policy and infer mode from lookup_term.
+Rule:    Inferred lookup_mode must not override lookup_policy unless manual override or URL exists.
+Layer:   Python worker
+
 ## Lesson G â€” ADR done only when acceptance test passes and committed
 Wrong:   Mark ADR Accepted after writing the document
 Correct: Write â†’ implement â†’ run acceptance test â†’ commit "docs(adr): ADR-XXXX â€” verified and closed"

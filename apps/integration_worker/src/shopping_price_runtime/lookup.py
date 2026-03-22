@@ -13,10 +13,12 @@ def select_lookup_term(
     ean = str(inputs.product_ean or "").strip()
 
     if signal is not None:
-        if signal.lookup_mode == "EAN" and ean:
-            return ean
-        if signal.lookup_mode == "REFERENCE" and ref:
-            return ref
+        # Only honor stored lookup_mode when a stable/manual signal exists.
+        if signal.manual_override or (signal.product_url is not None and signal.product_url.strip() != ""):
+            if signal.lookup_mode == "EAN" and ean:
+                return ean
+            if signal.lookup_mode == "REFERENCE" and ref:
+                return ref
 
     if config.lookup_policy.upper() == "EAN_FIRST":
         if ean:

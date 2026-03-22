@@ -1165,9 +1165,19 @@ def query_xlsx_fallback_items(
 
 
 def infer_lookup_mode(item: RunItem) -> str:
-    channel = item.channel.upper()
+    lookup_term = ""
+    if isinstance(item.chosen_seller_json, dict):
+        raw_term = item.chosen_seller_json.get("lookup_term")
+        if raw_term is not None:
+            lookup_term = str(raw_term).strip()
+
+    if lookup_term.isdigit() and len(lookup_term) in (13, 14):
+        return "EAN"
+
+    channel = str(item.channel or "").upper()
     if "EAN" in channel:
         return "EAN"
+
     return "REFERENCE"
 
 
