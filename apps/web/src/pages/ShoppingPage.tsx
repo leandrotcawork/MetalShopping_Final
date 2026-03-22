@@ -24,6 +24,7 @@ type ShoppingPageProps = {
 
 type WizardStep = 1 | 2 | 3;
 type InputMode = "xlsx" | "catalog";
+type ShoppingRunItemRow = ShoppingRunItemListV1["rows"][number];
 
 const catalogPageLimit = 30;
 const manualPageLimit = 10;
@@ -83,6 +84,42 @@ function toggleMultiSelection(current: string[], next: string): string[] {
     return current.filter((value) => value !== next);
   }
   return [...current, next];
+}
+
+function sanitizeUrlCandidate(candidate: string | null | undefined): string | null {
+  if (!candidate) {
+    return null;
+  }
+  const trimmed = candidate.trim().replace(/^['"]+|['"]+$/g, "");
+  if (!trimmed) {
+    return null;
+  }
+  const stripped = trimmed.replace(/[),.;\]]+$/g, "");
+  if (!/^https?:\/\//i.test(stripped)) {
+    return null;
+  }
+  return stripped;
+}
+
+function deriveRunItemUrl(item: ShoppingRunItemRow): string | null {
+  const durableUrl = sanitizeUrlCandidate(item.productUrl);
+  if (durableUrl) {
+    return durableUrl;
+  }
+
+  const notes = (item.notes ?? "").trim();
+  if (!notes) {
+    return null;
+  }
+
+  const keyMatch = notes.match(/\b(?:final_url|finalUrl|request_url|requestUrl|search_url|searchUrl)\s*=\s*([^\s]+)/i);
+  const fromKey = sanitizeUrlCandidate(keyMatch?.[1] ?? null);
+  if (fromKey) {
+    return fromKey;
+  }
+
+  const httpMatch = notes.match(/https?:\/\/[^\s)]+/i);
+  return sanitizeUrlCandidate(httpMatch?.[0] ?? null);
 }
 
 function StepPill(props: { step: WizardStep; activeStep: WizardStep; label: string; onClick: () => void }) {
@@ -170,7 +207,6 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
   const [catalogStatusOptions, setCatalogStatusOptions] = useState<SelectMenuOption[]>([
     { value: allOptionValue, label: "Todos os status" },
   ]);
-  const [showAllRuns, setShowAllRuns] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
 
@@ -229,14 +265,10 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     };
   }, [shoppingApi, selectedStatus, shoppingReloadTick]);
 
-  useEffect(() => {
-    setShowAllRuns(false);
-  }, [selectedStatus, runs.length]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadCandidates() {
+  useEffect(() => { 
+    let cancelled = false; 
+ 
+    async function loadCandidates() { 
       const searchValue = manualSearch.trim();
       const enabledSupplierCodes = (bootstrap?.suppliers ?? [])
         .filter((supplier) => supplier.enabled)
@@ -653,18 +685,15 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     [currentPageIds, selectedProductIds],
   );
 
-  const modeSummary =
-    inputMode === "xlsx"
-      ? "Fonte selecionada: XLSX (Atual)"
-      : `Fonte selecionada: Produtos Cadastrados (${selectedProductIds.length} selecionados)`;
+  const modeSummary = 
+    inputMode === "xlsx" 
+      ? "Fonte selecionada: XLSX (Atual)" 
+      : `Fonte selecionada: Produtos Cadastrados (${selectedProductIds.length} selecionados)`; 
 
-  const maxRecentRuns = 8;
-  const recentRuns = showAllRuns ? runs : runs.slice(0, maxRecentRuns);
-
-  const manualSupplierOptions = useMemo(
-    () =>
-      (bootstrap?.suppliers ?? [])
-        .filter((supplier) => supplier.enabled)
+  const manualSupplierOptions = useMemo( 
+    () => 
+      (bootstrap?.suppliers ?? []) 
+        .filter((supplier) => supplier.enabled) 
         .map((supplier) => ({
           value: supplier.supplierCode,
           label: `${supplier.supplierLabel} (${supplier.supplierCode})`,
@@ -1518,36 +1547,25 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                 {runs.length === 0 ? (
                   <p className={styles.empty}>Nenhum run encontrado para o filtro atual.</p>
                 ) : (
-                  <div className={styles.runListScroll}>
-                    <ul className={styles.runList}>
-                      {recentRuns.map((run) => (
-                        <li key={run.runId}>
-                          <button type="button" className={styles.runButton} onClick={() => void handleRunSelect(run.runId)}>
-                            <span className={styles.runMain}>
-                              <strong className={styles.runId}>{run.runId}</strong>
-                            <small className={styles.runTime}>{formatDateTime(run.startedAt)}</small>
+                  <div className={styles.runListScroll}> 
+                    <ul className={styles.runList}> 
+                      {runs.map((run) => ( 
+                        <li key={run.runId}> 
+                          <button type="button" className={styles.runButton} onClick={() => void handleRunSelect(run.runId)}> 
+                            <span className={styles.runMain}> 
+                              <strong className={styles.runId}>{run.runId}</strong> 
+                            <small className={styles.runTime}>{formatDateTime(run.startedAt)}</small> 
                           </span>
                           <span className={`${styles.statusPill} ${statusClass(styles, run.status)}`.trim()}>{run.status}</span>
                         </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {runs.length > maxRecentRuns ? (
-                  <div className={styles.runListFooter}>
-                    <button
-                      type="button"
-                      className={`${styles.btn} ${styles.btnGhost}`.trim()}
-                      onClick={() => setShowAllRuns((value) => !value)}
-                    >
-                      {showAllRuns ? "Ver menos" : "Ver tudo"}
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            <div className={styles.detailWrap}>
-              <h3>Detalhe do run</h3>
+                        </li> 
+                      ))} 
+                    </ul> 
+                  </div> 
+                )} 
+              </div> 
+            <div className={styles.detailWrap}> 
+              <h3>Detalhe do run</h3> 
               {!selectedRun ? (
                 <p className={styles.empty}>Selecione um run para visualizar os detalhes.</p>
               ) : (
@@ -1649,26 +1667,36 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                   <p className={styles.logMuted}>Carregando log detalhado...</p>
                 ) : runItemsLogError ? (
                   <p className={styles.logError}>{runItemsLogError}</p>
-                ) : runItemsLog && runItemsLog.rows.length > 0 ? (
-                  <ul className={styles.logList}>
-                    {runItemsLog.rows.map((item) => (
-                      <li key={item.runItemId}>
-                        <span className={styles.logItemMain}>
-                          <strong>{item.productLabel}</strong>
-                          <small>
-                            Fornecedor: {item.supplierCode} | Status: {item.itemStatus} | Lookup: {item.lookupTerm ?? "-"}
-                          </small>
-                        </span>
-                        <span className={styles.logItemMeta}>
-                          URL: {item.productUrl ?? "-"} | HTTP: {item.httpStatus ?? "-"} | Tempo:{" "}
-                          {item.elapsedSeconds ?? "-"}s
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className={styles.logMuted}>Nenhum item encontrado para este run.</p>
-                )}
+                ) : runItemsLog && runItemsLog.rows.length > 0 ? ( 
+                  <ul className={styles.logList}> 
+                    {runItemsLog.rows.map((item) => { 
+                      const url = deriveRunItemUrl(item); 
+                      return ( 
+                        <li key={item.runItemId}> 
+                          <span className={styles.logItemMain}> 
+                            <strong>{item.productLabel}</strong> 
+                            <small> 
+                              Fornecedor: {item.supplierCode} | Status: {item.itemStatus} | Lookup: {item.lookupTerm ?? "-"} 
+                            </small> 
+                          </span> 
+                          <span className={styles.logItemMeta}> 
+                            URL:{" "} 
+                            {url ? ( 
+                              <a className={styles.logLink} href={url} target="_blank" rel="noreferrer"> 
+                                {url} 
+                              </a> 
+                            ) : ( 
+                              "-" 
+                            )}{" "} 
+                            | HTTP: {item.httpStatus ?? "-"} | Tempo: {item.elapsedSeconds ?? "-"}s 
+                          </span> 
+                        </li> 
+                      ); 
+                    })} 
+                  </ul> 
+                ) : ( 
+                  <p className={styles.logMuted}>Nenhum item encontrado para este run.</p> 
+                )} 
               </div>
             </div>
           ) : null}

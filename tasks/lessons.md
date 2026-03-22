@@ -181,3 +181,10 @@ Correct: Prefer `response.text()` (document HTML) and fallback to `page.content(
 Rule:    Playwright PDP parsing must use the actual document HTML and enforce sane numeric bounds to keep writes safe.
 Layer:   Python worker
 
+## Lesson 19 — Run item log URL must not rely only on productUrl
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Showing `URL: -` in the log when `productUrl` is empty, even though the worker wrote the attempted/final URL into `notes`.
+Correct: Derive the displayed URL from `productUrl` OR parse `final_url/request_url` (or any http URL) from `notes` for debug visibility.
+Rule:    Debug UX should surface attempted URLs without polluting durable URL fields.
+Layer:   Frontend
+

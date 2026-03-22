@@ -1075,12 +1075,22 @@
   gap: 16px;
 }
 
-.runListWrap,
+.runListWrap, 
+.detailWrap { 
+  border: 1px solid var(--neutral-200); 
+  border-radius: 14px; 
+  background: #fff; 
+  padding: 14px; 
+} 
+
+.runListWrap {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .detailWrap {
-  border: 1px solid var(--neutral-200);
-  border-radius: 14px;
-  background: #fff;
-  padding: 14px;
+  min-height: 0;
 }
 
 .runListWrap h3,
@@ -1099,11 +1109,12 @@
   gap: 8px;
 }
 
-.runListScroll {
-  max-height: 260px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
+.runListScroll { 
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto; 
+  padding-right: 4px; 
+} 
 
 .runListFooter {
   margin-top: 10px;
@@ -1348,6 +1359,15 @@
   color: var(--neutral-500);
 }
 
+.logLink {
+  color: var(--wine-700);
+  text-decoration: none;
+}
+
+.logLink:hover {
+  text-decoration: underline;
+}
+
 .logMuted {
   color: var(--neutral-500);
   font-size: 12px;
@@ -1384,6 +1404,11 @@
 
   .runGrid {
     grid-template-columns: 1fr;
+  }
+
+  .runListScroll {
+    flex: none;
+    max-height: 260px;
   }
 
   .advancedGrid {
