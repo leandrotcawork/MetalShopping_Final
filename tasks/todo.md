@@ -166,7 +166,7 @@ Level 1 scope:
       commit: "feat(worker): add tab-based playwright batch execution"
 - [x] T4: supplier config parity (`OBRA_FACIL` tabs defaults + safe knobs)
       commit: "chore(shopping): tune obrafacil playwright runtime config"
-- [ ] T5: validation + evidence (smoke run comparison vs HTTP and previous Playwright baseline)
+- [x] T5: validation + evidence (smoke run comparison vs HTTP and previous Playwright baseline)
       commit: "docs(perf): capture playwright run performance evidence"
 
 ## Acceptance tests

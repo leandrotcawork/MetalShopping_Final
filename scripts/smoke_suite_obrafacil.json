@@ -1,0 +1,9 @@
+[
+  {
+    "supplier_code": "OBRA_FACIL",
+    "strategy": "playwright.pdp_first.v1",
+    "expected_statuses": ["OK", "NOT_FOUND", "AMBIGUOUS", "ERROR"],
+    "allow_empty": false,
+    "notes": "OBRA_FACIL Playwright runtime validation (single-supplier suite)."
+  }
+]
