@@ -8,6 +8,7 @@ import type {
   ShoppingCreateRunRequestV1,
   ShoppingRunRequestV1,
   ShoppingRunV1,
+  ShoppingRunItemStatusSummaryV1,
   ShoppingManualUrlCandidateV1,
 } from "@metalshopping/sdk-types";
 import { AppFrame, Checkbox, FilterDropdown, type SelectMenuOption } from "@metalshopping/ui";
@@ -72,6 +73,16 @@ function toSelectOptions(items: string[], allLabel: string): SelectMenuOption[] 
   return [{ value: allOptionValue, label: allLabel }, ...items.map((item) => ({ value: item, label: item }))];
 }
 
+function toggleMultiSelection(current: string[], next: string): string[] {
+  if (next === allOptionValue) {
+    return [];
+  }
+  if (current.includes(next)) {
+    return current.filter((value) => value !== next);
+  }
+  return [...current, next];
+}
+
 function StepPill(props: { step: WizardStep; activeStep: WizardStep; label: string; onClick: () => void }) {
   const isCompleted = props.activeStep > props.step;
   const isActive = props.activeStep === props.step;
@@ -94,12 +105,14 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showLog, setShowLog] = useState(false);
   const [showManualUrlPanel, setShowManualUrlPanel] = useState(false);
-  const [reloadTick, setReloadTick] = useState(0);
+  const [shoppingReloadTick, setShoppingReloadTick] = useState(0);
+  const [manualReloadTick, setManualReloadTick] = useState(0);
 
   const [summary, setSummary] = useState<Awaited<ReturnType<ServerCoreSdk["shopping"]["getSummary"]>> | null>(null);
   const [bootstrap, setBootstrap] = useState<ShoppingBootstrapV1 | null>(null);
   const [runs, setRuns] = useState<ShoppingRunV1[]>([]);
   const [selectedRun, setSelectedRun] = useState<ShoppingRunV1 | null>(null);
+  const [selectedRunItemSummary, setSelectedRunItemSummary] = useState<ShoppingRunItemStatusSummaryV1 | null>(null);
   const [loadingShopping, setLoadingShopping] = useState(true);
   const [creatingRun, setCreatingRun] = useState(false);
   const [createRunInfo, setCreateRunInfo] = useState<string | null>(null);
@@ -117,7 +130,7 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
   const [manualSignalSaving, setManualSignalSaving] = useState(false);
   const [manualCandidates, setManualCandidates] = useState<ShoppingManualUrlCandidateV1[]>([]);
   const [manualSearch, setManualSearch] = useState("");
-  const [manualSupplierCode, setManualSupplierCode] = useState(allOptionValue);
+  const [manualSupplierCodes, setManualSupplierCodes] = useState<string[]>([]);
   const [manualBrand, setManualBrand] = useState(allOptionValue);
   const [manualTaxonomy, setManualTaxonomy] = useState(allOptionValue);
   const [manualShowExisting, setManualShowExisting] = useState(true);
@@ -129,9 +142,9 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
   const [manualLoadError, setManualLoadError] = useState<string | null>(null);
 
   const [catalogSearch, setCatalogSearch] = useState("");
-  const [catalogBrand, setCatalogBrand] = useState(allOptionValue);
-  const [catalogLeaf0, setCatalogLeaf0] = useState(allOptionValue);
-  const [catalogStatus, setCatalogStatus] = useState(allOptionValue);
+  const [catalogBrand, setCatalogBrand] = useState<string[]>([]);
+  const [catalogLeaf0, setCatalogLeaf0] = useState<string[]>([]);
+  const [catalogStatus, setCatalogStatus] = useState<string[]>([]);
   const [catalogOffset, setCatalogOffset] = useState(0);
   const [catalogRows, setCatalogRows] = useState<ProductsPortfolioItemV1[]>([]);
   const [catalogTotal, setCatalogTotal] = useState(0);
@@ -148,6 +161,7 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
   const [catalogStatusOptions, setCatalogStatusOptions] = useState<SelectMenuOption[]>([
     { value: allOptionValue, label: "Todos os status" },
   ]);
+  const [showAllRuns, setShowAllRuns] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
 
@@ -199,7 +213,11 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     return () => {
       cancelled = true;
     };
-  }, [shoppingApi, selectedStatus, reloadTick]);
+  }, [shoppingApi, selectedStatus, shoppingReloadTick]);
+
+  useEffect(() => {
+    setShowAllRuns(false);
+  }, [selectedStatus, runs.length]);
 
   useEffect(() => {
     let cancelled = false;
@@ -209,37 +227,39 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
       const enabledSupplierCodes = (bootstrap?.suppliers ?? [])
         .filter((supplier) => supplier.enabled)
         .map((supplier) => supplier.supplierCode);
-      if (manualSupplierCode === allOptionValue) {
-        if (!searchValue) {
-          setManualCandidates([]);
-          setManualTotal(0);
-          setManualReturned(0);
-          setManualLoadError(null);
-          return;
-        }
+      const selectedSupplierCodes = manualSupplierCodes.length > 0 ? manualSupplierCodes : enabledSupplierCodes;
+      const usingAllSuppliers = manualSupplierCodes.length === 0;
 
-        if (enabledSupplierCodes.length === 0) {
-          setManualCandidates([]);
-          setManualTotal(0);
-          setManualReturned(0);
-          setManualLoadError("Nenhum fornecedor habilitado para consulta.");
-          return;
-        }
+      if (selectedSupplierCodes.length === 0) {
+        setManualCandidates([]);
+        setManualTotal(0);
+        setManualReturned(0);
+        setManualLoadError("Nenhum fornecedor habilitado para consulta.");
+        return;
+      }
+
+      if (usingAllSuppliers && !searchValue) {
+        setManualCandidates([]);
+        setManualTotal(0);
+        setManualReturned(0);
+        setManualLoadError(null);
+        return;
       }
 
       setManualLoading(true);
       setManualLoadError(null);
       try {
-        if (manualSupplierCode === allOptionValue) {
+        if (selectedSupplierCodes.length > 1) {
           const limit = manualOffset + manualPageLimit;
           const responses = await Promise.all(
-            enabledSupplierCodes.map((supplierCode) =>
+            selectedSupplierCodes.map((supplierCode) =>
               shoppingApi.listManualUrlCandidates({
                 supplierCode,
                 search: searchValue || undefined,
                 brandName: manualBrand === allOptionValue ? undefined : manualBrand,
                 taxonomyLeaf0Name: manualTaxonomy === allOptionValue ? undefined : manualTaxonomy,
-                includeExisting: manualShowExisting,
+                includeExisting: true,
+                onlyWithUrl: manualShowExisting || undefined,
                 limit,
                 offset: 0,
               }),
@@ -269,11 +289,12 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
         }
 
         const list = await shoppingApi.listManualUrlCandidates({
-          supplierCode: manualSupplierCode,
+          supplierCode: selectedSupplierCodes[0],
           search: searchValue || undefined,
           brandName: manualBrand === allOptionValue ? undefined : manualBrand,
           taxonomyLeaf0Name: manualTaxonomy === allOptionValue ? undefined : manualTaxonomy,
-          includeExisting: manualShowExisting,
+          includeExisting: true,
+          onlyWithUrl: manualShowExisting || undefined,
           limit: manualPageLimit,
           offset: manualOffset,
         });
@@ -303,14 +324,14 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     };
   }, [
     shoppingApi,
-    manualSupplierCode,
+    manualSupplierCodes,
     manualSearch,
     manualBrand,
     manualTaxonomy,
     manualShowExisting,
     manualOffset,
     bootstrap,
-    reloadTick,
+    manualReloadTick,
   ]);
 
   useEffect(() => {
@@ -325,9 +346,9 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
       try {
         const response = await productsApi.listProductsPortfolio({
           search: catalogSearch || undefined,
-          brand_name: catalogBrand === allOptionValue ? undefined : catalogBrand,
-          taxonomy_leaf0_name: catalogLeaf0 === allOptionValue ? undefined : catalogLeaf0,
-          status: catalogStatus === allOptionValue ? undefined : catalogStatus,
+          brand_name: catalogBrand.length > 0 ? catalogBrand : undefined,
+          taxonomy_leaf0_name: catalogLeaf0.length > 0 ? catalogLeaf0 : undefined,
+          status: catalogStatus.length > 0 ? catalogStatus : undefined,
           limit: catalogPageLimit,
           offset: catalogOffset,
         });
@@ -361,6 +382,7 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     const stableRunRequestId: string = runRequestId;
     let cancelled = false;
     let timer: number | null = null;
+    let finalRefreshDone = false;
 
     async function poll() {
       try {
@@ -371,6 +393,19 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
         setRunRequest(next);
 
         if (["completed", "failed", "cancelled"].includes(next.status)) {
+          if (!finalRefreshDone) {
+            finalRefreshDone = true;
+            setShoppingReloadTick((current) => current + 1);
+          }
+          if (next.runId) {
+            try {
+              const run = await shoppingApi.getRun(next.runId);
+              if (!cancelled) {
+                setSelectedRun(run);
+              }
+            } catch {
+            }
+          }
           return;
         }
       } catch (pollError) {
@@ -392,6 +427,32 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
       }
     };
   }, [shoppingApi, createdRunRequestId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadRunItemSummary() {
+      if (!selectedRun) {
+        setSelectedRunItemSummary(null);
+        return;
+      }
+      try {
+        const summary = await shoppingApi.getRunItemStatusSummary(selectedRun.runId);
+        if (!cancelled) {
+          setSelectedRunItemSummary(summary);
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setSelectedRunItemSummary(null);
+        }
+      }
+    }
+
+    void loadRunItemSummary();
+    return () => {
+      cancelled = true;
+    };
+  }, [shoppingApi, selectedRun?.runId]);
 
   function applyCatalogResponse(response: ProductsPortfolioListV1) {
     const filters = response.filters;
@@ -417,21 +478,89 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     setXlsxSelectedName(file.name || "");
   }
 
-  const runProgressPct = useMemo(() => {
-    if (!selectedRun || selectedRun.totalItems <= 0) {
-      return 0;
+  const runProgressInfo = useMemo(() => {
+    const runRequestActive =
+      runRequest && !["completed", "failed", "cancelled"].includes(runRequest.status ?? "");
+    if (
+      runRequestActive &&
+      runRequest.totalItems !== null &&
+      runRequest.totalItems !== undefined &&
+      runRequest.totalItems > 0 &&
+      runRequest.processedItems !== null &&
+      runRequest.processedItems !== undefined
+    ) {
+      const pct = Math.max(
+        0,
+        Math.min(100, Math.round((runRequest.processedItems / runRequest.totalItems) * 100)),
+      );
+      return {
+        pct,
+        label: `${runRequest.processedItems}/${runRequest.totalItems} itens`,
+      };
     }
-    return Math.max(0, Math.min(100, Math.round((selectedRun.processedItems / selectedRun.totalItems) * 100)));
-  }, [selectedRun]);
+
+    if (selectedRun && selectedRun.totalItems > 0) {
+      const pct = Math.max(0, Math.min(100, Math.round((selectedRun.processedItems / selectedRun.totalItems) * 100)));
+      return {
+        pct,
+        label: `${selectedRun.processedItems}/${selectedRun.totalItems} itens`,
+      };
+    }
+
+    return {
+      pct: 0,
+      label: "Aguardando run",
+    };
+  }, [runRequest, selectedRun]);
+
+  const runRequestCurrentLabel = useMemo(() => {
+    const runRequestActive =
+      runRequest && !["completed", "failed", "cancelled"].includes(runRequest.status ?? "");
+    if (!runRequestActive) {
+      return null;
+    }
+    const supplier = runRequest.currentSupplierCode?.trim() ?? "";
+    const product = (runRequest.currentProductLabel?.trim() || runRequest.currentProductId?.trim() || "").trim();
+    if (!supplier && !product) {
+      return null;
+    }
+    if (supplier && product) {
+      return `Fornecedor ${supplier} · ${product}`;
+    }
+    if (supplier) {
+      return `Fornecedor ${supplier}`;
+    }
+    return `Produto ${product}`;
+  }, [runRequest]);
 
   const kpis = useMemo(
-    () => ({
-      ok: summary?.completedRuns ?? 0,
-      nf: summary ? Math.max((summary.totalRuns ?? 0) - (summary.completedRuns ?? 0) - (summary.failedRuns ?? 0), 0) : 0,
-      amb: summary?.runningRuns ?? 0,
-      err: summary?.failedRuns ?? 0,
-    }),
-    [summary],
+    () => {
+      const rows = selectedRunItemSummary?.rows ?? [];
+      const counts = {
+        ok: 0,
+        nf: 0,
+        amb: 0,
+        err: 0,
+      };
+      for (const row of rows) {
+        const status = String(row.itemStatus ?? "").trim().toUpperCase();
+        const total = Number(row.total ?? 0);
+        if (!Number.isFinite(total) || total <= 0) {
+          continue;
+        }
+        if (status === "OK") {
+          counts.ok += total;
+        } else if (status === "NOT_FOUND") {
+          counts.nf += total;
+        } else if (status === "AMBIGUOUS") {
+          counts.amb += total;
+        } else if (status === "ERROR") {
+          counts.err += total;
+        }
+      }
+      return counts;
+    },
+    [selectedRunItemSummary],
   );
 
   const currentPageIds = useMemo(() => catalogRows.map((row) => row.product_id), [catalogRows]);
@@ -444,6 +573,9 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     inputMode === "xlsx"
       ? "Fonte selecionada: XLSX (Atual)"
       : `Fonte selecionada: Produtos Cadastrados (${selectedProductIds.length} selecionados)`;
+
+  const maxRecentRuns = 8;
+  const recentRuns = showAllRuns ? runs : runs.slice(0, maxRecentRuns);
 
   const manualSupplierOptions = useMemo(
     () =>
@@ -468,6 +600,7 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
   );
 
   const manualRows = useMemo(() => manualCandidates, [manualCandidates]);
+  const manualShown = Math.min(manualOffset + manualReturned, manualTotal);
 
   async function handleRunSelect(runId: string) {
     setError(null);
@@ -543,11 +676,12 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     setCreatingRun(true);
     try {
       const created = await shoppingApi.createRunRequest(payload);
-      setCreateRunInfo(`Run solicitada: ${created.runRequestId} (${created.status})`);
+      setCreateRunInfo(`Run solicitada: ${created.runRequestId}`);
       setCreatedRunRequestId(created.runRequestId);
       setRunRequest(null);
+      setSelectedRun(null);
       setStep(3);
-      setReloadTick((current) => current + 1);
+      setShoppingReloadTick((current) => current + 1);
     } catch (requestError) {
       const message = requestError instanceof Error ? requestError.message : "Falha ao criar run.";
       setError(message);
@@ -578,7 +712,7 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
         urlStatus: nextUrl ? "ACTIVE" : "STALE",
         manualOverride: true,
       });
-      setReloadTick((current) => current + 1);
+      setManualReloadTick((current) => current + 1);
     } catch (saveError) {
       const message = saveError instanceof Error ? saveError.message : "Falha ao salvar configuracao manual de URL.";
       setError(message);
@@ -694,9 +828,10 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                   <FilterDropdown
                     id="shopping-filter-brand"
                     options={catalogBrandOptions}
-                    value={catalogBrand}
+                    values={catalogBrand}
+                    selectionMode="duo"
                     onSelect={(value) => {
-                      setCatalogBrand(value);
+                      setCatalogBrand((current) => toggleMultiSelection(current, value));
                       resetCatalogPaging();
                     }}
                     classNamesOverrides={{
@@ -712,9 +847,10 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                   <FilterDropdown
                     id="shopping-filter-taxonomy"
                     options={catalogLeaf0Options}
-                    value={catalogLeaf0}
+                    values={catalogLeaf0}
+                    selectionMode="duo"
                     onSelect={(value) => {
-                      setCatalogLeaf0(value);
+                      setCatalogLeaf0((current) => toggleMultiSelection(current, value));
                       resetCatalogPaging();
                     }}
                     classNamesOverrides={{
@@ -730,9 +866,10 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                   <FilterDropdown
                     id="shopping-filter-status"
                     options={catalogStatusOptions}
-                    value={catalogStatus}
+                    values={catalogStatus}
+                    selectionMode="duo"
                     onSelect={(value) => {
-                      setCatalogStatus(value);
+                      setCatalogStatus((current) => toggleMultiSelection(current, value));
                       resetCatalogPaging();
                     }}
                     classNamesOverrides={{
@@ -920,15 +1057,17 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                         id="manual-filter-supplier"
                         options={manualSupplierOptions}
                         allLabel="Todos fornecedores"
-                        value={manualSupplierCode}
-                        selectionMode="one"
+                        values={manualSupplierCodes}
+                        selectionMode="duo"
                         onSelect={(value) => {
                           if (value === allOptionValue) {
-                            setManualSupplierCode(allOptionValue);
+                            setManualSupplierCodes([]);
                             setManualOffset(0);
                             return;
                           }
-                          setManualSupplierCode(value);
+                          setManualSupplierCodes((current) =>
+                            current.includes(value) ? current.filter((item) => item !== value) : [...current, value],
+                          );
                           setManualOffset(0);
                         }}
                         classNamesOverrides={{
@@ -1000,12 +1139,13 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
         <button
           type="button"
           className={`${styles.btn} ${styles.btnSecondary}`}
+          disabled={manualLoading}
           onClick={() => {
             setManualOffset(0);
-            setReloadTick((current) => current + 1);
+            setManualReloadTick((current) => current + 1);
           }}
         >
-          Atualizar lista
+          {manualLoading ? "Atualizando..." : "Atualizar lista"}
         </button>
       </div>
     </div>
@@ -1014,38 +1154,31 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
       <table className={styles.manualTable}>
         <thead>
           <tr>
+            <th className={styles.manualColTight}>PN</th>
+            <th className={styles.manualColCompact}>Referencia/EAN</th>
             <th>Produto</th>
-            <th>Fornecedor</th>
             <th>URL</th>
-            <th>Status</th>
-            <th>Cooldown</th>
+            <th className={styles.manualColTight}>URL Status</th>
+            <th className={styles.manualColTight}>Cooldown</th>
           </tr>
         </thead>
         <tbody>
-          {manualLoading ? (
+          {manualLoadError ? (
             <tr>
-              <td colSpan={5} className={styles.manualEmpty}>
-                Carregando candidatos...
-              </td>
-            </tr>
-          ) : manualLoadError ? (
-            <tr>
-              <td colSpan={5} className={styles.manualEmpty}>
+              <td colSpan={6} className={styles.manualEmpty}>
                 {manualLoadError}
               </td>
             </tr>
-          ) : manualSupplierCode === allOptionValue ? (
+          ) : manualSupplierCodes.length === 0 && !manualSearch.trim() ? (
             <tr>
-              <td colSpan={5} className={styles.manualEmpty}>
-                {manualSearch.trim()
-                  ? "Busque um SKU para consultar todos os fornecedores."
-                  : "Informe um SKU ou referencia para buscar em todos os fornecedores."}
+              <td colSpan={6} className={styles.manualEmpty}>
+                Informe um SKU ou referencia para buscar em todos os fornecedores.
               </td>
             </tr>
           ) : manualRows.length === 0 ? (
             <tr>
-              <td colSpan={5} className={styles.manualEmpty}>
-                Nenhum sinal encontrado.
+              <td colSpan={6} className={styles.manualEmpty}>
+                {manualLoading ? "Carregando candidatos..." : "Nenhum sinal encontrado."}
               </td>
             </tr>
           ) : (
@@ -1053,18 +1186,26 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
               const rowKey = manualRowKey(candidate.productId, candidate.supplierCode);
               const draftUrl = manualEditUrls[rowKey] ?? candidate.productUrl ?? "";
               const nextDiscovery = candidate.nextDiscoveryAt ? formatDateTime(candidate.nextDiscoveryAt) : "--";
-              const notFoundCount = candidate.notFoundCount ?? 0;
+              const pnValue = candidate.pnInterno ?? candidate.sku;
               return (
                 <tr key={rowKey}>
+                  <td className={styles.manualColTight}>{pnValue}</td>
+                  <td className={styles.manualColCompact}>
+                    <div className={styles.manualRefCell}>
+                      <span>{candidate.reference ?? "--"}</span>
+                      <span>{candidate.ean ?? "--"}</span>
+                    </div>
+                  </td>
                   <td>
                     <div className={styles.manualProductCell}>
                       <strong>{candidate.name}</strong>
-                      <small>
-                        {candidate.sku} | NotFound {notFoundCount}
+                      <small className={styles.manualProductMeta}>
+                        Fornecedor: {candidate.supplierCode} • Marca: {candidate.brandName ?? "--"}
+                        <br />
+                        {catalogLeaf0Label}: {candidate.taxonomyLeaf0Name ?? "--"}
                       </small>
                     </div>
                   </td>
-                  <td>{candidate.supplierCode}</td>
                   <td>
                     <input
                       type="text"
@@ -1078,8 +1219,8 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                       placeholder="https://fornecedor/pdp/produto"
                     />
                   </td>
-                  <td>{candidate.urlStatus}</td>
-                  <td>{nextDiscovery}</td>
+                  <td className={styles.manualColTight}>{candidate.urlStatus}</td>
+                  <td className={styles.manualColTight}>{nextDiscovery}</td>
                 </tr>
               );
             })
@@ -1090,7 +1231,7 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
 
     <div className={styles.manualFooterRow}>
       <span className={styles.manualFooterSummary}>
-        Mostrando {manualReturned} de {manualTotal}
+        Mostrando {manualShown} de {manualTotal}
       </span>
       <div className={styles.manualFooterPagination}>
         <button
@@ -1181,7 +1322,15 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
             ) : null}
           </div>
 
-          {createRunInfo ? <p className={styles.modeSummary}>{createRunInfo}</p> : null}
+          {createdRunRequestId ? (
+            <p className={styles.modeSummary}>
+              Request {createdRunRequestId}: {runRequest?.status ?? "queued"}
+              {runRequest?.workerId ? ` | worker=${runRequest.workerId}` : ""}
+              {runRequest?.errorMessage ? ` | erro=${runRequest.errorMessage}` : ""}
+            </p>
+          ) : createRunInfo ? (
+            <p className={styles.modeSummary}>{createRunInfo}</p>
+          ) : null}
 
           <div className={styles.btnRow}>
             <button
@@ -1229,12 +1378,18 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
 
           <div className={styles.progress}>
             <div className={styles.progressTrack}>
-              <span style={{ width: `${runProgressPct}%` }} />
+              <span style={{ width: `${runProgressInfo.pct}%` }} />
             </div>
             <div className={styles.progressMeta}>
-              <strong>{runProgressPct}%</strong>
-              <small>{selectedRun ? `${selectedRun.processedItems}/${selectedRun.totalItems} itens` : "Aguardando run"}</small>
+              <strong>{runProgressInfo.pct}%</strong>
+              <small>{runProgressInfo.label}</small>
             </div>
+            {runRequestCurrentLabel ? <p className={styles.progressHint}>{runRequestCurrentLabel}</p> : null}
+            {runRequest?.progressUpdatedAt ? (
+              <p className={styles.progressHintMuted}>
+                Atualizado em {formatDateTime(runRequest.progressUpdatedAt)}
+              </p>
+            ) : null}
           </div>
 
           <div className={styles.current}>
@@ -1276,24 +1431,35 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
           <div className={styles.runGrid}>
             <div className={styles.runListWrap}>
               <h3>Historico recente</h3>
-              {runs.length === 0 ? (
-                <p className={styles.empty}>Nenhum run encontrado para o filtro atual.</p>
-              ) : (
-                <ul className={styles.runList}>
-                  {runs.map((run) => (
-                    <li key={run.runId}>
-                      <button type="button" className={styles.runButton} onClick={() => void handleRunSelect(run.runId)}>
-                        <span className={styles.runMain}>
-                          <strong className={styles.runId}>{run.runId}</strong>
+                {runs.length === 0 ? (
+                  <p className={styles.empty}>Nenhum run encontrado para o filtro atual.</p>
+                ) : (
+                  <ul className={styles.runList}>
+                    {recentRuns.map((run) => (
+                      <li key={run.runId}>
+                        <button type="button" className={styles.runButton} onClick={() => void handleRunSelect(run.runId)}>
+                          <span className={styles.runMain}>
+                            <strong className={styles.runId}>{run.runId}</strong>
                           <small className={styles.runTime}>{formatDateTime(run.startedAt)}</small>
                         </span>
                         <span className={`${styles.statusPill} ${statusClass(styles, run.status)}`.trim()}>{run.status}</span>
                       </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {runs.length > maxRecentRuns ? (
+                  <div className={styles.runListFooter}>
+                    <button
+                      type="button"
+                      className={`${styles.btn} ${styles.btnGhost}`.trim()}
+                      onClick={() => setShowAllRuns((value) => !value)}
+                    >
+                      {showAllRuns ? "Ver menos" : "Ver tudo"}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
             <div className={styles.detailWrap}>
               <h3>Detalhe do run</h3>
               {!selectedRun ? (

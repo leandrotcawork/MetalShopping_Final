@@ -20,7 +20,7 @@ from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from hashlib import sha1
-from typing import Any
+from typing import Any, Callable
 from uuid import uuid4
 
 import psycopg
@@ -187,6 +187,21 @@ def upsert_run(
         )
 
         for item in items:
+            log(
+                "shopping_run_item",
+                tenant_id=tenant_id,
+                run_id=run_id,
+                product_id=item.product_id,
+                supplier_code=item.supplier_code,
+                item_status=item.item_status,
+                channel=item.channel,
+                observed_price=item.observed_price,
+                currency_code=item.currency_code,
+                http_status=item.http_status,
+                elapsed_s=item.elapsed_s,
+                product_url=item.product_url,
+                notes=item.notes,
+            )
             run_item_id = deterministic_run_item_id(
                 tenant_id=tenant_id,
                 run_id=run_id,
@@ -603,10 +618,101 @@ def mark_request_failed(
         cur.execute("COMMIT")
 
 
+def update_request_progress(
+    conn: psycopg.Connection,
+    tenant_id: str,
+    run_request_id: str,
+    processed_items: int,
+    total_items: int,
+    current_supplier_code: str | None,
+    current_product_id: str | None,
+    current_product_label: str | None,
+) -> None:
+    supplier_code = current_supplier_code.strip().upper() if current_supplier_code else None
+    product_id = current_product_id.strip() if current_product_id else None
+    product_label = current_product_label.strip() if current_product_label else None
+    with conn.cursor() as cur:
+        cur.execute("BEGIN")
+        cur.execute("SELECT set_config('app.tenant_id', %s, true)", (tenant_id,))
+        cur.execute(
+            """
+            UPDATE shopping_price_run_requests
+            SET processed_items = %s,
+                total_items = %s,
+                current_supplier_code = %s,
+                current_product_id = %s,
+                current_product_label = %s,
+                progress_updated_at = NOW(),
+                updated_at = NOW()
+            WHERE tenant_id = current_tenant_id()
+              AND run_request_id = %s
+            """,
+            (
+                max(0, processed_items),
+                max(0, total_items),
+                supplier_code,
+                product_id,
+                product_label,
+                run_request_id,
+            ),
+        )
+        cur.execute("COMMIT")
+
+
+class ProgressTracker:
+    def __init__(
+        self,
+        conn: psycopg.Connection,
+        tenant_id: str,
+        run_request_id: str,
+    ) -> None:
+        self.conn = conn
+        self.tenant_id = tenant_id
+        self.run_request_id = run_request_id
+        self.total_items = 0
+        self.processed_items = 0
+        self.current_supplier_code: str | None = None
+        self.current_product_id: str | None = None
+        self.current_product_label: str | None = None
+        self.last_flush = 0.0
+
+    def set_total(self, total_items: int) -> None:
+        self.total_items = max(0, total_items)
+        self.flush(force=True)
+
+    def mark_item(self, supplier_code: str, product_id: str, product_label: str) -> None:
+        self.processed_items += 1
+        self.current_supplier_code = supplier_code
+        self.current_product_id = product_id
+        self.current_product_label = product_label
+        self.flush(force=False)
+
+    def flush(self, force: bool) -> None:
+        now = time.monotonic()
+        if not force:
+            if self.processed_items % 5 != 0 and (now - self.last_flush) < 2.0:
+                return
+        update_request_progress(
+            conn=self.conn,
+            tenant_id=self.tenant_id,
+            run_request_id=self.run_request_id,
+            processed_items=self.processed_items,
+            total_items=self.total_items,
+            current_supplier_code=self.current_supplier_code,
+            current_product_id=self.current_product_id,
+            current_product_label=self.current_product_label,
+        )
+        self.last_flush = now
+
+    def finalize(self) -> None:
+        self.flush(force=True)
+
+
 @dataclass(frozen=True)
 class RuntimeTask:
     product_id: str
     supplier_code: str
+    product_label: str
     product_reference: str
     product_ean: str
     base_price: float
@@ -699,6 +805,7 @@ def _default_runtime_error_item(
 def execute_runtime_tasks_parallel(
     tasks: list[RuntimeTask],
     runtime_configs: dict[str, SupplierRuntimeConfig],
+    on_item_completed: Callable[[RuntimeTask], None] | None = None,
 ) -> list[RunItem]:
     if len(tasks) == 0:
         return []
@@ -758,6 +865,8 @@ def execute_runtime_tasks_parallel(
         for future in as_completed(pending):
             index = pending[future]
             results[index] = future.result()
+            if on_item_completed is not None:
+                on_item_completed(tasks[index])
 
     return [item for item in results if item is not None]
 
@@ -767,9 +876,10 @@ def query_catalog_items(
     tenant_id: str,
     product_ids: list[str],
     supplier_codes: list[str],
-) -> list[RunItem]:
+    progress: ProgressTracker | None = None,
+) -> tuple[list[RunItem], int]:
     if len(product_ids) == 0:
-        return []
+        return [], 0
     with conn.cursor() as cur:
         cur.execute("BEGIN")
         cur.execute("SELECT set_config('app.tenant_id', %s, true)", (tenant_id,))
@@ -777,6 +887,7 @@ def query_catalog_items(
             """
             SELECT
               p.product_id,
+              p.name,
               COALESCE(pr.price_amount, 0)::double precision AS observed_price,
               COALESCE(pr.currency_code, 'BRL') AS currency_code
             FROM catalog_products p
@@ -794,6 +905,9 @@ def query_catalog_items(
         cur.execute("COMMIT")
 
     effective_suppliers = supplier_codes if len(supplier_codes) > 0 else ["DEFAULT"]
+    total_items = len(rows) * len(effective_suppliers)
+    if progress is not None:
+        progress.set_total(total_items)
     identifiers = fetch_catalog_identifiers(conn, tenant_id, [str(row[0]) for row in rows])
     signal_overrides = fetch_supplier_signal_overrides(conn, tenant_id, [str(row[0]) for row in rows], effective_suppliers)
     runtime_configs = fetch_supplier_runtime_configs(conn, tenant_id, effective_suppliers)
@@ -802,8 +916,9 @@ def query_catalog_items(
     items: list[RunItem] = []
     for row in rows:
         product_id = str(row[0])
-        observed_price = float(row[1])
-        currency_code = str(row[2]).upper()
+        product_label = str(row[1]).strip()
+        observed_price = float(row[2])
+        currency_code = str(row[3]).upper()
         product_reference, product_ean = identifiers.get(product_id, ("", ""))
         for supplier_code in effective_suppliers:
             runtime_config = runtime_configs.get(supplier_code.upper())
@@ -823,11 +938,14 @@ def query_catalog_items(
                         notes="runtime_config_missing",
                     )
                 )
+                if progress is not None:
+                    progress.mark_item(supplier_code.upper(), product_id, product_label or product_id)
                 continue
             tasks.append(
                 RuntimeTask(
                     product_id=product_id,
                     supplier_code=supplier_code.upper(),
+                    product_label=product_label or product_id,
                     product_reference=product_reference,
                     product_ean=product_ean,
                     base_price=_safe_float(observed_price, observed_price),
@@ -836,8 +954,17 @@ def query_catalog_items(
                     signal=signal,
                 )
             )
-    items.extend(execute_runtime_tasks_parallel(tasks, runtime_configs))
-    return items
+    if progress is None:
+        items.extend(execute_runtime_tasks_parallel(tasks, runtime_configs))
+    else:
+        items.extend(
+            execute_runtime_tasks_parallel(
+                tasks,
+                runtime_configs,
+                on_item_completed=lambda task: progress.mark_item(task.supplier_code, task.product_id, task.product_label),
+            )
+        )
+    return items, total_items
 
 
 def query_xlsx_fallback_items(
@@ -845,7 +972,8 @@ def query_xlsx_fallback_items(
     tenant_id: str,
     limit: int,
     supplier_codes: list[str],
-) -> list[RunItem]:
+    progress: ProgressTracker | None = None,
+) -> tuple[list[RunItem], int]:
     with conn.cursor() as cur:
         cur.execute("BEGIN")
         cur.execute("SELECT set_config('app.tenant_id', %s, true)", (tenant_id,))
@@ -853,6 +981,7 @@ def query_xlsx_fallback_items(
             """
             SELECT
               p.product_id,
+              p.name,
               COALESCE(pr.price_amount, 0)::double precision AS observed_price,
               COALESCE(pr.currency_code, 'BRL') AS currency_code
             FROM catalog_products p
@@ -870,6 +999,9 @@ def query_xlsx_fallback_items(
         cur.execute("COMMIT")
 
     effective_suppliers = supplier_codes if len(supplier_codes) > 0 else ["DEFAULT"]
+    total_items = len(rows) * len(effective_suppliers)
+    if progress is not None:
+        progress.set_total(total_items)
     identifiers = fetch_catalog_identifiers(conn, tenant_id, [str(row[0]) for row in rows])
     signal_overrides = fetch_supplier_signal_overrides(conn, tenant_id, [str(row[0]) for row in rows], effective_suppliers)
     runtime_configs = fetch_supplier_runtime_configs(conn, tenant_id, effective_suppliers)
@@ -878,8 +1010,9 @@ def query_xlsx_fallback_items(
     items: list[RunItem] = []
     for row in rows:
         product_id = str(row[0])
-        observed_price = float(row[1])
-        currency_code = str(row[2]).upper()
+        product_label = str(row[1]).strip()
+        observed_price = float(row[2])
+        currency_code = str(row[3]).upper()
         product_reference, product_ean = identifiers.get(product_id, ("", ""))
         for supplier_code in effective_suppliers:
             runtime_config = runtime_configs.get(supplier_code.upper())
@@ -899,11 +1032,14 @@ def query_xlsx_fallback_items(
                         notes="runtime_config_missing",
                     )
                 )
+                if progress is not None:
+                    progress.mark_item(supplier_code.upper(), product_id, product_label or product_id)
                 continue
             tasks.append(
                 RuntimeTask(
                     product_id=product_id,
                     supplier_code=supplier_code.upper(),
+                    product_label=product_label or product_id,
                     product_reference=product_reference,
                     product_ean=product_ean,
                     base_price=_safe_float(observed_price, observed_price),
@@ -912,8 +1048,17 @@ def query_xlsx_fallback_items(
                     signal=signal,
                 )
             )
-    items.extend(execute_runtime_tasks_parallel(tasks, runtime_configs))
-    return items
+    if progress is None:
+        items.extend(execute_runtime_tasks_parallel(tasks, runtime_configs))
+    else:
+        items.extend(
+            execute_runtime_tasks_parallel(
+                tasks,
+                runtime_configs,
+                on_item_completed=lambda task: progress.mark_item(task.supplier_code, task.product_id, task.product_label),
+            )
+        )
+    return items, total_items
 
 
 def infer_lookup_mode(item: RunItem) -> str:
@@ -1164,6 +1309,7 @@ def process_claimed_request(
 ) -> tuple[str, int]:
     run_id = str(uuid4())
     mark_request_running(conn, run_request.tenant_id, run_request.run_request_id, run_id)
+    progress = ProgressTracker(conn, run_request.tenant_id, run_request.run_request_id)
 
     notes = f"requested_by={run_request.requested_by}; input_mode={run_request.input_mode}"
     supplier_codes = parse_supplier_codes(run_request.input_payload)
@@ -1175,7 +1321,7 @@ def process_claimed_request(
         product_ids = parse_catalog_product_ids(run_request.input_payload)
         if len(product_ids) == 0:
             raise ValueError("catalog mode requires at least one catalogProductIds entry")
-        items = query_catalog_items(conn, run_request.tenant_id, product_ids, effective_supplier_codes)
+        items, _ = query_catalog_items(conn, run_request.tenant_id, product_ids, effective_supplier_codes, progress)
     elif run_request.input_mode == "xlsx":
         xlsx_file_path = parse_xlsx_file_path(run_request.input_payload)
         product_ids = parse_catalog_product_ids(run_request.input_payload)
@@ -1186,14 +1332,20 @@ def process_claimed_request(
             {"catalogProductIds": run_request.input_payload.get("ambiguousScopeIdentifiers")}
         )
         if len(product_ids) > 0:
-            items = query_catalog_items(conn, run_request.tenant_id, product_ids, effective_supplier_codes)
+            items, _ = query_catalog_items(conn, run_request.tenant_id, product_ids, effective_supplier_codes, progress)
             notes = (
                 f"{notes}; xlsx_path={xlsx_file_path or 'not_provided'}; "
                 f"mode=xlsx_resolved; resolved={len(product_ids)}; "
                 f"unresolved={len(unresolved_scope)}; ambiguous={len(ambiguous_scope)}"
             )
         else:
-            items = query_xlsx_fallback_items(conn, run_request.tenant_id, xlsx_fallback_limit, effective_supplier_codes)
+            items, _ = query_xlsx_fallback_items(
+                conn,
+                run_request.tenant_id,
+                xlsx_fallback_limit,
+                effective_supplier_codes,
+                progress,
+            )
             notes = f"{notes}; xlsx_path={xlsx_file_path or 'not_provided'}; mode=xlsx_fallback"
     else:
         raise ValueError(f"unsupported input_mode: {run_request.input_mode}")
@@ -1208,6 +1360,7 @@ def process_claimed_request(
         notes=notes,
         items=items,
     )
+    progress.finalize()
     mark_request_completed(conn, run_request.tenant_id, run_request.run_request_id)
     return run_id, len(items)
 

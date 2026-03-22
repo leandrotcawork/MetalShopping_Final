@@ -13,6 +13,7 @@ OPERATION_IDS = [
     'getShoppingBootstrap',
     'getShoppingProductLatest',
     'getShoppingRun',
+    'getShoppingRunItemStatusSummary',
     'getShoppingRunRequest',
     'getShoppingSummary',
     'listCatalogProductIdentifiers',

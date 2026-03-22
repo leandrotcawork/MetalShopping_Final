@@ -281,7 +281,51 @@ func (h *Handler) handleRunByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	runID := strings.TrimSpace(strings.TrimPrefix(r.URL.Path, "/api/v1/shopping/runs/"))
+	runIDPath := strings.TrimSpace(strings.TrimPrefix(r.URL.Path, "/api/v1/shopping/runs/"))
+	if strings.HasSuffix(runIDPath, "/item-status-summary") {
+		runID := strings.TrimSuffix(runIDPath, "/item-status-summary")
+		runID = strings.TrimSpace(strings.TrimSuffix(runID, "/"))
+		if runID == "" || strings.Contains(runID, "/") {
+			statusCode = http.StatusNotFound
+			reqResult = "not_found"
+			writeShoppingError(w, http.StatusNotFound, "SHOPPING_RUN_NOT_FOUND", "Shopping run not found", traceID)
+			return
+		}
+		summary, err := h.service.GetRunItemStatusSummary(r.Context(), tenantID, runID)
+		if err != nil {
+			if errors.Is(err, postgres.ErrRunNotFound) {
+				statusCode = http.StatusNotFound
+				reqResult = "not_found"
+				writeShoppingError(w, http.StatusNotFound, "SHOPPING_RUN_NOT_FOUND", "Shopping run not found", traceID)
+				return
+			}
+			statusCode = http.StatusInternalServerError
+			reqResult = "internal_error"
+			writeShoppingError(
+				w,
+				http.StatusInternalServerError,
+				"INTERNAL_ERROR",
+				"Failed to load shopping run item status summary",
+				traceID,
+			)
+			return
+		}
+		rows := make([]map[string]any, 0, len(summary.Rows))
+		for _, item := range summary.Rows {
+			rows = append(rows, map[string]any{
+				"itemStatus": item.ItemStatus,
+				"total":      item.Total,
+			})
+		}
+		writeJSON(w, http.StatusOK, map[string]any{
+			"runId":      summary.RunID,
+			"totalItems": summary.TotalItems,
+			"rows":       rows,
+		})
+		return
+	}
+
+	runID := runIDPath
 	if runID == "" || strings.Contains(runID, "/") {
 		statusCode = http.StatusNotFound
 		reqResult = "not_found"
@@ -367,6 +411,12 @@ func (h *Handler) handleRunRequestByID(w http.ResponseWriter, r *http.Request) {
 		"workerId":                   nil,
 		"runId":                      nil,
 		"errorMessage":               nil,
+		"totalItems":                 nil,
+		"processedItems":             nil,
+		"currentSupplierCode":        nil,
+		"currentProductId":           nil,
+		"currentProductLabel":        nil,
+		"progressUpdatedAt":          nil,
 	}
 	if runRequest.ClaimedAt != nil {
 		payload["claimedAt"] = runRequest.ClaimedAt.UTC().Format(time.RFC3339)
@@ -385,6 +435,24 @@ func (h *Handler) handleRunRequestByID(w http.ResponseWriter, r *http.Request) {
 	}
 	if runRequest.ErrorMessage != nil {
 		payload["errorMessage"] = *runRequest.ErrorMessage
+	}
+	if runRequest.TotalItems != nil {
+		payload["totalItems"] = *runRequest.TotalItems
+	}
+	if runRequest.ProcessedItems != nil {
+		payload["processedItems"] = *runRequest.ProcessedItems
+	}
+	if runRequest.CurrentSupplierCode != nil {
+		payload["currentSupplierCode"] = *runRequest.CurrentSupplierCode
+	}
+	if runRequest.CurrentProductID != nil {
+		payload["currentProductId"] = *runRequest.CurrentProductID
+	}
+	if runRequest.CurrentProductLabel != nil {
+		payload["currentProductLabel"] = *runRequest.CurrentProductLabel
+	}
+	if runRequest.ProgressUpdatedAt != nil {
+		payload["progressUpdatedAt"] = runRequest.ProgressUpdatedAt.UTC().Format(time.RFC3339)
 	}
 	if runRequest.XLSXFilePath != nil {
 		payload["xlsxFilePath"] = *runRequest.XLSXFilePath
@@ -585,6 +653,7 @@ func (h *Handler) handleManualURLCandidates(w http.ResponseWriter, r *http.Reque
 	limit := parseQueryInt64(r, "limit", 50)
 	offset := parseQueryInt64(r, "offset", 0)
 	includeExisting := r.URL.Query().Get("include_existing")
+	onlyWithURL := r.URL.Query().Get("only_with_url")
 
 	parsedIncludeExisting := true
 	if strings.TrimSpace(includeExisting) != "" {
@@ -598,12 +667,28 @@ func (h *Handler) handleManualURLCandidates(w http.ResponseWriter, r *http.Reque
 		parsedIncludeExisting = value
 	}
 
+	parsedOnlyWithURL := false
+	if strings.TrimSpace(onlyWithURL) != "" {
+		value, err := strconv.ParseBool(onlyWithURL)
+		if err != nil {
+			statusCode = http.StatusBadRequest
+			reqResult = "validation_error"
+			writeShoppingError(w, http.StatusBadRequest, "SHOPPING_MANUAL_URL_CANDIDATES_INVALID", "only_with_url must be boolean", traceID)
+			return
+		}
+		parsedOnlyWithURL = value
+		if parsedOnlyWithURL {
+			parsedIncludeExisting = true
+		}
+	}
+
 	candidates, err := h.service.ListManualURLCandidates(r.Context(), tenantID, ports.ManualURLCandidateFilter{
 		SupplierCode:      supplierCode,
 		Search:            strings.TrimSpace(r.URL.Query().Get("search")),
 		BrandName:         strings.TrimSpace(r.URL.Query().Get("brand_name")),
 		TaxonomyLeaf0Name: strings.TrimSpace(r.URL.Query().Get("taxonomy_leaf0_name")),
 		IncludeExisting:   parsedIncludeExisting,
+		OnlyWithURL:       parsedOnlyWithURL,
 		Limit:             limit,
 		Offset:            offset,
 	})
@@ -703,6 +788,9 @@ func mapManualURLCandidate(item ports.ManualURLCandidate) map[string]any {
 		"productId":         item.ProductID,
 		"supplierCode":      item.SupplierCode,
 		"sku":               item.SKU,
+		"pnInterno":         nil,
+		"reference":         nil,
+		"ean":               nil,
 		"name":              item.Name,
 		"brandName":         nil,
 		"taxonomyLeaf0Name": nil,
@@ -718,6 +806,15 @@ func mapManualURLCandidate(item ports.ManualURLCandidate) map[string]any {
 		"nextDiscoveryAt":   nil,
 		"notFoundCount":     item.NotFoundCount,
 		"updatedAt":         item.UpdatedAt.UTC().Format(time.RFC3339),
+	}
+	if item.PNInterno != nil {
+		payload["pnInterno"] = *item.PNInterno
+	}
+	if item.Reference != nil {
+		payload["reference"] = *item.Reference
+	}
+	if item.EAN != nil {
+		payload["ean"] = *item.EAN
 	}
 	if item.BrandName != nil {
 		payload["brandName"] = *item.BrandName

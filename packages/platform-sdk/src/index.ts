@@ -10,6 +10,7 @@ import type {
   ShoppingManualUrlCandidateListV1,
   ShoppingManualUrlCandidateV1,
   ShoppingRunRequestV1,
+  ShoppingRunItemStatusSummaryV1,
   ShoppingProductLatestV1,
   ShoppingRunListV1,
   ShoppingSupplierSignalListV1,
@@ -70,9 +71,9 @@ export type ProductsPortfolioSortDirection = GeneratedProductsPortfolioSortDirec
 
 export type ListProductsPortfolioQueryParams = {
   search?: string;
-  brand_name?: string;
-  taxonomy_leaf0_name?: string;
-  status?: string;
+  brand_name?: string[];
+  taxonomy_leaf0_name?: string[];
+  status?: string[];
   sort_key?: ProductsPortfolioSortKey;
   sort_direction?: ProductsPortfolioSortDirection;
   limit?: number;
@@ -100,6 +101,7 @@ export type ListShoppingManualUrlCandidatesQueryParams = {
   brandName?: string;
   taxonomyLeaf0Name?: string;
   includeExisting?: boolean;
+  onlyWithUrl?: boolean;
   limit?: number;
   offset?: number;
 };
@@ -115,6 +117,7 @@ export type ServerCoreSdk = {
     getSummary(): Promise<ShoppingSummaryV1>;
     listRuns(query?: ListShoppingRunsQueryParams): Promise<ShoppingRunListV1>;
     getRun(runId: string): Promise<ShoppingRunV1>;
+    getRunItemStatusSummary(runId: string): Promise<ShoppingRunItemStatusSummaryV1>;
     getProductLatest(productId: string): Promise<ShoppingProductLatestV1>;
     listSupplierSignals(query?: ListShoppingSupplierSignalsQueryParams): Promise<ShoppingSupplierSignalListV1>;
     listManualUrlCandidates(
@@ -359,6 +362,25 @@ function parseShoppingRunList(raw: unknown): ShoppingRunListV1 {
   };
 }
 
+function parseShoppingRunItemStatusSummary(raw: unknown): ShoppingRunItemStatusSummaryV1 {
+  if (!isRecord(raw)) {
+    throw new Error("[sdk-runtime] ShoppingRunItemStatusSummaryV1 response must be an object");
+  }
+  assertString(raw.runId, "ShoppingRunItemStatusSummaryV1.runId");
+  assertNumber(raw.totalItems, "ShoppingRunItemStatusSummaryV1.totalItems");
+  if (!Array.isArray(raw.rows)) {
+    throw new Error("[sdk-runtime] ShoppingRunItemStatusSummaryV1.rows must be an array");
+  }
+  for (const row of raw.rows) {
+    if (!isRecord(row)) {
+      throw new Error("[sdk-runtime] ShoppingRunItemStatusSummaryV1.rows entries must be objects");
+    }
+    assertString(row.itemStatus, "ShoppingRunItemStatusSummaryV1.rows.itemStatus");
+    assertNumber(row.total, "ShoppingRunItemStatusSummaryV1.rows.total");
+  }
+  return raw as ShoppingRunItemStatusSummaryV1;
+}
+
 function parseShoppingSummary(raw: unknown): ShoppingSummaryV1 {
   if (!isRecord(raw)) {
     throw new Error("[sdk-runtime] ShoppingSummaryV1 response must be an object");
@@ -448,6 +470,25 @@ function parseShoppingRunRequest(raw: unknown): ShoppingRunRequestV1 {
   if (raw.errorMessage !== undefined && raw.errorMessage !== null) {
     assertString(raw.errorMessage, "ShoppingRunRequestV1.errorMessage");
   }
+  if (raw.totalItems !== undefined && raw.totalItems !== null) {
+    assertNumber(raw.totalItems, "ShoppingRunRequestV1.totalItems");
+  }
+  if (raw.processedItems !== undefined && raw.processedItems !== null) {
+    assertNumber(raw.processedItems, "ShoppingRunRequestV1.processedItems");
+  }
+  if (raw.currentSupplierCode !== undefined && raw.currentSupplierCode !== null) {
+    assertString(raw.currentSupplierCode, "ShoppingRunRequestV1.currentSupplierCode");
+  }
+  if (raw.currentProductId !== undefined && raw.currentProductId !== null) {
+    assertString(raw.currentProductId, "ShoppingRunRequestV1.currentProductId");
+  }
+  if (raw.currentProductLabel !== undefined && raw.currentProductLabel !== null) {
+    assertString(raw.currentProductLabel, "ShoppingRunRequestV1.currentProductLabel");
+  }
+  const progressUpdatedAt =
+    raw.progressUpdatedAt === null || raw.progressUpdatedAt === undefined
+      ? null
+      : normalizeDateTime(raw.progressUpdatedAt, "ShoppingRunRequestV1.progressUpdatedAt");
   if (raw.catalogProductIds !== undefined) {
     assertStringArray(raw.catalogProductIds, "ShoppingRunRequestV1.catalogProductIds");
   }
@@ -479,6 +520,12 @@ function parseShoppingRunRequest(raw: unknown): ShoppingRunRequestV1 {
     workerId: raw.workerId ?? null,
     runId: raw.runId ?? null,
     errorMessage: raw.errorMessage ?? null,
+    totalItems: (raw.totalItems as number | null | undefined) ?? null,
+    processedItems: (raw.processedItems as number | null | undefined) ?? null,
+    currentSupplierCode: (raw.currentSupplierCode as string | null | undefined) ?? null,
+    currentProductId: (raw.currentProductId as string | null | undefined) ?? null,
+    currentProductLabel: (raw.currentProductLabel as string | null | undefined) ?? null,
+    progressUpdatedAt: progressUpdatedAt === null ? null : progressUpdatedAt,
     catalogProductIds: (raw.catalogProductIds as string[] | undefined) ?? [],
     xlsxFilePath: (raw.xlsxFilePath as string | null | undefined) ?? null,
     xlsxScopeIdentifiers: (raw.xlsxScopeIdentifiers as string[] | undefined) ?? [],
@@ -606,6 +653,15 @@ function parseShoppingManualUrlCandidate(raw: unknown): ShoppingManualUrlCandida
   if (raw.taxonomyLeaf0Name !== undefined && raw.taxonomyLeaf0Name !== null) {
     assertString(raw.taxonomyLeaf0Name, "ShoppingManualUrlCandidateV1.taxonomyLeaf0Name");
   }
+  if (raw.pnInterno !== undefined && raw.pnInterno !== null) {
+    assertString(raw.pnInterno, "ShoppingManualUrlCandidateV1.pnInterno");
+  }
+  if (raw.reference !== undefined && raw.reference !== null) {
+    assertString(raw.reference, "ShoppingManualUrlCandidateV1.reference");
+  }
+  if (raw.ean !== undefined && raw.ean !== null) {
+    assertString(raw.ean, "ShoppingManualUrlCandidateV1.ean");
+  }
 
   const lastCheckedAt =
     raw.lastCheckedAt === null || raw.lastCheckedAt === undefined
@@ -630,6 +686,9 @@ function parseShoppingManualUrlCandidate(raw: unknown): ShoppingManualUrlCandida
     productId: raw.productId,
     supplierCode: raw.supplierCode,
     sku: raw.sku,
+    pnInterno: (raw.pnInterno as string | null | undefined) ?? null,
+    reference: (raw.reference as string | null | undefined) ?? null,
+    ean: (raw.ean as string | null | undefined) ?? null,
     name: raw.name,
     brandName: (raw.brandName as string | null | undefined) ?? null,
     taxonomyLeaf0Name: (raw.taxonomyLeaf0Name as string | null | undefined) ?? null,
@@ -863,6 +922,10 @@ export function createServerCoreSdk(client: GeneratedHttpClient): ServerCoreSdk 
         const raw = await runGeneratedCall(() => shoppingApi.getShoppingRun({ runId }));
         return parseShoppingRun(raw);
       },
+      async getRunItemStatusSummary(runId) {
+        const raw = await runGeneratedCall(() => shoppingApi.getShoppingRunItemStatusSummary({ runId }));
+        return parseShoppingRunItemStatusSummary(raw);
+      },
       async getProductLatest(productId) {
         const raw = await runGeneratedCall(() => shoppingApi.getShoppingProductLatest({ productId }));
         return parseShoppingProductLatest(raw);
@@ -886,6 +949,7 @@ export function createServerCoreSdk(client: GeneratedHttpClient): ServerCoreSdk 
             brandName: query.brandName,
             taxonomyLeaf0Name: query.taxonomyLeaf0Name,
             includeExisting: query.includeExisting,
+            onlyWithUrl: query.onlyWithUrl,
             limit: query.limit,
             offset: query.offset,
           }),

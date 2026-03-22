@@ -33,6 +33,10 @@ func (s *Service) GetRun(ctx context.Context, tenantID, runID string) (ports.Run
 	return s.reader.GetRun(ctx, strings.TrimSpace(tenantID), strings.TrimSpace(runID))
 }
 
+func (s *Service) GetRunItemStatusSummary(ctx context.Context, tenantID, runID string) (ports.RunItemStatusSummary, error) {
+	return s.reader.GetRunItemStatusSummary(ctx, strings.TrimSpace(tenantID), strings.TrimSpace(runID))
+}
+
 func (s *Service) GetProductLatest(ctx context.Context, tenantID, productID string) (ports.ProductLatest, error) {
 	return s.reader.GetProductLatest(ctx, strings.TrimSpace(tenantID), strings.TrimSpace(productID))
 }
@@ -84,6 +88,14 @@ func (s *Service) ListSupplierSignals(ctx context.Context, tenantID string, filt
 	filter.SupplierCode = strings.ToUpper(strings.TrimSpace(filter.SupplierCode))
 	filter.ProductID = strings.TrimSpace(filter.ProductID)
 	return s.reader.ListSupplierSignals(ctx, strings.TrimSpace(tenantID), filter)
+}
+
+func (s *Service) ListManualURLCandidates(ctx context.Context, tenantID string, filter ports.ManualURLCandidateFilter) (ports.ManualURLCandidateList, error) {
+	filter.SupplierCode = strings.ToUpper(strings.TrimSpace(filter.SupplierCode))
+	filter.Search = strings.TrimSpace(filter.Search)
+	filter.BrandName = strings.TrimSpace(filter.BrandName)
+	filter.TaxonomyLeaf0Name = strings.TrimSpace(filter.TaxonomyLeaf0Name)
+	return s.reader.ListManualURLCandidates(ctx, strings.TrimSpace(tenantID), filter)
 }
 
 func (s *Service) UpsertSupplierSignal(ctx context.Context, tenantID string, input ports.UpsertSupplierSignalInput) (ports.SupplierSignal, error) {

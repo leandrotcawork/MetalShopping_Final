@@ -203,6 +203,48 @@ paths:
             application/json:
               schema:
                 $ref: "../jsonschema/common_error_v1.schema.json"
+  /api/v1/shopping/runs/{run_id}/item-status-summary:
+    get:
+      operationId: getShoppingRunItemStatusSummary
+      summary: "Get shopping run item counts grouped by item_status"
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: "Item status summary returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/shopping_run_item_status_summary_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Tenant context required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "404":
+          description: "Run not found"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
   /api/v1/shopping/products/{product_id}/latest:
     get:
       operationId: getShoppingProductLatest
@@ -405,6 +447,11 @@ paths:
           schema:
             type: string
         - name: include_existing
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: only_with_url
           in: query
           required: false
           schema:

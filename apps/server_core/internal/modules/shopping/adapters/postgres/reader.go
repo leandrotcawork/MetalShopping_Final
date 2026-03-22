@@ -220,6 +220,71 @@ LIMIT 1
 	return run, nil
 }
 
+func (r *Reader) GetRunItemStatusSummary(ctx context.Context, tenantID, runID string) (ports.RunItemStatusSummary, error) {
+	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return ports.RunItemStatusSummary{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	const runExistsQuery = `
+SELECT 1
+FROM shopping_price_runs
+WHERE tenant_id = current_tenant_id()
+  AND run_id = $1
+LIMIT 1
+`
+	var one int
+	if err := tx.QueryRowContext(ctx, runExistsQuery, runID).Scan(&one); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ports.RunItemStatusSummary{}, ErrRunNotFound
+		}
+		return ports.RunItemStatusSummary{}, fmt.Errorf("check shopping run exists: %w", err)
+	}
+
+	const query = `
+SELECT
+  item_status,
+  COUNT(*) AS total
+FROM shopping_price_run_items
+WHERE tenant_id = current_tenant_id()
+  AND run_id = $1
+GROUP BY item_status
+ORDER BY COUNT(*) DESC, item_status ASC
+`
+
+	rows, err := tx.QueryContext(ctx, query, runID)
+	if err != nil {
+		return ports.RunItemStatusSummary{}, fmt.Errorf("query shopping run item status summary: %w", err)
+	}
+	defer rows.Close()
+
+	items := make([]ports.RunItemStatusCount, 0, 8)
+	var totalItems int64
+	for rows.Next() {
+		var item ports.RunItemStatusCount
+		if err := rows.Scan(&item.ItemStatus, &item.Total); err != nil {
+			return ports.RunItemStatusSummary{}, fmt.Errorf("scan shopping run item status summary: %w", err)
+		}
+		item.ItemStatus = strings.TrimSpace(item.ItemStatus)
+		items = append(items, item)
+		totalItems += item.Total
+	}
+	if err := rows.Err(); err != nil {
+		return ports.RunItemStatusSummary{}, fmt.Errorf("iterate shopping run item status summary: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return ports.RunItemStatusSummary{}, fmt.Errorf("commit shopping run item status summary read: %w", err)
+	}
+
+	return ports.RunItemStatusSummary{
+		RunID:      runID,
+		TotalItems: totalItems,
+		Rows:       items,
+	}, nil
+}
+
 func (r *Reader) GetProductLatest(ctx context.Context, tenantID, productID string) (ports.ProductLatest, error) {
 	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
@@ -285,7 +350,13 @@ SELECT
   finished_at,
   worker_id,
   run_id,
-  error_message
+  error_message,
+  total_items,
+  processed_items,
+  current_supplier_code,
+  current_product_id,
+  current_product_label,
+  progress_updated_at
 FROM shopping_price_run_requests
 WHERE tenant_id = current_tenant_id()
   AND run_request_id = $1
@@ -300,6 +371,12 @@ LIMIT 1
 	var workerID sql.NullString
 	var runID sql.NullString
 	var errorMessage sql.NullString
+	var totalItems sql.NullInt64
+	var processedItems sql.NullInt64
+	var currentSupplierCode sql.NullString
+	var currentProductID sql.NullString
+	var currentProductLabel sql.NullString
+	var progressUpdatedAt sql.NullTime
 
 	if err := tx.QueryRowContext(ctx, query, runRequestID).Scan(
 		&result.RunRequestID,
@@ -314,6 +391,12 @@ LIMIT 1
 		&workerID,
 		&runID,
 		&errorMessage,
+		&totalItems,
+		&processedItems,
+		&currentSupplierCode,
+		&currentProductID,
+		&currentProductLabel,
+		&progressUpdatedAt,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ports.RunRequest{}, ErrRunRequestNotFound
@@ -344,6 +427,36 @@ LIMIT 1
 	if errorMessage.Valid {
 		value := errorMessage.String
 		result.ErrorMessage = &value
+	}
+	if totalItems.Valid {
+		value := totalItems.Int64
+		result.TotalItems = &value
+	}
+	if processedItems.Valid {
+		value := processedItems.Int64
+		result.ProcessedItems = &value
+	}
+	if currentSupplierCode.Valid {
+		value := strings.TrimSpace(currentSupplierCode.String)
+		if value != "" {
+			result.CurrentSupplierCode = &value
+		}
+	}
+	if currentProductID.Valid {
+		value := strings.TrimSpace(currentProductID.String)
+		if value != "" {
+			result.CurrentProductID = &value
+		}
+	}
+	if currentProductLabel.Valid {
+		value := strings.TrimSpace(currentProductLabel.String)
+		if value != "" {
+			result.CurrentProductLabel = &value
+		}
+	}
+	if progressUpdatedAt.Valid {
+		value := progressUpdatedAt.Time.UTC()
+		result.ProgressUpdatedAt = &value
 	}
 
 	if strings.TrimSpace(payloadRaw) != "" {
@@ -480,7 +593,10 @@ func (r *Reader) ListManualURLCandidates(ctx context.Context, tenantID string, f
   p.sku ILIKE $%d
   OR p.name ILIKE $%d
   OR p.product_id ILIKE $%d
-)`, argPos, argPos, argPos))
+  OR COALESCE(idf.pn_interno, '') ILIKE $%d
+  OR COALESCE(idf.reference, '') ILIKE $%d
+  OR COALESCE(idf.ean, '') ILIKE $%d
+)`, argPos, argPos, argPos, argPos, argPos, argPos))
 		args = append(args, "%"+filter.Search+"%")
 		argPos++
 	}
@@ -498,6 +614,9 @@ func (r *Reader) ListManualURLCandidates(ctx context.Context, tenantID string, f
 	includeExisting := filter.IncludeExisting
 	if !includeExisting {
 		clauses = append(clauses, "AND (s.product_url IS NULL OR BTRIM(s.product_url) = '')")
+	}
+	if filter.OnlyWithURL {
+		clauses = append(clauses, "AND (s.product_url IS NOT NULL AND BTRIM(s.product_url) <> '')")
 	}
 
 	whereSQL := strings.Join(clauses, "\n")
@@ -532,6 +651,16 @@ taxonomy_lookup AS (
     MAX(CASE WHEN level = 0 THEN name END) AS taxonomy_leaf0_name
   FROM taxonomy_chain
   GROUP BY leaf_id
+),
+identifiers_lookup AS (
+  SELECT
+    product_id,
+    MAX(CASE WHEN identifier_type = 'pn_interno' THEN identifier_value END) AS pn_interno,
+    MAX(CASE WHEN identifier_type = 'reference' THEN identifier_value END) AS reference,
+    MAX(CASE WHEN identifier_type = 'ean' THEN identifier_value END) AS ean
+  FROM catalog_product_identifiers
+  WHERE tenant_id = current_tenant_id()
+  GROUP BY product_id
 )
 `
 
@@ -539,6 +668,7 @@ taxonomy_lookup AS (
 SELECT COUNT(*)
 FROM catalog_products p
 LEFT JOIN taxonomy_lookup txo ON txo.taxonomy_node_id = p.primary_taxonomy_node_id
+LEFT JOIN identifiers_lookup idf ON idf.product_id = p.product_id
 LEFT JOIN shopping_supplier_product_signals s
   ON s.tenant_id = current_tenant_id()
  AND s.product_id = p.product_id
@@ -555,6 +685,9 @@ SELECT
   p.product_id,
   $1 AS supplier_code,
   p.sku,
+  idf.pn_interno,
+  idf.reference,
+  idf.ean,
   p.name,
   p.brand_name,
   txo.taxonomy_leaf0_name,
@@ -575,6 +708,7 @@ SELECT
   COALESCE(s.updated_at, p.updated_at) AS updated_at
 FROM catalog_products p
 LEFT JOIN taxonomy_lookup txo ON txo.taxonomy_node_id = p.primary_taxonomy_node_id
+LEFT JOIN identifiers_lookup idf ON idf.product_id = p.product_id
 LEFT JOIN shopping_supplier_product_signals s
   ON s.tenant_id = current_tenant_id()
  AND s.product_id = p.product_id
@@ -724,6 +858,9 @@ func scanSupplierSignal(s scanner) (ports.SupplierSignal, error) {
 
 func scanManualURLCandidate(s scanner) (ports.ManualURLCandidate, error) {
 	var item ports.ManualURLCandidate
+	var pnInterno sql.NullString
+	var reference sql.NullString
+	var ean sql.NullString
 	var brandName sql.NullString
 	var taxonomyLeaf0Name sql.NullString
 	var productURL sql.NullString
@@ -736,6 +873,9 @@ func scanManualURLCandidate(s scanner) (ports.ManualURLCandidate, error) {
 		&item.ProductID,
 		&item.SupplierCode,
 		&item.SKU,
+		&pnInterno,
+		&reference,
+		&ean,
 		&item.Name,
 		&brandName,
 		&taxonomyLeaf0Name,
@@ -755,6 +895,24 @@ func scanManualURLCandidate(s scanner) (ports.ManualURLCandidate, error) {
 		return ports.ManualURLCandidate{}, fmt.Errorf("scan shopping manual url candidate: %w", err)
 	}
 
+	if pnInterno.Valid {
+		value := strings.TrimSpace(pnInterno.String)
+		if value != "" {
+			item.PNInterno = &value
+		}
+	}
+	if reference.Valid {
+		value := strings.TrimSpace(reference.String)
+		if value != "" {
+			item.Reference = &value
+		}
+	}
+	if ean.Valid {
+		value := strings.TrimSpace(ean.String)
+		if value != "" {
+			item.EAN = &value
+		}
+	}
 	if brandName.Valid {
 		value := strings.TrimSpace(brandName.String)
 		if value != "" {

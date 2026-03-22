@@ -44,6 +44,8 @@ Level 1 scope:
       commit: "chore(sdk): regenerate after shopping contract"
 - [x] T5: frontend - $metalshopping-frontend
       commit: "feat(web): manual URL panel uses candidates endpoint"
+- [ ] T5b: frontend - manual URL panel UX fixes
+      commit: "fix(web): stabilize manual URL panel interactions"
 - [ ] T6: ADR close-out - capture evidence and accept ADR-0045
       commit: "docs(adr): ADR-0045 manual URL candidates - verified and closed"
 
@@ -54,3 +56,61 @@ Level 1 scope:
 - [x] With `shopping_supplier_product_signals` empty:
       `GET /api/v1/shopping/manual-url-candidates?supplier_code=DEXCO&limit=10&offset=0` returns catalog rows
 - [ ] In browser: Manual URL panel lists products even with empty signals; saving a URL creates signal and table reflects overlay
+- [ ] In browser: manual URL panel refreshes without layout jump, supplier=all behaves per spec, and toggle slider aligns
+
+---
+
+## Feature: Shopping run progress (polling)
+Type: scraping | Events: yes (shopping.run_requested) | ADR: no
+
+## Phase 1 - Architectural thinking
+
+Module type:
+- scraping (Python worker writes progress; Go reader exposes status)
+
+Module location:
+- `apps/server_core/internal/modules/shopping`
+  - extend `ports/read_models.go`, `adapters/postgres/reader.go`, `transport/http/handler.go`
+- `apps/server_core/migrations`
+  - add progress columns on `shopping_price_run_requests`
+- `apps/integration_worker/shopping_price_worker.py`
+  - update progress per item/supplier
+- `contracts/api/openapi/shopping_v1.openapi.yaml`
+  - expose progress fields on run request payload
+
+Risks to manage:
+- migration + backfill defaults for existing rows
+- avoid high write frequency (batch update progress)
+- keep RLS + tenant_id safety
+
+Level 1 scope:
+- UI polling shows % progress and current supplier/product info
+
+## Phase 2 - Plan (wait for approval, then execute T1..T5)
+
+## Tasks
+- [ ] T1: contract - $metalshopping-openapi-contracts
+      commit: "feat(shopping): add run progress fields"
+- [ ] T2: Go module - reader + handler + postgres adapter
+      commit: "feat(shopping): expose run request progress"
+- [ ] T2b: Go module - run item status summary endpoint
+      commit: "feat(shopping): expose run item status summary"
+- [ ] T3: worker - update progress during runs
+      commit: "feat(worker): persist shopping run progress"
+- [ ] T3b: worker - add per-item logs for debugging
+      commit: "feat(worker): add per-item shopping run logs"
+- [ ] T4: SDK - $metalshopping-sdk-generation
+      commit: "chore(sdk): regenerate after shopping progress contract"
+- [ ] T5: frontend - $metalshopping-frontend
+      commit: "feat(web): poll and display shopping run progress"
+- [ ] T5b: frontend - KPIs from item summary + cap history list
+      commit: "feat(web): show run item KPIs and cap recent history"
+
+## Acceptance tests
+- [ ] `go build ./...` passes
+- [ ] `npm.cmd run web:typecheck` passes
+- [ ] `GET /api/v1/shopping/run-requests/{id}` returns progress fields
+- [ ] `GET /api/v1/shopping/runs/{run_id}/item-status-summary` returns grouped counts
+- [ ] In browser: progress bar updates over time with worker running
+- [ ] In browser: KPI cards reflect selected run item counts (OK/NOT_FOUND/AMBIGUOUS/ERROR)
+- [ ] In browser: "Historico recente" shows max N with "Ver tudo"

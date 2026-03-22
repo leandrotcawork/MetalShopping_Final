@@ -30,6 +30,17 @@ type RunList struct {
 	Total  int64
 }
 
+type RunItemStatusCount struct {
+	ItemStatus string
+	Total      int64
+}
+
+type RunItemStatusSummary struct {
+	RunID      string
+	TotalItems int64
+	Rows       []RunItemStatusCount
+}
+
 type ProductLatest struct {
 	ProductID     string
 	RunID         string
@@ -77,6 +88,48 @@ type SupplierSignalList struct {
 	Total  int64
 }
 
+type ManualURLCandidate struct {
+	ProductID         string
+	SupplierCode      string
+	SKU               string
+	PNInterno         *string
+	Reference         *string
+	EAN               *string
+	Name              string
+	BrandName         *string
+	TaxonomyLeaf0Name *string
+	ProductURL        *string
+	URLStatus         string
+	LookupMode        string
+	LookupModeSource  string
+	ManualOverride    bool
+	LastCheckedAt     *time.Time
+	LastSuccessAt     *time.Time
+	LastHTTPStatus    *int64
+	LastErrorMessage  *string
+	NextDiscoveryAt   *time.Time
+	NotFoundCount     int64
+	UpdatedAt         time.Time
+}
+
+type ManualURLCandidateFilter struct {
+	SupplierCode      string
+	Search            string
+	BrandName         string
+	TaxonomyLeaf0Name string
+	IncludeExisting   bool
+	OnlyWithURL       bool
+	Limit             int64
+	Offset            int64
+}
+
+type ManualURLCandidateList struct {
+	Rows   []ManualURLCandidate
+	Offset int64
+	Limit  int64
+	Total  int64
+}
+
 type UpsertSupplierSignalInput struct {
 	ProductID      string
 	SupplierCode   string
@@ -92,9 +145,11 @@ type Reader interface {
 	GetSummary(ctx context.Context, tenantID string) (Summary, error)
 	ListRuns(ctx context.Context, tenantID string, filter RunListFilter) (RunList, error)
 	GetRun(ctx context.Context, tenantID, runID string) (Run, error)
+	GetRunItemStatusSummary(ctx context.Context, tenantID, runID string) (RunItemStatusSummary, error)
 	GetProductLatest(ctx context.Context, tenantID, productID string) (ProductLatest, error)
 	GetRunRequest(ctx context.Context, tenantID, runRequestID string) (RunRequest, error)
 	ListSupplierSignals(ctx context.Context, tenantID string, filter SupplierSignalListFilter) (SupplierSignalList, error)
+	ListManualURLCandidates(ctx context.Context, tenantID string, filter ManualURLCandidateFilter) (ManualURLCandidateList, error)
 }
 
 type BootstrapSupplier struct {
@@ -132,17 +187,23 @@ type CreateRunRequestInput struct {
 }
 
 type RunRequest struct {
-	RunRequestID string
-	Status       string
-	InputMode    string
-	RequestedAt  time.Time
-	RequestedBy  string
-	ClaimedAt    *time.Time
-	StartedAt    *time.Time
-	FinishedAt   *time.Time
-	WorkerID     *string
-	RunID        *string
-	ErrorMessage *string
+	RunRequestID        string
+	Status              string
+	InputMode           string
+	RequestedAt         time.Time
+	RequestedBy         string
+	ClaimedAt           *time.Time
+	StartedAt           *time.Time
+	FinishedAt          *time.Time
+	WorkerID            *string
+	RunID               *string
+	ErrorMessage        *string
+	TotalItems          *int64
+	ProcessedItems      *int64
+	CurrentSupplierCode *string
+	CurrentProductID    *string
+	CurrentProductLabel *string
+	ProgressUpdatedAt   *time.Time
 
 	CatalogProductIDs         []string
 	XLSXFilePath              *string

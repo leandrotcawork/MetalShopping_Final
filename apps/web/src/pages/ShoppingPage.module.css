@@ -722,7 +722,7 @@
 
 .manualToggleSwitch input:checked + .manualToggleSlider::after {
   background: #fff;
-  transform: translateX(22px);
+  transform: translateX(19px);
 }
 
 .manualFilters input {
@@ -744,8 +744,7 @@
 .manualTable {
   width: 100%;
   border-collapse: collapse;
-  min-width: 760px;
-  table-layout: fixed;
+  table-layout: auto;
 }
 
 .manualTable th,
@@ -779,10 +778,37 @@
   gap: 4px;
 }
 
+.manualProductCell input {
+  margin-top: 6px;
+}
+
+.manualProductMeta {
+  color: var(--neutral-500);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.manualRefCell {
+  display: grid;
+  gap: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--neutral-700);
+}
+
 .manualProductCell small {
   color: var(--neutral-500);
   font-size: 11px;
   font-weight: 700;
+}
+
+.manualColTight {
+  white-space: nowrap;
+  width: 1%;
+}
+
+.manualColCompact {
+  width: 1%;
 }
 
 .manualEmpty {
@@ -947,6 +973,19 @@
   font-weight: 600;
 }
 
+.progressHint {
+  margin: 6px 0 0;
+  color: var(--neutral-700);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.progressHintMuted {
+  margin: 4px 0 0;
+  color: var(--neutral-500);
+  font-size: var(--font-size-xs);
+}
+
 .current {
   border: 1px solid var(--neutral-200);
   background: var(--neutral-50);
@@ -1058,6 +1097,12 @@
   padding: 0;
   display: grid;
   gap: 8px;
+}
+
+.runListFooter {
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
 }
 
 .runButton {

@@ -37,6 +37,7 @@ export const schemaIds = {
   "shopping_manual_url_candidate_list_v1.schema": "https://schemas.metalshopping.local/api/shopping_manual_url_candidate_list_v1.schema.json",
   "shopping_manual_url_candidate_v1.schema": "https://schemas.metalshopping.local/api/shopping_manual_url_candidate_v1.schema.json",
   "shopping_product_latest_v1.schema": "https://schemas.metalshopping.local/api/shopping_product_latest_v1.schema.json",
+  "shopping_run_item_status_summary_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_item_status_summary_v1.schema.json",
   "shopping_run_list_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_list_v1.schema.json",
   "shopping_run_request_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_request_v1.schema.json",
   "shopping_run_requested_payload_v1.schema": "https://contracts.metalshopping.local/schema/shopping/run_requested_payload/v1",
@@ -421,6 +422,9 @@ export type ShoppingManualUrlCandidateV1 = {
   productId: string;
   supplierCode: string;
   sku: string;
+  pnInterno?: string | null;
+  reference?: string | null;
+  ean?: string | null;
   name: string;
   brandName?: string | null;
   taxonomyLeaf0Name?: string | null;
@@ -448,6 +452,15 @@ export type ShoppingProductLatestV1 = {
   currency: string;
 };
 
+export type ShoppingRunItemStatusSummaryV1 = {
+  runId: string;
+  totalItems: number;
+  rows: Array<{
+    itemStatus: string;
+    total: number;
+  }>;
+};
+
 export type ShoppingRunListV1 = {
   rows: Array<ShoppingRunV1>;
   paging: {
@@ -470,6 +483,12 @@ export type ShoppingRunRequestV1 = {
   workerId?: string | null;
   runId?: string | null;
   errorMessage?: string | null;
+  totalItems?: number | null;
+  processedItems?: number | null;
+  currentSupplierCode?: string | null;
+  currentProductId?: string | null;
+  currentProductLabel?: string | null;
+  progressUpdatedAt?: string | null;
   catalogProductIds?: Array<string>;
   xlsxFilePath?: string | null;
   xlsxScopeIdentifiers?: Array<string>;

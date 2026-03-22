@@ -50,6 +50,30 @@
     "errorMessage": {
       "type": ["string", "null"]
     },
+    "totalItems": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "processedItems": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "currentSupplierCode": {
+      "type": ["string", "null"],
+      "minLength": 1
+    },
+    "currentProductId": {
+      "type": ["string", "null"],
+      "minLength": 1
+    },
+    "currentProductLabel": {
+      "type": ["string", "null"],
+      "minLength": 1
+    },
+    "progressUpdatedAt": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
     "catalogProductIds": {
       "type": "array",
       "items": {
