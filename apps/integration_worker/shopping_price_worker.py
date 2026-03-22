@@ -1483,6 +1483,8 @@ def main() -> int:
     mode = os.getenv("MS_SHOPPING_WORKER_MODE", "").strip().lower() or "queue"
     xlsx_fallback_limit_raw = os.getenv("MS_SHOPPING_XLSX_FALLBACK_LIMIT", "").strip() or "50"
     max_queue_claims_raw = os.getenv("MS_SHOPPING_MAX_QUEUE_CLAIMS", "").strip() or "1"
+    keep_alive_raw = os.getenv("MS_SHOPPING_KEEP_ALIVE", "").strip().lower() or "false"
+    poll_interval_raw = os.getenv("MS_SHOPPING_POLL_INTERVAL_SECONDS", "").strip() or "2"
 
     if database_url == "":
         print("Missing required env var: MS_DATABASE_URL", file=sys.stderr)
@@ -1490,8 +1492,12 @@ def main() -> int:
     try:
         xlsx_fallback_limit = max(1, int(xlsx_fallback_limit_raw))
         max_queue_claims = max(1, int(max_queue_claims_raw))
+        poll_interval_seconds = max(1, int(poll_interval_raw))
     except ValueError:
-        print("MS_SHOPPING_XLSX_FALLBACK_LIMIT and MS_SHOPPING_MAX_QUEUE_CLAIMS must be integers", file=sys.stderr)
+        print(
+            "MS_SHOPPING_XLSX_FALLBACK_LIMIT, MS_SHOPPING_MAX_QUEUE_CLAIMS, and MS_SHOPPING_POLL_INTERVAL_SECONDS must be integers",
+            file=sys.stderr,
+        )
         return 2
 
     if input_path != "":
@@ -1535,34 +1541,46 @@ def main() -> int:
         print("Missing required env var for event mode: MS_TENANT_ID", file=sys.stderr)
         return 2
 
+    keep_alive = keep_alive_raw in {"1", "true", "yes", "y", "on"}
+
     log(
         "shopping_worker_start",
         tenant_id=tenant_id or "all",
         worker_id=worker_id,
         mode=mode,
         max_queue_claims=max_queue_claims,
+        keep_alive=keep_alive,
+        poll_interval_seconds=poll_interval_seconds,
     )
     handled = 0
     try:
         with psycopg.connect(database_url) as conn:
-            for _ in range(max_queue_claims):
-                if mode == "queue":
-                    did_handle = run_queue_once(
-                        conn=conn,
-                        tenant_id=tenant_id,
-                        worker_id=worker_id,
-                        xlsx_fallback_limit=xlsx_fallback_limit,
-                    )
-                else:
-                    did_handle = run_event_once(
-                        conn=conn,
-                        worker_id=worker_id,
-                        xlsx_fallback_limit=xlsx_fallback_limit,
-                        tenant_id_filter=tenant_id,
-                    )
-                if not did_handle:
+            while True:
+                did_handle_any = False
+                for _ in range(max_queue_claims):
+                    if mode == "queue":
+                        did_handle = run_queue_once(
+                            conn=conn,
+                            tenant_id=tenant_id,
+                            worker_id=worker_id,
+                            xlsx_fallback_limit=xlsx_fallback_limit,
+                        )
+                    else:
+                        did_handle = run_event_once(
+                            conn=conn,
+                            worker_id=worker_id,
+                            xlsx_fallback_limit=xlsx_fallback_limit,
+                            tenant_id_filter=tenant_id,
+                        )
+                    if not did_handle:
+                        break
+                    did_handle_any = True
+                    handled += 1
+
+                if did_handle_any or not keep_alive:
                     break
-                handled += 1
+
+                time.sleep(poll_interval_seconds)
     except Exception as exc:  # pragma: no cover - worker boundary log
         log(
             "shopping_worker_error",

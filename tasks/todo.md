@@ -89,28 +89,31 @@ Level 1 scope:
 ## Phase 2 - Plan (wait for approval, then execute T1..T5)
 
 ## Tasks
-- [ ] T1: contract - $metalshopping-openapi-contracts
+- [x] T1: contract - $metalshopping-openapi-contracts
       commit: "feat(shopping): add run progress fields"
-- [ ] T2: Go module - reader + handler + postgres adapter
+- [x] T2: Go module - reader + handler + postgres adapter
       commit: "feat(shopping): expose run request progress"
-- [ ] T2b: Go module - run item status summary endpoint
+- [x] T2b: Go module - run item status summary endpoint
       commit: "feat(shopping): expose run item status summary"
-- [ ] T3: worker - update progress during runs
+- [x] T3: worker - update progress during runs
       commit: "feat(worker): persist shopping run progress"
-- [ ] T3b: worker - add per-item logs for debugging
+- [x] T3b: worker - add per-item logs for debugging
       commit: "feat(worker): add per-item shopping run logs"
-- [ ] T4: SDK - $metalshopping-sdk-generation
+- [ ] T3c: worker - keep alive polling mode for queue
+      commit: "feat(worker): keep alive when queue is empty"
+- [x] T4: SDK - $metalshopping-sdk-generation
       commit: "chore(sdk): regenerate after shopping progress contract"
-- [ ] T5: frontend - $metalshopping-frontend
+- [x] T5: frontend - $metalshopping-frontend
       commit: "feat(web): poll and display shopping run progress"
-- [ ] T5b: frontend - KPIs from item summary + cap history list
+- [x] T5b: frontend - KPIs from item summary + cap history list
       commit: "feat(web): show run item KPIs and cap recent history"
 
 ## Acceptance tests
 - [ ] `go build ./...` passes
-- [ ] `npm.cmd run web:typecheck` passes
+- [x] `npm.cmd run web:typecheck` passes
 - [ ] `GET /api/v1/shopping/run-requests/{id}` returns progress fields
 - [ ] `GET /api/v1/shopping/runs/{run_id}/item-status-summary` returns grouped counts
 - [ ] In browser: progress bar updates over time with worker running
 - [ ] In browser: KPI cards reflect selected run item counts (OK/NOT_FOUND/AMBIGUOUS/ERROR)
 - [ ] In browser: "Historico recente" shows max N with "Ver tudo"
+- [ ] In dev: worker keeps running with empty queue when enabled
