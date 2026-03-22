@@ -1350,6 +1350,27 @@
   max-height: 280px;
   overflow-y: auto;
   padding-right: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--wine-700) transparent;
+}
+
+.logList::-webkit-scrollbar {
+  width: 8px;
+}
+
+.logList::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.logList::-webkit-scrollbar-thumb {
+  background: var(--wine-700);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.logList::-webkit-scrollbar-thumb:hover {
+  background: var(--wine-500);
 }
 
 .logList li {
