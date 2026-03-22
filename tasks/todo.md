@@ -1,3 +1,35 @@
+# Feature: Workflow skill compaction + manual /plan gate
+Type: process  |  Events: no  |  ADR: no
+
+## Phase 1 â€” Architectural thinking
+Module type:
+- `docs/process`: compact skill instructions and align `$ms` with the real harness behavior.
+
+Risks:
+- Skill text can drift from tool reality and create the wrong expectation about automatic plan mode.
+- Overly verbose skills increase context load and make orchestration slower/noisier than needed.
+
+Level scope:
+- Level 1 (now): `$ms` asks the user to run `/plan` manually for complex work, uses `update_plan`, and keeps the workflow concise.
+- Level 2 (later): archive completed feature blocks out of `tasks/todo.md` if the file grows again.
+
+## Tasks
+- [x] T1: process â€” compact `$ms` and add manual `/plan` gate
+      - remove the false "enters plan mode automatically" claim
+      - add complexity gate + operational gate
+      commit: "docs(skills): compact ms workflow and add manual plan gate"
+- [x] T2: process â€” compact `metalshopping-implement`
+      - keep invariants in the skill and move concrete code to references
+      commit: "docs(skills): compact implement skill"
+- [x] T3: process â€” record lesson and keep workflow source-of-truth updated
+      commit: "docs(process): align skill workflow with harness"
+
+## Acceptance tests
+- [x] Review: `.agents/skills/ms/SKILL.md` no longer claims automatic plan mode
+- [x] Review: complex tasks now instruct the user to run `/plan` manually
+- [x] Review: `.agents/skills/metalshopping-implement/SKILL.md` stays compact and points to repo references
+
+---
 # Feature: Shopping run observability + UX (history, filters, logs)
 Type: read-only  |  Events: no  |  ADR: no
 
@@ -87,7 +119,7 @@ Level scope:
 # Feature: Shopping run log search URL (computed, non-persistent)
 Type: read-only  |  Events: no  |  ADR: no
 
-## Phase 1 — Architectural thinking
+## Phase 1 ï¿½ Architectural thinking
 Module type:
 - `apps/server_core/internal/modules/shopping` (read-only): calcular URL de busca em leitura no endpoint `/runs/{run_id}/items`, sem persistir em DB.
 
@@ -100,7 +132,7 @@ Level scope:
 - Level 2 (defer): criar campo dedicado `searchUrl` no contrato para separar semantica.
 
 ## Tasks
-- [x] T2: Go module — compute search URL at read-time
+- [x] T2: Go module ï¿½ compute search URL at read-time
       - Reader `ListRunItems`: join manifest ativo e renderizar URL a partir de `lookup_term`
       - Sem gravacao em tabela; somente resposta da API
       commit: "fix(shopping): compute run item search url on read"
@@ -114,7 +146,7 @@ Level scope:
 # Feature: Shopping run log search URL (driver notes)
 Type: scraping  |  Events: no  |  ADR: no
 
-## Phase 1 — Architectural thinking
+## Phase 1 ï¿½ Architectural thinking
 Module type:
 - `apps/integration_worker/src/shopping_price_runtime/http/strategies.py`: registrar `search_url=` nos `notes` do RuntimeObservation.
 
@@ -126,7 +158,7 @@ Level scope:
 - Level 1 (now): VTEX/HTML/Leroy reportam `search_url=` nos notes para aparecer no log.
 
 ## Tasks
-- [ ] T3: worker — append search_url to observation notes
+- [ ] T3: worker ï¿½ append search_url to observation notes
       commit: "fix(worker): add search_url to http runtime notes"
 
 ## Acceptance tests

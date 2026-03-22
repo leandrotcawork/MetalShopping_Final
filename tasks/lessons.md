@@ -223,3 +223,10 @@ Correct: Add `debugSearchUrlTemplate` in manifest and expose it as `search_url`,
 Rule:    For VTEX suppliers, keep a dedicated storefront search URL template for logs.
 Layer:   Worker + Config
 
+
+## Lesson 25 — Skills must match harness behavior and stay compact
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Letting `$ms` claim automatic plan mode and duplicating long implementation examples inside skills.
+Correct: Use `update_plan` for complex work, ask the user to run `/plan` manually when needed, and keep skills short by pointing to repo references for concrete patterns.
+Rule:    Skill workflows must reflect actual tool capabilities and minimize duplicated context.
+Layer:   Process
