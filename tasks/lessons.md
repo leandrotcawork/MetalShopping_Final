@@ -216,3 +216,10 @@ Correct: Prefix `notes` with `search_url=` for HTTP strategies when a lookup URL
 Rule:    Driver notes should include the actual lookup URL for debugging.
 Layer:   Python worker
 
+## Lesson 24 — VTEX needs separate storefront search template
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Using the VTEX GraphQL persisted-query URL as `search_url`, which is not the human storefront search.
+Correct: Add `debugSearchUrlTemplate` in manifest and expose it as `search_url`, while keeping GraphQL as `api_url` for deep debug.
+Rule:    For VTEX suppliers, keep a dedicated storefront search URL template for logs.
+Layer:   Worker + Config
+

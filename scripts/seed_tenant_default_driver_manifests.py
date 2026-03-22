@@ -44,6 +44,7 @@ def _seeds() -> list[ManifestSeed]:
                 "baseUrl": "https://www.lojadexco.com.br/deca/_v/segment/graphql/v1",
                 "operationName": "productSearchV3",
                 "sha256Hash": sha_vtex_product_search_v3,
+                "debugSearchUrlTemplate": "https://www.lojadexco.com.br/deca/{term}?_q={term}&map=ft",
                 # Optional knobs (kept aligned with legacy intent).
                 "skusFilter": "FIRST_AVAILABLE",
                 "toN": 11,
@@ -64,6 +65,7 @@ def _seeds() -> list[ManifestSeed]:
                 "baseUrl": "https://www.telhanorte.com.br/_v/segment/graphql/v1",
                 "operationName": "productSearchV3",
                 "sha256Hash": sha_vtex_product_search_v3,
+                "debugSearchUrlTemplate": "https://www.telhanorte.com.br/{term}?_q={term}",
                 "skusFilter": "ALL_AVAILABLE",
                 "toN": 39,
                 "includeVariant": True,

@@ -190,14 +190,24 @@ def _render_runtime_url(
     return None 
 
 
-def _with_search_url(note: str | None, url: str | None) -> str | None:
+def _with_search_url(note: str | None, url: str | None, api_url: str | None = None) -> str | None:
     if url is None or str(url).strip() == "":
         return note
     prefix = f"search_url={url}"
+    if api_url is not None and str(api_url).strip() != "" and api_url != url:
+        prefix = f"{prefix}; api_url={api_url}"
     if note is None or str(note).strip() == "":
         return prefix[:280]
     combined = f"{prefix}; {note}"
     return combined[:280]
+
+
+def _render_debug_search_url(config: SupplierRuntimeConfig, lookup_term: str) -> str | None:
+    template = safe_str(config.config_json.get("debugSearchUrlTemplate"), "").strip()
+    if template == "":
+        return None
+    encoded = urllib.parse.quote(str(lookup_term or "").strip(), safe="")
+    return template.replace("EAN", encoded).replace("{term}", encoded)
 
 
 def _build_vtex_url(
@@ -724,46 +734,47 @@ def _execute_http_vtex_strategy(
     max_retries: int,
     seller_default: str,
 ) -> RuntimeObservation:
-    url = _build_vtex_url(config, lookup_term, signal)
-    if url is None: 
+    api_url = _build_vtex_url(config, lookup_term, signal) 
+    if api_url is None: 
         return RuntimeObservation("ERROR", safe_float(base_price, 0), seller_default, "HTTP_VTEX", None, "vtex_url_missing", _strategy_for_config(config), lookup_term) 
+    url = _render_debug_search_url(config, lookup_term) or api_url
 
-    headers = build_runtime_headers(config)
-    headers.setdefault("Accept", "application/json")
-    headers.setdefault("Content-Type", "application/json")
+    headers = build_runtime_headers(config) 
+    headers.setdefault("Accept", "application/json") 
+    headers.setdefault("Content-Type", "application/json") 
     last_error = "vtex_runtime_failed"
     strategy = _strategy_for_config(config)
     retry_statuses = _retry_http_statuses(config)
 
-    for attempt in range(1, max_retries + 1):
-        try:
-            req = urllib.request.Request(url, headers=headers)
-            with urllib.request.urlopen(req, timeout=timeout_seconds) as response:
-                raw_body = response.read().decode("utf-8", errors="replace")
-                loaded = json.loads(raw_body)
-                body_json = loaded if isinstance(loaded, dict) else {"data": loaded}
-                extracted_price, note = _vtex_extract_price(body_json, lookup_term, config=config)
-                if extracted_price is None:
-                    status = "NOT_FOUND" if note in {"ean_not_found_in_items", "ean_exact_but_no_price", "ean_exact_but_unavailable", "no_price_found"} else "ERROR"
-                    return RuntimeObservation(status, safe_float(base_price, base_price), seller_default, "HTTP_VTEX", int(response.status), _with_search_url(note, url), strategy, lookup_term) 
+    for attempt in range(1, max_retries + 1): 
+        try: 
+            req = urllib.request.Request(api_url, headers=headers) 
+            with urllib.request.urlopen(req, timeout=timeout_seconds) as response: 
+                raw_body = response.read().decode("utf-8", errors="replace") 
+                loaded = json.loads(raw_body) 
+                body_json = loaded if isinstance(loaded, dict) else {"data": loaded} 
+                extracted_price, note = _vtex_extract_price(body_json, lookup_term, config=config) 
+                if extracted_price is None: 
+                    status = "NOT_FOUND" if note in {"ean_not_found_in_items", "ean_exact_but_no_price", "ean_exact_but_unavailable", "no_price_found"} else "ERROR" 
+                    return RuntimeObservation(status, safe_float(base_price, base_price), seller_default, "HTTP_VTEX", int(response.status), _with_search_url(note, url, api_url), strategy, lookup_term) 
                 return RuntimeObservation( 
                     "OK", 
                     safe_float(extracted_price, base_price), 
                     safe_str(config.config_json.get("sellerName"), seller_default), 
                     "HTTP_VTEX", 
                     int(response.status), 
-                    _with_search_url(f"http_vtex_runtime attempt={attempt}", url), 
+                    _with_search_url(f"http_vtex_runtime attempt={attempt}", url, api_url), 
                     strategy, 
                     lookup_term, 
                 ) 
         except urllib.error.HTTPError as exc: 
             if exc.code not in retry_statuses: 
-                return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_VTEX", int(exc.code), _with_search_url(f"http_status_{exc.code}_not_retryable", url), strategy, lookup_term) 
+                return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_VTEX", int(exc.code), _with_search_url(f"http_status_{exc.code}_not_retryable", url, api_url), strategy, lookup_term) 
             last_error = f"http_status_{exc.code}" 
         except Exception as exc: 
             last_error = f"http_error:{exc}" 
         time.sleep(0.1) 
-    return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_VTEX", None, _with_search_url(last_error[:280], url), strategy, lookup_term) 
+    return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_VTEX", None, _with_search_url(last_error[:280], url, api_url), strategy, lookup_term) 
 
 
 def _execute_http_html_search_strategy( 

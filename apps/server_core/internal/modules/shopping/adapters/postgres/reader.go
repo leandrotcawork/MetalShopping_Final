@@ -1074,6 +1074,7 @@ func deriveSearchURLFromRuntimeConfig(rawConfigJSON, supplierCode, productID, lo
 		return ""
 	}
 	candidates := []string{
+		extractString(config["debugSearchUrlTemplate"]),
 		extractString(config["searchUrlTemplate"]),
 		extractString(config["searchUrl"]),
 		extractString(config["endpointTemplate"]),
