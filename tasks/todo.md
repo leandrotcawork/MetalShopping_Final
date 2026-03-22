@@ -120,7 +120,7 @@ Level 1 scope:
 
 ---
 
-## Feature: Obra Fácil Playwright performance hardening
+## Feature: Obra Facil Playwright performance hardening
 Type: scraping | Events: no | ADR: no
 
 ## Phase 1 - Architectural thinking
@@ -170,8 +170,8 @@ Level 1 scope:
       commit: "docs(perf): capture playwright run performance evidence"
 
 ## Acceptance tests
-- [ ] `go build ./...` passes
-- [ ] Worker smoke with `OBRA_FACIL` completes with real items (non-zero rows written)
-- [ ] For equal product sample, median `OBRA_FACIL` item latency improves materially vs current baseline
+- [x] `python -m py_compile apps/integration_worker/src/shopping_price_runtime/playwright/strategies.py apps/integration_worker/src/shopping_price_runtime/playwright/batch.py` passes
+- [x] Worker smoke with `OBRA_FACIL` completes with real items (non-zero rows written)
+- [x] For equal product sample, median `OBRA_FACIL` item latency improves materially vs current baseline (`docs/SHOPPING_OBRAFACIL_PERF_EVIDENCE.md`)
 - [ ] Progress UI keeps updating during run (no regression)
 - [ ] Existing HTTP suppliers (DEXCO/CONDEC/ABC/LEROY/TELHA_NORTE) show no regression in smoke
