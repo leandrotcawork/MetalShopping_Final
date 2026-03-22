@@ -169,11 +169,11 @@ def _vtex_extract_price(payload: dict[str, Any], ean: str, *, config: SupplierRu
     return None, "no_price_found"
 
 
-def _render_runtime_url(
-    config: SupplierRuntimeConfig,
-    product_id: str,
-    signal: SupplierSignal | None,
-) -> str | None:
+def _render_runtime_url( 
+    config: SupplierRuntimeConfig, 
+    product_id: str, 
+    signal: SupplierSignal | None, 
+) -> str | None: 
     if signal is not None and signal.product_url:
         return signal.product_url
     endpoint_template = safe_str(config.config_json.get("endpointTemplate"), "")
@@ -187,7 +187,17 @@ def _render_runtime_url(
         encoded_product = urllib.parse.quote(product_id, safe="")
         encoded_supplier = urllib.parse.quote(config.supplier_code, safe="")
         return f"{base_url}{separator}product_id={encoded_product}&supplier_code={encoded_supplier}"
-    return None
+    return None 
+
+
+def _with_search_url(note: str | None, url: str | None) -> str | None:
+    if url is None or str(url).strip() == "":
+        return note
+    prefix = f"search_url={url}"
+    if note is None or str(note).strip() == "":
+        return prefix[:280]
+    combined = f"{prefix}; {note}"
+    return combined[:280]
 
 
 def _build_vtex_url(
@@ -383,7 +393,7 @@ def _pick_dom_title(entries: list[tuple[str, str]], config: SupplierRuntimeConfi
     return fallback
 
 
-def _execute_http_html_dom_first_card_strategy(
+def _execute_http_html_dom_first_card_strategy( 
     *,
     config: SupplierRuntimeConfig,
     lookup_term: str,
@@ -395,16 +405,16 @@ def _execute_http_html_dom_first_card_strategy(
 ) -> RuntimeObservation:
     strategy = _strategy_for_config(config)
     url = _build_html_search_url(config, lookup_term, signal)
-    if url is None:
-        return RuntimeObservation("ERROR", safe_float(base_price, 0), seller_default, "HTTP_HTML", None, "html_dom_search_url_missing", strategy, lookup_term)
+    if url is None: 
+        return RuntimeObservation("ERROR", safe_float(base_price, 0), seller_default, "HTTP_HTML", None, "html_dom_search_url_missing", strategy, lookup_term) 
 
     retry_statuses = _retry_http_statuses(config)
     headers = build_runtime_headers(config)
     headers.setdefault("Accept", "text/html")
     root_hint = safe_str(config.config_json.get("cardRootHint"), "")
     card_item_hint = safe_str(config.config_json.get("cardItemHint"), "")
-    if root_hint == "":
-        return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_HTML", None, "html_dom_card_root_hint_missing", strategy, lookup_term)
+    if root_hint == "": 
+        return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_HTML", None, _with_search_url("html_dom_card_root_hint_missing", url), strategy, lookup_term) 
 
     last_error = "html_dom_runtime_failed"
     for attempt in range(1, max_retries + 1):
@@ -415,24 +425,24 @@ def _execute_http_html_dom_first_card_strategy(
                 parser = _DOMScopeParser(root_hint=root_hint, card_item_hint=card_item_hint)
                 parser.feed(raw_html)
                 entries = parser.entries
-                if len(entries) == 0:
-                    return RuntimeObservation("NOT_FOUND", safe_float(base_price, base_price), seller_default, "HTTP_HTML", int(response.status), "html_dom_first_card_not_found", strategy, lookup_term)
+                if len(entries) == 0: 
+                    return RuntimeObservation("NOT_FOUND", safe_float(base_price, base_price), seller_default, "HTTP_HTML", int(response.status), _with_search_url("html_dom_first_card_not_found", url), strategy, lookup_term) 
 
                 observed_price, price_note = _pick_dom_price(entries=entries, config=config, base_price=base_price)
-                if price_note == "price_not_found":
-                    return RuntimeObservation("NOT_FOUND", safe_float(base_price, base_price), seller_default, "HTTP_HTML", int(response.status), "html_dom_price_not_found", strategy, lookup_term)
+                if price_note == "price_not_found": 
+                    return RuntimeObservation("NOT_FOUND", safe_float(base_price, base_price), seller_default, "HTTP_HTML", int(response.status), _with_search_url("html_dom_price_not_found", url), strategy, lookup_term) 
 
                 seller_name = _pick_dom_title(entries, config, seller_default)
-                note = f"html_dom_first_card attempt={attempt} {price_note}"
-                return RuntimeObservation("OK", observed_price, seller_name, "HTTP_HTML", int(response.status), note[:280], strategy, lookup_term)
-        except urllib.error.HTTPError as exc:
-            if exc.code not in retry_statuses:
-                return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_HTML", int(exc.code), f"http_status_{exc.code}_not_retryable", strategy, lookup_term)
-            last_error = f"http_status_{exc.code}"
-        except Exception as exc:
-            last_error = f"http_error:{exc}"
-        time.sleep(0.1)
-    return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_HTML", None, last_error[:280], strategy, lookup_term)
+                note = f"html_dom_first_card attempt={attempt} {price_note}" 
+                return RuntimeObservation("OK", observed_price, seller_name, "HTTP_HTML", int(response.status), _with_search_url(note, url), strategy, lookup_term) 
+        except urllib.error.HTTPError as exc: 
+            if exc.code not in retry_statuses: 
+                return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_HTML", int(exc.code), _with_search_url(f"http_status_{exc.code}_not_retryable", url), strategy, lookup_term) 
+            last_error = f"http_status_{exc.code}" 
+        except Exception as exc: 
+            last_error = f"http_error:{exc}" 
+        time.sleep(0.1) 
+    return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_HTML", None, _with_search_url(last_error[:280], url), strategy, lookup_term) 
 
 
 def _leroy_extract_product_id_from_url(url: str) -> str:
@@ -614,7 +624,7 @@ def _http_get_with_retries(
     return None, None, None, last_error
 
 
-def _execute_http_leroy_search_sellers_strategy(
+def _execute_http_leroy_search_sellers_strategy( 
     *,
     config: SupplierRuntimeConfig,
     lookup_term: str,
@@ -626,8 +636,8 @@ def _execute_http_leroy_search_sellers_strategy(
 ) -> RuntimeObservation:
     strategy = _strategy_for_config(config)
     search_url = _build_leroy_search_url(config, lookup_term, signal)
-    if search_url is None:
-        return RuntimeObservation("ERROR", safe_float(base_price, 0), seller_default, "HTTP_LEROY", None, "leroy_search_url_missing", strategy, lookup_term)
+    if search_url is None: 
+        return RuntimeObservation("ERROR", safe_float(base_price, 0), seller_default, "HTTP_LEROY", None, "leroy_search_url_missing", strategy, lookup_term) 
 
     retry_statuses = _retry_http_statuses(config)
     base_headers = build_runtime_headers(config)
@@ -648,9 +658,9 @@ def _execute_http_leroy_search_sellers_strategy(
         )
         search_status = status
         if search_body is None:
-            if status is not None:
-                return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_LEROY", status, f"leroy_search_failed:{fetch_note}", strategy, lookup_term)
-            return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_LEROY", None, f"leroy_search_failed:{fetch_note}", strategy, lookup_term)
+            if status is not None: 
+                return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_LEROY", status, _with_search_url(f"leroy_search_failed:{fetch_note}", search_url), strategy, lookup_term) 
+            return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_LEROY", None, _with_search_url(f"leroy_search_failed:{fetch_note}", search_url), strategy, lookup_term) 
 
         final_url = safe_str(resolved_url, search_url)
         product_id = _leroy_extract_product_id_from_url(final_url)
@@ -661,12 +671,12 @@ def _execute_http_leroy_search_sellers_strategy(
             if product_id != "":
                 search_note = "search_html_ldjson_product_id"
 
-    if product_id == "":
-        return RuntimeObservation("NOT_FOUND", safe_float(base_price, base_price), seller_default, "HTTP_LEROY", search_status, "leroy_product_id_not_found", strategy, lookup_term)
+    if product_id == "": 
+        return RuntimeObservation("NOT_FOUND", safe_float(base_price, base_price), seller_default, "HTTP_LEROY", search_status, _with_search_url("leroy_product_id_not_found", search_url), strategy, lookup_term) 
 
     sellers_url = _build_leroy_sellers_url(config, product_id)
-    if sellers_url is None:
-        return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_LEROY", search_status, "leroy_sellers_url_missing", strategy, lookup_term)
+    if sellers_url is None: 
+        return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_LEROY", search_status, _with_search_url("leroy_sellers_url_missing", search_url), strategy, lookup_term) 
 
     seller_headers = dict(base_headers)
     seller_headers["x-region"] = _resolve_leroy_region(config)
@@ -680,18 +690,18 @@ def _execute_http_leroy_search_sellers_strategy(
         retry_statuses=retry_statuses,
     )
     if sellers_body is None:
-        if sellers_status is not None:
-            return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_LEROY", sellers_status, f"leroy_sellers_failed:{sellers_note}", strategy, lookup_term)
-        return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_LEROY", None, f"leroy_sellers_failed:{sellers_note}", strategy, lookup_term)
+        if sellers_status is not None: 
+            return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_LEROY", sellers_status, _with_search_url(f"leroy_sellers_failed:{sellers_note}", search_url), strategy, lookup_term) 
+        return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_LEROY", None, _with_search_url(f"leroy_sellers_failed:{sellers_note}", search_url), strategy, lookup_term) 
 
     try:
         payload = json.loads(sellers_body)
     except Exception:
-        return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_LEROY", sellers_status, "leroy_sellers_invalid_json", strategy, lookup_term)
+        return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_LEROY", sellers_status, _with_search_url("leroy_sellers_invalid_json", search_url), strategy, lookup_term) 
 
     sellers = _leroy_extract_sellers(payload)
     if len(sellers) == 0:
-        return RuntimeObservation("NOT_FOUND", safe_float(base_price, base_price), seller_default, "HTTP_LEROY", sellers_status, "leroy_sellers_empty", strategy, lookup_term)
+        return RuntimeObservation("NOT_FOUND", safe_float(base_price, base_price), seller_default, "HTTP_LEROY", sellers_status, _with_search_url("leroy_sellers_empty", search_url), strategy, lookup_term) 
 
     pick_strategy = safe_str(config.config_json.get("sellerPickStrategy"), "selected")
     observed_price, seller_name, pick_note = _leroy_pick_seller(
@@ -700,11 +710,11 @@ def _execute_http_leroy_search_sellers_strategy(
         fallback_seller=seller_default,
         pick_strategy=pick_strategy,
     )
-    note = f"leroy_ok search={search_note} sellers={pick_note} product_id={product_id} final_url={final_url}"
-    return RuntimeObservation("OK", observed_price, seller_name, "HTTP_LEROY", sellers_status, note[:280], strategy, lookup_term)
+    note = f"leroy_ok search={search_note} sellers={pick_note} product_id={product_id} final_url={final_url}" 
+    return RuntimeObservation("OK", observed_price, seller_name, "HTTP_LEROY", sellers_status, _with_search_url(note, search_url), strategy, lookup_term) 
 
 
-def _execute_http_vtex_strategy(
+def _execute_http_vtex_strategy( 
     *,
     config: SupplierRuntimeConfig,
     lookup_term: str,
@@ -715,8 +725,8 @@ def _execute_http_vtex_strategy(
     seller_default: str,
 ) -> RuntimeObservation:
     url = _build_vtex_url(config, lookup_term, signal)
-    if url is None:
-        return RuntimeObservation("ERROR", safe_float(base_price, 0), seller_default, "HTTP_VTEX", None, "vtex_url_missing", _strategy_for_config(config), lookup_term)
+    if url is None: 
+        return RuntimeObservation("ERROR", safe_float(base_price, 0), seller_default, "HTTP_VTEX", None, "vtex_url_missing", _strategy_for_config(config), lookup_term) 
 
     headers = build_runtime_headers(config)
     headers.setdefault("Accept", "application/json")
@@ -735,28 +745,28 @@ def _execute_http_vtex_strategy(
                 extracted_price, note = _vtex_extract_price(body_json, lookup_term, config=config)
                 if extracted_price is None:
                     status = "NOT_FOUND" if note in {"ean_not_found_in_items", "ean_exact_but_no_price", "ean_exact_but_unavailable", "no_price_found"} else "ERROR"
-                    return RuntimeObservation(status, safe_float(base_price, base_price), seller_default, "HTTP_VTEX", int(response.status), note, strategy, lookup_term)
-                return RuntimeObservation(
-                    "OK",
-                    safe_float(extracted_price, base_price),
-                    safe_str(config.config_json.get("sellerName"), seller_default),
-                    "HTTP_VTEX",
-                    int(response.status),
-                    f"http_vtex_runtime attempt={attempt}",
-                    strategy,
-                    lookup_term,
-                )
-        except urllib.error.HTTPError as exc:
-            if exc.code not in retry_statuses:
-                return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_VTEX", int(exc.code), f"http_status_{exc.code}_not_retryable", strategy, lookup_term)
-            last_error = f"http_status_{exc.code}"
-        except Exception as exc:
-            last_error = f"http_error:{exc}"
-        time.sleep(0.1)
-    return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_VTEX", None, last_error[:280], strategy, lookup_term)
+                    return RuntimeObservation(status, safe_float(base_price, base_price), seller_default, "HTTP_VTEX", int(response.status), _with_search_url(note, url), strategy, lookup_term) 
+                return RuntimeObservation( 
+                    "OK", 
+                    safe_float(extracted_price, base_price), 
+                    safe_str(config.config_json.get("sellerName"), seller_default), 
+                    "HTTP_VTEX", 
+                    int(response.status), 
+                    _with_search_url(f"http_vtex_runtime attempt={attempt}", url), 
+                    strategy, 
+                    lookup_term, 
+                ) 
+        except urllib.error.HTTPError as exc: 
+            if exc.code not in retry_statuses: 
+                return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_VTEX", int(exc.code), _with_search_url(f"http_status_{exc.code}_not_retryable", url), strategy, lookup_term) 
+            last_error = f"http_status_{exc.code}" 
+        except Exception as exc: 
+            last_error = f"http_error:{exc}" 
+        time.sleep(0.1) 
+    return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_VTEX", None, _with_search_url(last_error[:280], url), strategy, lookup_term) 
 
 
-def _execute_http_html_search_strategy(
+def _execute_http_html_search_strategy( 
     *,
     config: SupplierRuntimeConfig,
     lookup_term: str,
@@ -767,8 +777,8 @@ def _execute_http_html_search_strategy(
     seller_default: str,
 ) -> RuntimeObservation:
     url = _build_html_search_url(config, lookup_term, signal)
-    if url is None:
-        return RuntimeObservation("ERROR", safe_float(base_price, 0), seller_default, "HTTP_HTML", None, "html_search_url_missing", _strategy_for_config(config), lookup_term)
+    if url is None: 
+        return RuntimeObservation("ERROR", safe_float(base_price, 0), seller_default, "HTTP_HTML", None, "html_search_url_missing", _strategy_for_config(config), lookup_term) 
 
     headers = build_runtime_headers(config)
     headers.setdefault("Accept", "text/html,application/json")
@@ -797,11 +807,11 @@ def _execute_http_html_search_strategy(
                         seller_default=seller_default,
                         channel_default="HTTP_HTML",
                     )
-                    return RuntimeObservation("OK", observed_price, seller_name, channel, int(response.status), f"http_html_json attempt={attempt}", strategy, lookup_term)
+                    return RuntimeObservation("OK", observed_price, seller_name, channel, int(response.status), _with_search_url(f"http_html_json attempt={attempt}", url), strategy, lookup_term) 
 
                 price_match = re.search(price_regex, raw_body, flags=re.IGNORECASE | re.MULTILINE)
                 if price_match is None:
-                    return RuntimeObservation("NOT_FOUND", safe_float(base_price, base_price), seller_default, "HTTP_HTML", int(response.status), "price_not_found_in_html", strategy, lookup_term)
+                    return RuntimeObservation("NOT_FOUND", safe_float(base_price, base_price), seller_default, "HTTP_HTML", int(response.status), _with_search_url("price_not_found_in_html", url), strategy, lookup_term) 
                 observed_price = decode_price_text(price_match.group(1), base_price)
 
                 seller_name = seller_default
@@ -810,15 +820,15 @@ def _execute_http_html_search_strategy(
                     if seller_match is not None and seller_match.lastindex:
                         seller_name = safe_str(seller_match.group(1), seller_default)
 
-                return RuntimeObservation("OK", observed_price, seller_name, "HTTP_HTML", int(response.status), f"http_html_runtime attempt={attempt}", strategy, lookup_term)
-        except urllib.error.HTTPError as exc:
-            if exc.code not in retry_statuses:
-                return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_HTML", int(exc.code), f"http_status_{exc.code}_not_retryable", strategy, lookup_term)
-            last_error = f"http_status_{exc.code}"
-        except Exception as exc:
-            last_error = f"http_error:{exc}"
-        time.sleep(0.1)
-    return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_HTML", None, last_error[:280], strategy, lookup_term)
+                return RuntimeObservation("OK", observed_price, seller_name, "HTTP_HTML", int(response.status), _with_search_url(f"http_html_runtime attempt={attempt}", url), strategy, lookup_term) 
+        except urllib.error.HTTPError as exc: 
+            if exc.code not in retry_statuses: 
+                return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_HTML", int(exc.code), _with_search_url(f"http_status_{exc.code}_not_retryable", url), strategy, lookup_term) 
+            last_error = f"http_status_{exc.code}" 
+        except Exception as exc: 
+            last_error = f"http_error:{exc}" 
+        time.sleep(0.1) 
+    return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_HTML", None, _with_search_url(last_error[:280], url), strategy, lookup_term) 
 
 
 def execute_http_runtime(

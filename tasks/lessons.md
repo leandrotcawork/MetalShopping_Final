@@ -209,3 +209,10 @@ Correct: Derive using the same strategy-facing config keys as the worker (`searc
 Rule:    Debug projections must follow runtime contract keys, not ad-hoc subsets.
 Layer:   Go adapter
 
+## Lesson 23 — HTTP runtime should record search_url in notes
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Returning only status notes for VTEX/HTML so the UI cannot show the executed search URL.
+Correct: Prefix `notes` with `search_url=` for HTTP strategies when a lookup URL is built.
+Rule:    Driver notes should include the actual lookup URL for debugging.
+Layer:   Python worker
+

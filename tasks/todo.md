@@ -108,3 +108,26 @@ Level scope:
 ## Acceptance tests
 - [x] go test ./apps/server_core/... passes
 - [ ] Browser: `/shopping` log detalhado mostra URL de busca para fornecedores com template configurado
+
+---
+
+# Feature: Shopping run log search URL (driver notes)
+Type: scraping  |  Events: no  |  ADR: no
+
+## Phase 1 — Architectural thinking
+Module type:
+- `apps/integration_worker/src/shopping_price_runtime/http/strategies.py`: registrar `search_url=` nos `notes` do RuntimeObservation.
+
+Risks:
+- URLs longas podem truncar `notes` (limite 280 chars). Usar prefixo curto.
+- Para fornecedores sem URL de busca, manter comportamento atual.
+
+Level scope:
+- Level 1 (now): VTEX/HTML/Leroy reportam `search_url=` nos notes para aparecer no log.
+
+## Tasks
+- [ ] T3: worker — append search_url to observation notes
+      commit: "fix(worker): add search_url to http runtime notes"
+
+## Acceptance tests
+- [ ] Run real shopping with Dexco/Telha Norte shows `search_url=` in log
