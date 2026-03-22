@@ -188,3 +188,10 @@ Correct: Derive the displayed URL from `productUrl` OR parse `final_url/request_
 Rule:    Debug UX should surface attempted URLs without polluting durable URL fields.
 Layer:   Frontend
 
+## Lesson 20 — History panel must be bounded by detail panel height
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Letting the recent history list define its own height, causing layout stretch and no internal scroll with many runs.
+Correct: Measure the run detail card with `ResizeObserver` and set history scroll `maxHeight` from that value (mobile fallback fixed).
+Rule:    Side-by-side panels must share bounded height to keep content readable and scrollable.
+Layer:   Frontend
+

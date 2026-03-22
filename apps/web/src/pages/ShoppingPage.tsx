@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import type { ServerCoreSdk, ShoppingRunStatus } from "@metalshopping/sdk-runtime";
 import type {
@@ -90,15 +90,23 @@ function sanitizeUrlCandidate(candidate: string | null | undefined): string | nu
   if (!candidate) {
     return null;
   }
-  const trimmed = candidate.trim().replace(/^['"]+|['"]+$/g, "");
+  const trimmed = candidate.trim().replace(/^['"`]+|['"`]+$/g, "");
   if (!trimmed) {
     return null;
   }
   const stripped = trimmed.replace(/[),.;\]]+$/g, "");
-  if (!/^https?:\/\//i.test(stripped)) {
+  if (/^https?:\/\//i.test(stripped)) {
+    return stripped;
+  }
+  try {
+    const decoded = decodeURIComponent(stripped);
+    if (/^https?:\/\//i.test(decoded)) {
+      return decoded;
+    }
+  } catch {
     return null;
   }
-  return stripped;
+  return null;
 }
 
 function deriveRunItemUrl(item: ShoppingRunItemRow): string | null {
@@ -112,7 +120,7 @@ function deriveRunItemUrl(item: ShoppingRunItemRow): string | null {
     return null;
   }
 
-  const keyMatch = notes.match(/\b(?:final_url|finalUrl|request_url|requestUrl|search_url|searchUrl)\s*=\s*([^\s]+)/i);
+  const keyMatch = notes.match(/\b(?:final_url|finalUrl|request_url|requestUrl|search_url|searchUrl)\s*[:=]\s*([^\s]+)/i);
   const fromKey = sanitizeUrlCandidate(keyMatch?.[1] ?? null);
   if (fromKey) {
     return fromKey;
@@ -207,6 +215,8 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
   const [catalogStatusOptions, setCatalogStatusOptions] = useState<SelectMenuOption[]>([
     { value: allOptionValue, label: "Todos os status" },
   ]);
+  const detailWrapRef = useRef<HTMLDivElement | null>(null);
+  const [historyScrollMaxHeight, setHistoryScrollMaxHeight] = useState<number>(260);
 
   const [error, setError] = useState<string | null>(null);
 
@@ -712,12 +722,38 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     [catalogLeaf0Options],
   );
 
-  const manualRows = useMemo(() => manualCandidates, [manualCandidates]);
-  const manualShown = Math.min(manualOffset + manualReturned, manualTotal);
+  const manualRows = useMemo(() => manualCandidates, [manualCandidates]); 
+  const manualShown = Math.min(manualOffset + manualReturned, manualTotal); 
 
-  async function handleRunSelect(runId: string) {
-    setError(null);
-    try {
+  useLayoutEffect(() => {
+    const detailNode = detailWrapRef.current;
+    if (!detailNode) {
+      return;
+    }
+
+    const recompute = () => {
+      if (window.matchMedia("(max-width: 1080px)").matches) {
+        setHistoryScrollMaxHeight(260);
+        return;
+      }
+      const detailHeight = detailNode.getBoundingClientRect().height;
+      const safeHeight = Number.isFinite(detailHeight) ? Math.max(180, Math.floor(detailHeight - 64)) : 260;
+      setHistoryScrollMaxHeight(safeHeight);
+    };
+
+    recompute();
+    const observer = new ResizeObserver(recompute);
+    observer.observe(detailNode);
+    window.addEventListener("resize", recompute);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", recompute);
+    };
+  }, [selectedRun?.runId, supplierSummaryLoading, runItemsLogLoading, runItemsLog?.rows.length, showLog]);
+
+  async function handleRunSelect(runId: string) { 
+    setError(null); 
+    try { 
       const run = await shoppingApi.getRun(runId);
       setSelectedRun(run);
       setStep(3);
@@ -1547,7 +1583,7 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                 {runs.length === 0 ? (
                   <p className={styles.empty}>Nenhum run encontrado para o filtro atual.</p>
                 ) : (
-                  <div className={styles.runListScroll}> 
+                  <div className={styles.runListScroll} style={{ maxHeight: `${historyScrollMaxHeight}px` }}>
                     <ul className={styles.runList}> 
                       {runs.map((run) => ( 
                         <li key={run.runId}> 
@@ -1564,7 +1600,7 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                   </div> 
                 )} 
               </div> 
-            <div className={styles.detailWrap}> 
+            <div className={styles.detailWrap} ref={detailWrapRef}> 
               <h3>Detalhe do run</h3> 
               {!selectedRun ? (
                 <p className={styles.empty}>Selecione um run para visualizar os detalhes.</p>
