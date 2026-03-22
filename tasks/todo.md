@@ -81,3 +81,30 @@ Level scope:
 - [x] npm.cmd run web:typecheck passes
 - [ ] Browser: `/shopping` → selecionar run com `notes` contendo `final_url=` → URL aparece no log
 - [ ] Browser: `/shopping` → run com muitos fornecedores → histórico recente não quebra e permanece scrollável
+
+---
+
+# Feature: Shopping run log search URL (computed, non-persistent)
+Type: read-only  |  Events: no  |  ADR: no
+
+## Phase 1 � Architectural thinking
+Module type:
+- `apps/server_core/internal/modules/shopping` (read-only): calcular URL de busca em leitura no endpoint `/runs/{run_id}/items`, sem persistir em DB.
+
+Risks:
+- Nem todo manifest possui template de busca (`searchUrl`/`endpointTemplate`/`startUrl`) com placeholder de termo.
+- Regra de render deve ser conservadora para nao exibir URL invalida.
+
+Level scope:
+- Level 1 (now): preencher `productUrl` no item de run com URL de busca renderizada quando `product_url` vier vazio.
+- Level 2 (defer): criar campo dedicado `searchUrl` no contrato para separar semantica.
+
+## Tasks
+- [x] T2: Go module � compute search URL at read-time
+      - Reader `ListRunItems`: join manifest ativo e renderizar URL a partir de `lookup_term`
+      - Sem gravacao em tabela; somente resposta da API
+      commit: "fix(shopping): compute run item search url on read"
+
+## Acceptance tests
+- [x] go test ./apps/server_core/... passes
+- [ ] Browser: `/shopping` log detalhado mostra URL de busca para fornecedores com template configurado

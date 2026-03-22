@@ -195,3 +195,10 @@ Correct: Measure the run detail card with `ResizeObserver` and set history scrol
 Rule:    Side-by-side panels must share bounded height to keep content readable and scrollable.
 Layer:   Frontend
 
+## Lesson 21 — Search URL for run logs should be computed at read-time
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Depending on persisted `product_url` to display the executed lookup URL in run logs.
+Correct: Compute the search URL from active manifest templates (`searchUrl`/`endpointTemplate`/`startUrl`) plus `lookup_term` while reading run items.
+Rule:    Debug-only lookup URLs should be derived from runtime config, not persisted as durable data.
+Layer:   Go adapter
+

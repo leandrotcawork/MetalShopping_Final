@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -431,11 +432,17 @@ SELECT
   i.http_status,
   i.elapsed_s,
   i.chosen_seller_json->>'lookup_term',
-  i.notes
+  i.notes,
+  m.config_json::text
 FROM shopping_price_run_items i
 JOIN catalog_products p
   ON p.tenant_id = i.tenant_id
  AND p.product_id = i.product_id
+LEFT JOIN supplier_driver_manifests m
+  ON m.tenant_id = i.tenant_id
+ AND m.supplier_code = i.supplier_code
+ AND m.is_active = TRUE
+ AND m.validation_status = 'valid'
 WHERE i.tenant_id = current_tenant_id()
   AND i.run_id = $1
   AND ($2 = '' OR i.supplier_code = $2)
@@ -998,6 +1005,7 @@ func scanRunItem(s scanner) (ports.RunItem, error) {
 	var elapsedSeconds sql.NullFloat64
 	var lookupTerm sql.NullString
 	var notes sql.NullString
+	var runtimeConfigJSON sql.NullString
 	if err := s.Scan(
 		&item.RunItemID,
 		&item.RunID,
@@ -1015,6 +1023,7 @@ func scanRunItem(s scanner) (ports.RunItem, error) {
 		&elapsedSeconds,
 		&lookupTerm,
 		&notes,
+		&runtimeConfigJSON,
 	); err != nil {
 		return ports.RunItem{}, fmt.Errorf("scan shopping run item: %w", err)
 	}
@@ -1047,7 +1056,73 @@ func scanRunItem(s scanner) (ports.RunItem, error) {
 			item.Notes = &value
 		}
 	}
+	if item.ProductURL == nil && item.LookupTerm != nil && runtimeConfigJSON.Valid {
+		if computed := deriveSearchURLFromRuntimeConfig(runtimeConfigJSON.String, *item.LookupTerm); computed != "" {
+			item.ProductURL = &computed
+		}
+	}
 	return item, nil
+}
+
+func deriveSearchURLFromRuntimeConfig(rawConfigJSON, lookupTerm string) string {
+	trimmedLookup := strings.TrimSpace(lookupTerm)
+	if trimmedLookup == "" {
+		return ""
+	}
+	var config map[string]any
+	if err := json.Unmarshal([]byte(rawConfigJSON), &config); err != nil {
+		return ""
+	}
+	candidates := []string{
+		extractString(config["searchUrl"]),
+		extractString(config["endpointTemplate"]),
+		extractString(config["startUrl"]),
+	}
+	for _, candidate := range candidates {
+		rendered := renderSearchURLTemplate(candidate, trimmedLookup)
+		if rendered != "" {
+			return rendered
+		}
+	}
+	return ""
+}
+
+func renderSearchURLTemplate(template, lookupTerm string) string {
+	trimmed := strings.TrimSpace(template)
+	if trimmed == "" {
+		return ""
+	}
+	encoded := url.QueryEscape(lookupTerm)
+	replaced := false
+	placeholders := []string{
+		"{term}",
+		"{lookup_term}",
+		"{lookupTerm}",
+		"{lookup}",
+		"{ean}",
+		"{reference}",
+		"{sku}",
+		"{{term}}",
+		"{{lookup_term}}",
+		"{{lookupTerm}}",
+	}
+	for _, placeholder := range placeholders {
+		if strings.Contains(trimmed, placeholder) {
+			trimmed = strings.ReplaceAll(trimmed, placeholder, encoded)
+			replaced = true
+		}
+	}
+	if strings.Contains(trimmed, "%s") {
+		trimmed = fmt.Sprintf(trimmed, encoded)
+		replaced = true
+	}
+	if !replaced {
+		return ""
+	}
+	if strings.HasPrefix(trimmed, "http://") || strings.HasPrefix(trimmed, "https://") {
+		return trimmed
+	}
+	return ""
 }
 
 func scanSupplierSignal(s scanner) (ports.SupplierSignal, error) {
