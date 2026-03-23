@@ -11,6 +11,7 @@ import {
   Chart as ChartJSCore,
   Tooltip,
   Legend,
+  LinearScale,
   type ChartData,
   type ChartOptions,
 } from "chart.js";
@@ -46,6 +47,7 @@ ChartJSCore.register(
   TreemapElement,
   Tooltip,
   Legend,
+  LinearScale,
 );
 
 type TreemapChartProps = {

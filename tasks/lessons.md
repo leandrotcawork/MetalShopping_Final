@@ -398,3 +398,10 @@ Wrong:   Mounting treemap during empty/loading states and relying only on local 
 Correct: Gate treemap render on ready/non-empty data and call `Chart.getChart(canvas)?.destroy()` before new instantiation.
 Rule:    In StrictMode, chart wrappers need defensive canvas cleanup plus data-ready mount guards.
 Layer:   Frontend
+
+## Lesson 50 — Treemap runtime requires LinearScale registration
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Registering treemap controller/elements without `LinearScale`, causing runtime error (`"linear" is not a registered scale`).
+Correct: Register `LinearScale` together with treemap components in TaxonomyHomePage.
+Rule:    When instantiating Chart.js directly, register all required scales/plugins explicitly.
+Layer:   Frontend
