@@ -540,7 +540,7 @@ func (h *Handler) handleRunByID(w http.ResponseWriter, r *http.Request) {
 			default:
 				statusCode = http.StatusInternalServerError
 				reqResult = "internal_error"
-				writeShoppingError(w, http.StatusInternalServerError, "SHOPPING_MARKET_REPORT_EXPORT_FAILED", "Failed to export XLSX report", traceID)
+				writeShoppingError(w, http.StatusInternalServerError, "SHOPPING_MARKET_REPORT_EXPORT_FAILED", err.Error(), traceID)
 			}
 			return
 		}
@@ -606,7 +606,7 @@ func (h *Handler) handleRunByID(w http.ResponseWriter, r *http.Request) {
 			default:
 				statusCode = http.StatusInternalServerError
 				reqResult = "internal_error"
-				writeShoppingError(w, http.StatusInternalServerError, "SHOPPING_RUN_EXPORT_FAILED", "Failed to export XLSX report", traceID)
+				writeShoppingError(w, http.StatusInternalServerError, "SHOPPING_RUN_EXPORT_FAILED", err.Error(), traceID)
 			}
 			return
 		}

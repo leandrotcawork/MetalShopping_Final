@@ -484,3 +484,10 @@ Wrong:   Rejecting `outputFilePath` when the user provided only the export folde
 Correct: If the target is a directory (or the root itself), generate a default `.xlsx` filename inside it; if the target is a bare filename without extension, append `.xlsx`.
 Rule:    Export path validation should accept the common folder-first workflow and normalize it into a valid file path under the export root.
 Layer:   Go application
+
+## Lesson 63 — Export handlers must not mask internal write errors
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Returning the generic message `Failed to export XLSX report` for every unclassified export failure, which hid the real backend cause from the UI.
+Correct: Preserve `500` for internal failures, but return `err.Error()` in the export handlers so the operator sees the concrete write or filesystem problem.
+Rule:    Operational export endpoints must surface actionable internal error messages instead of generic failure text.
+Layer:   Go handler
