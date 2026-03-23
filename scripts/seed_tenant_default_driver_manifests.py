@@ -103,6 +103,16 @@ def _seeds() -> list[ManifestSeed]:
                 "priceHint": "spot__content-price",
                 "calculatedPriceHint": "precoCalculado",
                 "pricePriority": "calculated_first",
+                "unavailableHints": [
+                    "indisponível",
+                    "indisponivel",
+                    "produto indisponível",
+                    "produto indisponivel",
+                    "esgotado",
+                    "fora de estoque",
+                    "sem estoque",
+                    "out of stock",
+                ],
             },
         ),
         ManifestSeed(

@@ -294,6 +294,28 @@ def _normalize_hint(value: str) -> str:
     return safe_str(value, "").lower()
 
 
+def _normalized_unavailable_hints(config: SupplierRuntimeConfig) -> list[str]:
+    raw = config.config_json.get("unavailableHints")
+    if not isinstance(raw, list):
+        return []
+    hints: list[str] = []
+    for value in raw:
+        normalized = _normalize_hint(safe_str(value, ""))
+        if normalized != "":
+            hints.append(normalized)
+    return hints
+
+
+def _entries_match_unavailable_hints(
+    entries: list[tuple[str, str]],
+    unavailable_hints: list[str],
+) -> bool:
+    if len(entries) == 0 or len(unavailable_hints) == 0:
+        return False
+    merged = " ".join(f"{context} {text}" for context, text in entries).lower()
+    return any(hint in merged for hint in unavailable_hints)
+
+
 def _text_matches_hint(text: str, hint: str) -> bool:
     normalized_hint = _normalize_hint(hint)
     if normalized_hint == "":
@@ -330,6 +352,8 @@ class _DOMScopeParser(HTMLParser):
         self._root_depth: int | None = None
         self._card_depth: int | None = None
         self.entries: list[tuple[str, str]] = []
+        self.card_entries: list[list[tuple[str, str]]] = []
+        self._current_card_entries: list[tuple[str, str]] = []
         self._captured_chars = 0
 
     def _attrs_context(self, tag: str, attrs: list[tuple[str, str | None]]) -> str:
@@ -364,6 +388,9 @@ class _DOMScopeParser(HTMLParser):
             return
         depth_before_pop = len(self._stack)
         if self._card_depth is not None and depth_before_pop == self._card_depth:
+            if len(self._current_card_entries) > 0:
+                self.card_entries.append(list(self._current_card_entries))
+            self._current_card_entries = []
             self._card_depth = None
         if self._root_depth is not None and depth_before_pop == self._root_depth:
             self._root_depth = None
@@ -382,7 +409,10 @@ class _DOMScopeParser(HTMLParser):
         clipped = text[:remaining]
         self._captured_chars += len(clipped)
         context = " > ".join(self._stack[-6:]) if len(self._stack) > 0 else ""
-        self.entries.append((context, clipped))
+        entry = (context, clipped)
+        self.entries.append(entry)
+        if self._card_depth is not None:
+            self._current_card_entries.append(entry)
 
 
 def _pick_dom_price(
@@ -474,13 +504,34 @@ def _execute_http_html_dom_first_card_strategy(
                 if len(entries) == 0: 
                     return RuntimeObservation("NOT_FOUND", safe_float(base_price, base_price), seller_default, "HTTP_HTML", int(response.status), _with_search_url("html_dom_first_card_not_found", url), strategy, lookup_term) 
 
-                observed_price, price_note = _pick_dom_price(entries=entries, config=config, base_price=base_price)
-                if price_note == "price_not_found": 
-                    return RuntimeObservation("NOT_FOUND", safe_float(base_price, base_price), seller_default, "HTTP_HTML", int(response.status), _with_search_url("html_dom_price_not_found", url), strategy, lookup_term) 
+                unavailable_hints = _normalized_unavailable_hints(config)
+                candidate_cards = parser.card_entries if len(parser.card_entries) > 0 else [entries]
+                blocked_by_unavailable = 0
+                for card_entries in candidate_cards:
+                    if _entries_match_unavailable_hints(card_entries, unavailable_hints):
+                        blocked_by_unavailable += 1
+                        continue
 
-                seller_name = _pick_dom_title(entries, config, seller_default)
-                note = f"html_dom_first_card attempt={attempt} {price_note}" 
-                return RuntimeObservation("OK", observed_price, seller_name, "HTTP_HTML", int(response.status), _with_search_url(note, url), strategy, lookup_term) 
+                    observed_price, price_note = _pick_dom_price(entries=card_entries, config=config, base_price=base_price)
+                    if price_note == "price_not_found":
+                        continue
+
+                    seller_name = _pick_dom_title(card_entries, config, seller_default)
+                    note = f"html_dom_first_card attempt={attempt} {price_note}" 
+                    return RuntimeObservation("OK", observed_price, seller_name, "HTTP_HTML", int(response.status), _with_search_url(note, url), strategy, lookup_term) 
+
+                if blocked_by_unavailable == len(candidate_cards) and len(candidate_cards) > 0:
+                    return RuntimeObservation(
+                        "NOT_FOUND",
+                        safe_float(base_price, base_price),
+                        seller_default,
+                        "HTTP_HTML",
+                        int(response.status),
+                        _with_search_url("html_dom_all_cards_unavailable", url),
+                        strategy,
+                        lookup_term,
+                    )
+                return RuntimeObservation("NOT_FOUND", safe_float(base_price, base_price), seller_default, "HTTP_HTML", int(response.status), _with_search_url("html_dom_price_not_found", url), strategy, lookup_term) 
         except urllib.error.HTTPError as exc: 
             if exc.code not in retry_statuses: 
                 return RuntimeObservation("ERROR", safe_float(base_price, base_price), seller_default, "HTTP_HTML", int(exc.code), _with_search_url(f"http_status_{exc.code}_not_retryable", url), strategy, lookup_term) 

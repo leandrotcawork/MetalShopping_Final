@@ -547,3 +547,10 @@ Wrong:   Exposing `pnInterno` and `reference` in contracts but not selecting/map
 Correct: Select identifiers in reader, map in HTTP handler, parse in SDK runtime, and render in the log UI.
 Rule:    Any observability field used by UI must be wired through adapter -> transport -> SDK -> frontend consistently.
 Layer:   Go adapter + handler + SDK + Frontend
+
+## Lesson 72 — HTML card scraping must skip unavailable cards before pricing
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Picking price from the first parsed HTML card even when the card is marked as unavailable, causing false `OK` prices.
+Correct: Parse card-scoped entries and ignore cards matching configurable `unavailableHints`; return `NOT_FOUND` when all candidates are unavailable.
+Rule:    In HTML search/card strategies, availability checks must run before price extraction to avoid persisting non-buyable prices.
+Layer:   Worker
