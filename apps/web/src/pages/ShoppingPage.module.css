@@ -610,6 +610,72 @@
   gap: 12px;
 }
 
+.exportCard {
+  margin-top: var(--spacing-md);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-secondary);
+  padding: var(--spacing-md);
+  display: grid;
+  gap: var(--spacing-sm);
+}
+
+.exportHeader h4 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+}
+
+.exportSubtitle {
+  margin: var(--spacing-xs) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.exportGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-sm);
+}
+
+.exportGrid label {
+  display: grid;
+  gap: var(--spacing-xs);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.exportGrid input {
+  width: 100%;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-primary);
+  color: var(--color-text-primary);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-sm);
+}
+
+.exportPath {
+  grid-column: 1 / -1;
+}
+
+.exportActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.exportSuccess {
+  margin: 0;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  color: var(--color-status-success);
+  background: var(--color-surface-secondary);
+  border: 1px solid var(--color-border-subtle);
+  font-size: var(--font-size-sm);
+}
+
 .manualHeader {
   display: flex;
   justify-content: space-between;
@@ -1455,6 +1521,10 @@
 
   .advancedGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .exportGrid {
+    grid-template-columns: 1fr;
   }
 }
 

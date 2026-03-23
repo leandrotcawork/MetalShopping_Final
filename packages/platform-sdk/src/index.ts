@@ -14,6 +14,8 @@ import type {
   ShoppingRunRequestV1,
   ShoppingRunItemStatusSummaryV1,
   ShoppingRunSupplierItemStatusSummaryV1,
+  ShoppingRunExportXlsxRequestV1,
+  ShoppingRunExportXlsxResponseV1,
   ShoppingProductLatestV1,
   ShoppingRunListV1,
   ShoppingSupplierSignalListV1,
@@ -138,6 +140,7 @@ export type ServerCoreSdk = {
     getRunItemStatusSummary(runId: string): Promise<ShoppingRunItemStatusSummaryV1>;
     getRunSupplierItemStatusSummary(runId: string): Promise<ShoppingRunSupplierItemStatusSummaryV1>;
     listRunItems(runId: string, query?: ListShoppingRunItemsQueryParams): Promise<ShoppingRunItemListV1>;
+    exportRunXlsx(runId: string, payload: ShoppingRunExportXlsxRequestV1): Promise<ShoppingRunExportXlsxResponseV1>;
     getProductLatest(productId: string): Promise<ShoppingProductLatestV1>;
     listSupplierSignals(query?: ListShoppingSupplierSignalsQueryParams): Promise<ShoppingSupplierSignalListV1>;
     listManualUrlCandidates(
@@ -519,6 +522,30 @@ function parseShoppingRunItemList(raw: unknown): ShoppingRunItemListV1 {
       returned: paging.returned,
       total: paging.total,
     },
+  };
+}
+
+function parseShoppingRunExportXlsxResponse(raw: unknown): ShoppingRunExportXlsxResponseV1 {
+  if (!isRecord(raw)) {
+    throw new Error("[sdk-runtime] ShoppingRunExportXlsxResponseV1 response must be an object");
+  }
+  assertString(raw.runId, "ShoppingRunExportXlsxResponseV1.runId");
+  assertString(raw.outputFilePath, "ShoppingRunExportXlsxResponseV1.outputFilePath");
+  assertNumber(raw.totalRows, "ShoppingRunExportXlsxResponseV1.totalRows");
+  const exportedAt = normalizeDateTime(raw.exportedAt, "ShoppingRunExportXlsxResponseV1.exportedAt");
+
+  let supplierCodes: string[] = [];
+  if (raw.supplierCodes !== undefined) {
+    assertStringArray(raw.supplierCodes, "ShoppingRunExportXlsxResponseV1.supplierCodes");
+    supplierCodes = raw.supplierCodes;
+  }
+
+  return {
+    runId: raw.runId,
+    outputFilePath: raw.outputFilePath,
+    exportedAt,
+    totalRows: raw.totalRows,
+    supplierCodes,
   };
 }
 
@@ -1096,6 +1123,15 @@ export function createServerCoreSdk(client: GeneratedHttpClient): ServerCoreSdk 
           }),
         );
         return parseShoppingRunItemList(raw);
+      },
+      async exportRunXlsx(runId, payload) {
+        const raw = await runGeneratedCall(() =>
+          shoppingApi.exportShoppingRunXlsx({
+            runId,
+            shoppingRunExportXlsxRequestV1: payload,
+          }),
+        );
+        return parseShoppingRunExportXlsxResponse(raw);
       },
       async getProductLatest(productId) {
         const raw = await runGeneratedCall(() => shoppingApi.getShoppingProductLatest({ productId }));
