@@ -16,6 +16,7 @@ var defaultCORSAllowedHeaders = []string{
 var defaultCORSAllowedMethods = []string{
 	http.MethodGet,
 	http.MethodPost,
+	http.MethodPut,
 	http.MethodOptions,
 }
 

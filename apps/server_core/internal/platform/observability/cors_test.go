@@ -3,6 +3,7 @@ package observability
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -40,5 +41,10 @@ func TestCORSMiddlewareHandlesPreflight(t *testing.T) {
 
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("expected status 204, got %d", rec.Code)
+	}
+
+	allowMethods := rec.Header().Get("Access-Control-Allow-Methods")
+	if !strings.Contains(allowMethods, http.MethodPut) {
+		t.Fatalf("expected allow-methods to include PUT, got %q", allowMethods)
 	}
 }

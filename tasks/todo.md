@@ -1,3 +1,27 @@
+# Feature: Shopping manual URL save CORS preflight
+Type: backend  |  Events: no  |  ADR: no
+
+## Phase 1 — Architectural thinking
+Module type:
+- `apps/server_core/internal/platform/observability/cors.go`: ajustar preflight para métodos de escrita usados pelo Shopping (`PUT`).
+
+Risks:
+- Se CORS não expõe `PUT`, o browser bloqueia preflight e o SDK retorna erro genérico de interceptor.
+
+Level scope:
+- Level 1 (now): incluir `PUT` no `Access-Control-Allow-Methods` e validar com teste unitário de CORS.
+
+## Tasks
+- [x] T2: Go module — liberar `PUT` no CORS
+      - adicionar `http.MethodPut` na lista de métodos permitidos
+      - reforçar teste para garantir `PUT` no header de preflight
+      commit: "fix(server): allow cors preflight for shopping put"
+
+## Acceptance tests
+- [x] go test ./apps/server_core/internal/platform/observability/... passes
+- [ ] Browser: `/shopping` → salvar URL manual não retorna mais erro de interceptor
+
+---
 # Feature: Shopping manual URL save button
 Type: frontend  |  Events: no  |  ADR: no
 

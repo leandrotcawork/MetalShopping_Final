@@ -418,3 +418,9 @@ Wrong:   Relying only on footer batch save for manual URL edits, which can hide 
 Correct: Keep batch save, and also support row-level save button and Enter-to-save on each URL field.
 Rule:    Editable table flows should provide direct per-row commit actions in addition to batch actions.
 Layer:   Frontend
+## Lesson 53 — CORS must allow PUT for SDK write operations
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Restricting `Access-Control-Allow-Methods` to GET/POST/OPTIONS while Shopping save uses `PUT`.
+Correct: Include `PUT` in CORS allowed methods and assert it in preflight unit tests.
+Rule:    Browser write calls that use preflight must have matching CORS methods, or SDK errors become generic network/interceptor failures.
+Layer:   Go platform
