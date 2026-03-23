@@ -568,3 +568,10 @@ Wrong:   Showing toast notifications without motion cues, making feedback appear
 Correct: Add a short enter animation for toast viewport and disable it when `prefers-reduced-motion` is enabled.
 Rule:    UX microfeedback should animate subtly, while always honoring accessibility motion preferences.
 Layer:   Frontend
+
+## Lesson 51 — Legacy cards need surface token fallbacks in CSS modules
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Using `var(--surface)` / `var(--surface-border)` without fallback in migrated CSS modules, resulting in transparent cards when tokens are absent in scope.
+Correct: Add fallback values and use local surface variables for panel backgrounds/borders.
+Rule:    Visual-parity migrations must define safe CSS token fallbacks for critical surfaces.
+Layer:   Frontend

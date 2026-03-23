@@ -1,24 +1,24 @@
 ﻿.page {
   display: grid;
   gap: 18px;
-  --tx-surface-solid: var(--surface);
-  --tx-surface-card: color-mix(in srgb, var(--surface) 94%, transparent);
-  --tx-surface-soft: color-mix(in srgb, var(--surface) 90%, transparent);
-  --tx-surface-subtle: var(--surface);
-  --tx-border-soft: var(--surface-border);
-  --tx-border: color-mix(in srgb, var(--surface-border) 86%, transparent);
-  --tx-border-strong: color-mix(in srgb, var(--surface-border) 96%, transparent);
+  --tx-surface-solid: var(--surface, #ffffff);
+  --tx-surface-card: color-mix(in srgb, var(--surface, #ffffff) 94%, transparent);
+  --tx-surface-soft: color-mix(in srgb, var(--surface, #ffffff) 90%, transparent);
+  --tx-surface-subtle: var(--surface, #ffffff);
+  --tx-border-soft: var(--surface-border, #dbe1ea);
+  --tx-border: color-mix(in srgb, var(--surface-border, #dbe1ea) 86%, transparent);
+  --tx-border-strong: color-mix(in srgb, var(--surface-border, #dbe1ea) 96%, transparent);
   --tx-text-strong: color-mix(in srgb, var(--ink) 94%, #0f172a 6%);
   --tx-text-soft: color-mix(in srgb, var(--muted) 88%, #64748b 12%);
   --tx-on-accent: #fff;
 }
 
 [data-theme="dark"] .page {
-  --tx-surface-solid: var(--surface);
-  --tx-surface-subtle: var(--surface);
-  --tx-border-soft: var(--surface-border);
-  --tx-border: color-mix(in srgb, var(--surface-border) 86%, transparent);
-  --tx-border-strong: color-mix(in srgb, var(--surface-border) 96%, transparent);
+  --tx-surface-solid: var(--surface, #121822);
+  --tx-surface-subtle: var(--surface, #121822);
+  --tx-border-soft: var(--surface-border, #2a3344);
+  --tx-border: color-mix(in srgb, var(--surface-border, #2a3344) 86%, transparent);
+  --tx-border-strong: color-mix(in srgb, var(--surface-border, #2a3344) 96%, transparent);
   --tx-text-soft: color-mix(in srgb, var(--muted) 96%, #cbd5e1 4%);
 }
 
@@ -253,9 +253,9 @@
 }
 
 .panel {
-  border: 1px solid var(--surface-border);
+  border: 1px solid var(--tx-border-soft);
   border-radius: 14px;
-  background: var(--surface);
+  background: var(--tx-surface-solid);
   padding: 16px;
   box-shadow: var(--shadow-soft), 0 1px 0 rgba(255, 255, 255, 0.35) inset;
   backdrop-filter: blur(22px) saturate(170%);
