@@ -363,3 +363,10 @@ Wrong:   After writing a 403 response for missing tenant context, the handler st
 Correct: Return the concrete auth status (401 vs 403) from the auth gate and propagate it to the request logger.
 Rule:    Deferred request logging must reflect the actual response status, especially for auth/tenancy gates.
 Layer:   Go handler
+
+## Lesson 45 — Legacy UTF-8 BOM can break patching
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Trying to `apply_patch` the first import lines of a TSX copied from legacy with a UTF-8 BOM, causing context mismatches.
+Correct: Detect BOM (EF BB BF) and edit via BOM-safe rewrite (`Get-Content -Raw` + `Set-Content -Encoding utf8`) or normalize the file before patching.
+Rule:    When migrating legacy files, handle UTF-8 BOM explicitly so automated patches match the expected lines.
+Layer:   Process

@@ -6,7 +6,12 @@
   "dependencies": {
     "@metalshopping/sdk-runtime": "*",
     "@metalshopping/sdk-types": "*",
-    "@metalshopping/ui": "*"
+    "@metalshopping/ui": "*",
+    "@tanstack/react-table": "^8.21.2",
+    "chart.js": "^4.4.3",
+    "chartjs-chart-treemap": "^2.3.0",
+    "react-chartjs-2": "^5.3.0",
+    "recharts": "^2.12.7"
   },
   "peerDependencies": {
     "react": "^18.3.1",

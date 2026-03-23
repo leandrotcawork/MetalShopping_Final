@@ -6,6 +6,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAppSession } from "../../app/providers/AppProviders";
 import { AnalyticsHomePage } from "../analytics_home/AnalyticsHomePage";
 import { AnalyticsProductsPage } from "./AnalyticsProductsPage";
+import { TaxonomyHomePage } from "./TaxonomyHomePage";
 import "./analytics.css";
 
 type TabKey = "home" | "products" | "taxonomy" | "brands" | "actions";
@@ -35,35 +36,6 @@ type AlertItem = {
   urgency: Urgency;
   total: number;
   topSkus: string[];
-};
-
-type TaxonomyRankingItem = {
-  taxonomy_leaf_id: string;
-  taxonomy_leaf_name: string;
-  operational_severity: string | null;
-  operational_severity_rank: number | null;
-  actionability_score: number | null;
-  products_metrics: {
-    capital_brl_total: number | null;
-    potential_revenue_brl_total_market: number | null;
-    weighted_margin_pct_total: number | null;
-  } | null;
-};
-
-type TaxonomyLevelDefLite = {
-  level: number;
-  label: string;
-  short_label?: string | null;
-  is_enabled?: boolean;
-};
-
-type TaxonomyNodeLite = {
-  id: number;
-  name: string;
-  parent_id: number | null;
-  level: number;
-  is_active?: boolean;
-  children?: TaxonomyNodeLite[];
 };
 
 const LANES: Array<{ key: Lane; label: string }> = [
@@ -142,32 +114,6 @@ function domainOf(raw: string): Domain {
   if (/dado|cadastro|ean|descricao|qualidade/.test(token)) return "data";
   return "critical";
 }
-
-function parseTaxonomyNode(value: unknown): TaxonomyNodeLite | null {
-  const row = rec(value);
-  const id = num(row.id);
-  const level = num(row.level);
-  if (id === null || level === null) return null;
-  const childrenRaw = Array.isArray(row.children) ? row.children : [];
-  return {
-    id: Math.trunc(id),
-    name: txt(row.name) || `Nó ${id}`,
-    parent_id: row.parent_id == null ? null : Math.trunc(num(row.parent_id) ?? 0),
-    level: Math.trunc(level),
-    is_active: boolish(row.is_active, true),
-    children: childrenRaw.map(parseTaxonomyNode).filter(Boolean) as TaxonomyNodeLite[],
-  };
-}
-
-function flattenTaxonomyNodes(roots: TaxonomyNodeLite[]): TaxonomyNodeLite[] {
-  const out: TaxonomyNodeLite[] = [];
-  const visit = (node: TaxonomyNodeLite) => {
-    out.push(node);
-    for (const child of node.children || []) visit(child);
-  };
-  for (const root of roots) visit(root);
-  return out;
-}
 function urgency(score: number): Urgency {
   if (score >= 80) return "HIGH";
   if (score >= 55) return "MED";
@@ -231,17 +177,6 @@ export function AnalyticsPage() {
   const [chip, setChip] = useState<Domain>("all");
   const [drawer, setDrawer] = useState<Drawer>(null);
   const [laneByAction, setLaneByAction] = useState<Record<string, Lane>>({});
-  const [taxonomyRankingRows, setTaxonomyRankingRows] = useState<TaxonomyRankingItem[]>([]);
-  const [taxonomyRankingError, setTaxonomyRankingError] = useState("");
-  const [taxonomyLevels, setTaxonomyLevels] = useState<TaxonomyLevelDefLite[]>([]);
-  const [taxonomyRoots, setTaxonomyRoots] = useState<TaxonomyNodeLite[]>([]);
-  const [taxonomyError, setTaxonomyError] = useState("");
-  const [taxonomyLoading, setTaxonomyLoading] = useState(false);
-  const [selectedTaxonomyLevel, setSelectedTaxonomyLevel] = useState<number>(0);
-  const [selectedTaxonomyNodeId, setSelectedTaxonomyNodeId] = useState<number | null>(null);
-  const [selectedTaxonomyNode, setSelectedTaxonomyNode] = useState<TaxonomyNodeLite | null>(null);
-  const [taxonomyBreadcrumbs, setTaxonomyBreadcrumbs] = useState<TaxonomyNodeLite[]>([]);
-  const [taxonomyChildren, setTaxonomyChildren] = useState<TaxonomyNodeLite[]>([]);
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     try {
       const stored = window.localStorage.getItem("ms:theme");
@@ -334,132 +269,6 @@ export function AnalyticsPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  useEffect(() => {
-    let disposed = false;
-    async function loadTaxonomyRanking() {
-      const snapshot = analyticsHomeSnapshot?.data?.snapshot?.resolved_id || undefined;
-      setTaxonomyRankingError("");
-      try {
-        const env = await api.analytics.workspaceTaxonomyIndex(snapshot || undefined, { limit: 500, offset: 0 });
-        if (disposed) return;
-        const rows = Array.isArray(env.data?.rows) ? env.data.rows : [];
-        setTaxonomyRankingRows(
-          rows.map((row) => {
-            const rowRec = row as Record<string, unknown>;
-            const pm = rec(rowRec.products_metrics);
-            return {
-              taxonomy_leaf_id: txt(rowRec.taxonomy_leaf_id),
-              taxonomy_leaf_name: txt(rowRec.taxonomy_leaf_name) || "Sem classificação",
-              operational_severity: txt(rowRec.operational_severity) || null,
-              operational_severity_rank: num(rowRec.operational_severity_rank),
-              actionability_score: num(rowRec.actionability_score),
-              products_metrics: Object.keys(pm).length
-                ? {
-                    capital_brl_total: num(pm.capital_brl_total),
-                    potential_revenue_brl_total_market: num(pm.potential_revenue_brl_total_market),
-                    weighted_margin_pct_total: num(pm.weighted_margin_pct_total),
-                  }
-                : null,
-            };
-          }),
-        );
-      } catch (err) {
-        if (disposed) return;
-        setTaxonomyRankingError(err instanceof Error ? err.message : String(err));
-        setTaxonomyRankingRows([]);
-      }
-    }
-    void loadTaxonomyRanking();
-    return () => {
-      disposed = true;
-    };
-  }, [api.analytics, analyticsHomeSnapshot?.data?.snapshot?.resolved_id]);
-
-  useEffect(() => {
-    let disposed = false;
-    async function loadTaxonomy() {
-      setTaxonomyLoading(true);
-      setTaxonomyError("");
-      try {
-        const [levelsEnv, treeEnv] = await Promise.all([
-          api.taxonomy.levels({ client_id: "default", enabled_only: false }),
-          api.taxonomy.tree({ client_id: "default", active_only: true }),
-        ]);
-        if (disposed) return;
-        const levelsRaw = Array.isArray(levelsEnv.data?.rows) ? levelsEnv.data.rows : [];
-        const parsedLevels = levelsRaw
-          .map((row) => {
-            const r = rec(row);
-            const level = num(r.level);
-            if (level === null) return null;
-            return {
-              level: Math.trunc(level),
-              label: txt(r.label) || `Hierarquia ${Math.trunc(level) + 1}`,
-              short_label: txt(r.short_label) || null,
-              is_enabled: boolish(r.is_enabled, true),
-            } as TaxonomyLevelDefLite;
-          })
-          .filter(Boolean) as TaxonomyLevelDefLite[];
-        const rootsRaw = Array.isArray(treeEnv.data?.roots) ? treeEnv.data.roots : [];
-        const parsedRoots = rootsRaw.map(parseTaxonomyNode).filter(Boolean) as TaxonomyNodeLite[];
-        setTaxonomyLevels(parsedLevels);
-        setTaxonomyRoots(parsedRoots);
-        const enabledLevels = parsedLevels.filter((x) => x.is_enabled !== false).map((x) => x.level);
-        if (enabledLevels.length && !enabledLevels.includes(selectedTaxonomyLevel)) {
-          setSelectedTaxonomyLevel(enabledLevels[0]);
-        }
-      } catch (err) {
-        if (disposed) return;
-        setTaxonomyError(err instanceof Error ? err.message : String(err));
-        setTaxonomyLevels([]);
-        setTaxonomyRoots([]);
-      } finally {
-        if (!disposed) setTaxonomyLoading(false);
-      }
-    }
-    void loadTaxonomy();
-    return () => {
-      disposed = true;
-    };
-  }, [api.taxonomy, selectedTaxonomyLevel]);
-
-  useEffect(() => {
-    let disposed = false;
-    async function loadNodeDetail() {
-      if (selectedTaxonomyNodeId == null) {
-        setSelectedTaxonomyNode(null);
-        setTaxonomyBreadcrumbs([]);
-        setTaxonomyChildren([]);
-        return;
-      }
-      try {
-        const env = await api.taxonomy.node(selectedTaxonomyNodeId, { client_id: "default", active_only_children: true });
-        if (disposed) return;
-        const data = rec(env.data);
-        setSelectedTaxonomyNode(parseTaxonomyNode(data.node));
-        setTaxonomyBreadcrumbs(
-          (Array.isArray(data.breadcrumbs) ? data.breadcrumbs : [])
-            .map(parseTaxonomyNode)
-            .filter(Boolean) as TaxonomyNodeLite[],
-        );
-        setTaxonomyChildren(
-          (Array.isArray(data.children) ? data.children : [])
-            .map(parseTaxonomyNode)
-            .filter(Boolean) as TaxonomyNodeLite[],
-        );
-      } catch {
-        if (disposed) return;
-        setSelectedTaxonomyNode(null);
-        setTaxonomyBreadcrumbs([]);
-        setTaxonomyChildren([]);
-      }
-    }
-    void loadNodeDetail();
-    return () => {
-      disposed = true;
-    };
-  }, [api.taxonomy, selectedTaxonomyNodeId]);
-
   const dto = analyticsHomeSnapshot?.data ?? null;
   const actions = useMemo(() => parseActions(dto), [dto]);
   const alerts = useMemo(() => parseAlerts(dto), [dto]);
@@ -494,16 +303,6 @@ export function AnalyticsPage() {
       return `${it.id} ${it.title} ${it.reason}`.toLowerCase().includes(token);
     });
   }, [alerts, chip, query]);
-
-  const taxonomyFlatNodes = useMemo(() => flattenTaxonomyNodes(taxonomyRoots), [taxonomyRoots]);
-  const taxonomyLevelRows = useMemo(
-    () => taxonomyFlatNodes.filter((node) => node.level === selectedTaxonomyLevel),
-    [taxonomyFlatNodes, selectedTaxonomyLevel],
-  );
-  const taxonomyLevelLabel = useMemo(() => {
-    const found = taxonomyLevels.find((x) => x.level === selectedTaxonomyLevel);
-    return found?.label || `Hierarquia ${selectedTaxonomyLevel + 1}`;
-  }, [taxonomyLevels, selectedTaxonomyLevel]);
 
   const selectedAction = drawer?.type === "action" ? actions.find((it) => it.id === drawer.id) || null : null;
   const selectedAlert = drawer?.type === "alert" ? alerts.find((it) => it.id === drawer.id) || null : null;
@@ -563,8 +362,9 @@ export function AnalyticsPage() {
       ) : null}
 
       {activeTab === "products" ? <AnalyticsProductsPage /> : null}
+      {activeTab === "taxonomy" ? <TaxonomyHomePage /> : null}
 
-      {dto && activeTab !== "home" && activeTab !== "products" ? (
+      {dto && activeTab !== "home" && activeTab !== "products" && activeTab !== "taxonomy" ? (
         <>
           <section className="ah-hero">
             <div className="ah-hero-main">
@@ -627,96 +427,6 @@ export function AnalyticsPage() {
                   </div>
                 </article>
               ))}
-            </section>
-          )}
-
-          {activeTab === "products" && (
-            <section className="ah-simple">
-              <header><h3>Produtos</h3><p>Top SKUs identificados nas acoes e alertas.</p></header>
-              <div className="ah-chip-grid">
-                {Array.from(new Set([...actions.flatMap((it) => it.topSkus), ...alerts.flatMap((it) => it.topSkus)])).slice(0, 24).map((sku) => (
-                  <button key={sku} type="button" className="ah-chip-card" onClick={() => setDrawer({ type: "sku", sku })}>
-                    <b>{sku}</b>
-                    <small>Abrir SKU Drawer Lite</small>
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {activeTab === "taxonomy" && (
-            <section className="ah-simple">
-              <header><h3>Hierarquia</h3><p>Taxonomia dinâmica (MVP) + ranking de classificação.</p></header>
-              {taxonomyError ? <div className="ah-banner warning">Falha ao carregar taxonomia: {taxonomyError}</div> : null}
-              <div className="ah-chip-grid" style={{ marginBottom: 16 }}>
-                {(taxonomyLevels.length ? taxonomyLevels : [{ level: 0, label: "Hierarquia 1", is_enabled: true }])
-                  .filter((lv) => lv.is_enabled !== false)
-                  .map((lv) => (
-                    <button
-                      key={lv.level}
-                      type="button"
-                      className="ah-chip-card"
-                      onClick={() => setSelectedTaxonomyLevel(lv.level)}
-                      style={selectedTaxonomyLevel === lv.level ? { outline: "2px solid #111" } : undefined}
-                    >
-                      <b>{lv.label}</b>
-                      <small>Nível {lv.level + 1}</small>
-                    </button>
-                  ))}
-              </div>
-              <header>
-                <h3>{taxonomyLevelLabel}</h3>
-                <p>{taxonomyLoading ? "Carregando árvore..." : `${fmtInt(taxonomyLevelRows.length)} nós no nível selecionado`}</p>
-              </header>
-              <div className="ah-chip-grid">
-                {taxonomyLevelRows.map((node) => (
-                  <button
-                    key={node.id}
-                    type="button"
-                    className="ah-chip-card"
-                    onClick={() => setSelectedTaxonomyNodeId(node.id)}
-                    style={selectedTaxonomyNodeId === node.id ? { outline: "2px solid #111" } : undefined}
-                  >
-                    <b>{node.name}</b>
-                    <small>ID {node.id} | Nível {node.level + 1}</small>
-                    <small>{(node.children || []).length} filhos imediatos</small>
-                  </button>
-                ))}
-              </div>
-              {selectedTaxonomyNode ? (
-                <div className="ah-banner" style={{ marginTop: 12 }}>
-                  <div><b>Nó selecionado:</b> {selectedTaxonomyNode.name} (ID {selectedTaxonomyNode.id})</div>
-                  <div>
-                    <b>Breadcrumbs:</b>{" "}
-                    {taxonomyBreadcrumbs.length
-                      ? taxonomyBreadcrumbs.map((b) => b.name).join(" > ")
-                      : selectedTaxonomyNode.name}
-                  </div>
-                  <div>
-                    <b>Filhos:</b>{" "}
-                    {taxonomyChildren.length
-                      ? taxonomyChildren.map((c) => c.name).slice(0, 10).join(", ")
-                      : "Sem filhos"}
-                  </div>
-                </div>
-              ) : null}
-              {taxonomyRankingError ? <div className="ah-banner warning">Falha ao carregar ranking de classificação: {taxonomyRankingError}</div> : null}
-              <header style={{ marginTop: 16 }}><h3>Ranking de Classificação</h3><p>Visão consolidada por nó de taxonomia.</p></header>
-              <div className="ah-chip-grid">
-                {taxonomyRankingRows.map((item) => (
-                  <div key={item.taxonomy_leaf_id || item.taxonomy_leaf_name} className="ah-chip-card">
-                    <b>{item.taxonomy_leaf_name}</b>
-                    <small>
-                      Severidade {item.operational_severity || "N/D"} | Rank {fmtInt(item.operational_severity_rank)}
-                    </small>
-                    <small>Actionability: {fmtPct(item.actionability_score)}</small>
-                    <small>
-                      Capital: {fmtMoney(item.products_metrics?.capital_brl_total ?? null)} | Potencial: {fmtMoney(item.products_metrics?.potential_revenue_brl_total_market ?? null)}
-                    </small>
-                    <small>Margem ponderada: {fmtPct(item.products_metrics?.weighted_margin_pct_total ?? null)}</small>
-                  </div>
-                ))}
-              </div>
             </section>
           )}
 

@@ -10,6 +10,7 @@ dist/
 build/
 coverage/
 .cache/
+.claude/
 .gocache-*/
 .tmp/
 .env

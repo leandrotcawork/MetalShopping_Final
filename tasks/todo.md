@@ -324,3 +324,35 @@ Type: frontend-first migration  |  Events: no  |  ADR: no
 - [ ] Browser: /analytics/products/:pn/simulator renders simulator controls
 - [x] npm.cmd run web:typecheck passes
 - [x] npm.cmd run web:build passes
+
+---
+
+# Feature: Analytics Classificacoes - Legacy migration (Taxonomy)
+Type: frontend-first migration  |  Events: no  |  ADR: no
+
+## Tasks
+- [x] T5-A: frontend — inventory + baseline (legacy snapshot)
+      - source of truth: `packages/feature-analytics/legacy_snapshot/analytics/TaxonomyHomePage.tsx` + `taxonomy_home.module.css` + `legacy_snapshot/analytics/components/*`
+
+- [x] T5-B: frontend — literal copy + wiring (runnable)
+      - copy page + CSS + components into `packages/feature-analytics/src/pages/analytics/*`
+      - add missing helper `taxonomy_visuals`
+
+- [x] T5-C: frontend — dependencies (charts)
+      - add `chart.js`, `react-chartjs-2`, `chartjs-chart-treemap`, `recharts`, `@tanstack/react-table`
+
+- [x] T5-D: frontend — shell integration
+      - render `<TaxonomyHomePage />` on tab/route `/analytics/taxonomy`
+      - remove MVP taxonomy state/effects to avoid redundant loads
+
+- [x] T5-E: frontend — mock payload parity
+      - expand `AnalyticsTaxonomyScopeOverviewV1Dto` keys used by legacy
+      - enrich `buildMockTaxonomyScopeOverview()` with non-empty panels (treemap + charts + tables)
+      commit: "feat(web): migrate analytics taxonomy legacy page"
+
+## Acceptance tests
+- [ ] Browser: `/analytics/taxonomy` renders charts + tables filled (no console errors)
+- [ ] Browser: tab switch `Home -> Classificacoes -> Produtos -> Classificacoes` works (no freeze)
+- [ ] Browser: spotlights open/close restores body scroll (no stuck overlay)
+- [x] npm.cmd run web:typecheck passes
+- [x] npm.cmd run web:build passes

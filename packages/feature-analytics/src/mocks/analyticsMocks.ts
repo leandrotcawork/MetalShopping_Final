@@ -317,27 +317,173 @@ export function buildMockAnalyticsHomeDto(): AnalyticsHomeV2Dto {
 }
 
 export function buildMockTaxonomyScopeOverview(): AnalyticsTaxonomyScopeOverviewV1Dto {
+  const metric = (
+    value: number,
+    deltaMomPct: number | null,
+    windowMonths = 6,
+    flags?: { is_imputed?: boolean },
+  ) => ({
+    value,
+    trend: {
+      delta_mom_pct: deltaMomPct,
+      is_available: deltaMomPct != null,
+      window_months: windowMonths,
+    },
+    flags: flags || undefined,
+  });
+
+  const trend = (revenueDelta: number | null, marginDeltaPp: number | null, shareDeltaPp: number | null) => ({
+    source: "SNAPSHOT",
+    basis: "MoM",
+    window_months: 1,
+    target_month_ref: "2026-03",
+    base_month_ref: "2026-02",
+    revenue_delta_mom_pct: revenueDelta,
+    margin_delta_mom_pp: marginDeltaPp,
+    share_delta_mom_pp: shareDeltaPp,
+    is_available: revenueDelta != null || marginDeltaPp != null || shareDeltaPp != null,
+  });
+
+  const topNodesByRevenue = [
+    { node_id: 101, node_name: "Revestimentos", brand: "Eliane", revenue_brl: 245000, share_pct: 18.2, margin_pct: 26.4, trend: trend(3.2, 0.4, 0.3) },
+    { node_id: 102, node_name: "Porcelanatos", brand: "Portobello", revenue_brl: 210000, share_pct: 15.6, margin_pct: 24.1, trend: trend(1.8, -0.3, 0.1) },
+    { node_id: 103, node_name: "Metais", brand: "Deca", revenue_brl: 175000, share_pct: 13.0, margin_pct: 22.7, trend: trend(-0.9, 0.2, -0.2) },
+    { node_id: 104, node_name: "Louças", brand: "Incepa", revenue_brl: 96000, share_pct: 7.1, margin_pct: 20.3, trend: trend(2.4, 0.1, 0.0) },
+    { node_id: 105, node_name: "Ferragens", brand: "Vonder", revenue_brl: 71000, share_pct: 5.3, margin_pct: 18.8, trend: trend(4.9, -0.4, 0.2) },
+    { node_id: 106, node_name: "Hidráulica", brand: "Tigre", revenue_brl: 88000, share_pct: 6.6, margin_pct: 21.2, trend: trend(0.7, 0.0, -0.1) },
+    { node_id: 107, node_name: "Tintas", brand: "Suvinil", revenue_brl: 98000, share_pct: 7.3, margin_pct: 27.9, trend: trend(1.2, 0.6, 0.1) },
+    { node_id: 108, node_name: "Elétrica", brand: "Tramontina", revenue_brl: 64000, share_pct: 4.8, margin_pct: 19.6, trend: trend(-1.4, -0.2, -0.1) },
+    { node_id: 109, node_name: "Argamassas", brand: "Quartzolit", revenue_brl: 54000, share_pct: 4.0, margin_pct: 16.9, trend: trend(0.3, 0.1, 0.0) },
+    { node_id: 110, node_name: "Coberturas", brand: "Brasilit", revenue_brl: 52000, share_pct: 3.9, margin_pct: 14.6, trend: trend(2.1, -0.6, 0.0) },
+    { node_id: 111, node_name: "Pisos", brand: "Delta", revenue_brl: 48000, share_pct: 3.6, margin_pct: 17.4, trend: trend(0.9, 0.2, 0.0) },
+    { node_id: 112, node_name: "Madeiras", brand: "Duratex", revenue_brl: 41000, share_pct: 3.0, margin_pct: 23.1, trend: trend(-0.2, 0.3, 0.0) },
+  ];
+
+  const capitalAllocationBase = [
+    { node_id: 101, node_name: "Revestimentos", sku_count: 320, capital_brl: 120000, risk_level: "medium", risk_pct: 32 },
+    { node_id: 102, node_name: "Porcelanatos", sku_count: 260, capital_brl: 98000, risk_level: "high", risk_pct: 54 },
+    { node_id: 103, node_name: "Metais", sku_count: 210, capital_brl: 86000, risk_level: "medium", risk_pct: 18 },
+    { node_id: 104, node_name: "Louças", sku_count: 140, capital_brl: 54000, risk_level: "low", risk_pct: 11 },
+    { node_id: 105, node_name: "Ferragens", sku_count: 180, capital_brl: 42000, risk_level: "medium", risk_pct: 27 },
+    { node_id: 106, node_name: "Hidráulica", sku_count: 190, capital_brl: 48000, risk_level: "low", risk_pct: 14 },
+    { node_id: 107, node_name: "Tintas", sku_count: 175, capital_brl: 51000, risk_level: "medium", risk_pct: 21 },
+    { node_id: 108, node_name: "Elétrica", sku_count: 155, capital_brl: 39000, risk_level: "low", risk_pct: 9 },
+    { node_id: 109, node_name: "Argamassas", sku_count: 130, capital_brl: 28000, risk_level: "medium", risk_pct: 25 },
+    { node_id: 110, node_name: "Coberturas", sku_count: 90, capital_brl: 22000, risk_level: "high", risk_pct: 48 },
+  ];
+
+  const capitalEfficiency = [
+    { node_id: 101, node_name: "Revestimentos", capital_brl: 120000, risk_pct: 32, gmroi: 1.1, revenue_brl: 245000, gross_margin_brl: 60300 },
+    { node_id: 102, node_name: "Porcelanatos", capital_brl: 98000, risk_pct: 54, gmroi: 0.9, revenue_brl: 210000, gross_margin_brl: 50600 },
+    { node_id: 103, node_name: "Metais", capital_brl: 86000, risk_pct: 18, gmroi: 1.4, revenue_brl: 175000, gross_margin_brl: 43000 },
+    { node_id: 104, node_name: "Louças", capital_brl: 54000, risk_pct: 11, gmroi: 1.3, revenue_brl: 96000, gross_margin_brl: 19500 },
+    { node_id: 105, node_name: "Ferragens", capital_brl: 42000, risk_pct: 27, gmroi: 1.0, revenue_brl: 71000, gross_margin_brl: 13300 },
+    { node_id: 106, node_name: "Hidráulica", capital_brl: 48000, risk_pct: 14, gmroi: 1.2, revenue_brl: 88000, gross_margin_brl: 18700 },
+    { node_id: 107, node_name: "Tintas", capital_brl: 51000, risk_pct: 21, gmroi: 1.6, revenue_brl: 98000, gross_margin_brl: 27300 },
+    { node_id: 108, node_name: "Elétrica", capital_brl: 39000, risk_pct: 9, gmroi: 1.05, revenue_brl: 64000, gross_margin_brl: 12500 },
+    { node_id: 109, node_name: "Argamassas", capital_brl: 28000, risk_pct: 25, gmroi: 0.95, revenue_brl: 54000, gross_margin_brl: 9100 },
+    { node_id: 110, node_name: "Coberturas", capital_brl: 22000, risk_pct: 48, gmroi: 0.8, revenue_brl: 52000, gross_margin_brl: 7600 },
+  ];
+
+  const topMargin = [
+    { node_id: 107, node_name: "Tintas", revenue_brl: 98000, margin_pct: 27.9, gross_margin_brl: 27300, capital_brl: 51000, gmroi: 1.6, trend: trend(1.2, 0.6, 0.1) },
+    { node_id: 101, node_name: "Revestimentos", revenue_brl: 245000, margin_pct: 26.4, gross_margin_brl: 60300, capital_brl: 120000, gmroi: 1.1, trend: trend(3.2, 0.4, 0.3) },
+    { node_id: 112, node_name: "Madeiras", revenue_brl: 41000, margin_pct: 23.1, gross_margin_brl: 9400, capital_brl: 19000, gmroi: 1.2, trend: trend(-0.2, 0.3, 0.0) },
+    { node_id: 103, node_name: "Metais", revenue_brl: 175000, margin_pct: 22.7, gross_margin_brl: 43000, capital_brl: 86000, gmroi: 1.4, trend: trend(-0.9, 0.2, -0.2) },
+    { node_id: 104, node_name: "Louças", revenue_brl: 96000, margin_pct: 20.3, gross_margin_brl: 19500, capital_brl: 54000, gmroi: 1.3, trend: trend(2.4, 0.1, 0.0) },
+    { node_id: 108, node_name: "Elétrica", revenue_brl: 64000, margin_pct: 19.6, gross_margin_brl: 12500, capital_brl: 39000, gmroi: 1.05, trend: trend(-1.4, -0.2, -0.1) },
+    { node_id: 105, node_name: "Ferragens", revenue_brl: 71000, margin_pct: 18.8, gross_margin_brl: 13300, capital_brl: 42000, gmroi: 1.0, trend: trend(4.9, -0.4, 0.2) },
+    { node_id: 111, node_name: "Pisos", revenue_brl: 48000, margin_pct: 17.4, gross_margin_brl: 8300, capital_brl: 21000, gmroi: 1.1, trend: trend(0.9, 0.2, 0.0) },
+    { node_id: 109, node_name: "Argamassas", revenue_brl: 54000, margin_pct: 16.9, gross_margin_brl: 9100, capital_brl: 28000, gmroi: 0.95, trend: trend(0.3, 0.1, 0.0) },
+    { node_id: 110, node_name: "Coberturas", revenue_brl: 52000, margin_pct: 14.6, gross_margin_brl: 7600, capital_brl: 22000, gmroi: 0.8, trend: trend(2.1, -0.6, 0.0) },
+  ];
+
+  const nodesAtRisk = [
+    { node_id: 102, node_name: "Porcelanatos", risk_pct: 54, risk_level: "high", capital_at_risk_brl: 31000, capital_brl: 98000, revenue_brl: 210000, margin_pct: 24.1, gmroi: 0.9, financial_risk_priority_brl: 75000 },
+    { node_id: 110, node_name: "Coberturas", risk_pct: 48, risk_level: "high", capital_at_risk_brl: 12000, capital_brl: 22000, revenue_brl: 52000, margin_pct: 14.6, gmroi: 0.8, financial_risk_priority_brl: 32000 },
+    { node_id: 101, node_name: "Revestimentos", risk_pct: 32, risk_level: "medium", capital_at_risk_brl: 18000, capital_brl: 120000, revenue_brl: 245000, margin_pct: 26.4, gmroi: 1.1, financial_risk_priority_brl: 61000 },
+    { node_id: 105, node_name: "Ferragens", risk_pct: 27, risk_level: "medium", capital_at_risk_brl: 9800, capital_brl: 42000, revenue_brl: 71000, margin_pct: 18.8, gmroi: 1.0, financial_risk_priority_brl: 23000 },
+    { node_id: 109, node_name: "Argamassas", risk_pct: 25, risk_level: "medium", capital_at_risk_brl: 6400, capital_brl: 28000, revenue_brl: 54000, margin_pct: 16.9, gmroi: 0.95, financial_risk_priority_brl: 15500 },
+    { node_id: 107, node_name: "Tintas", risk_pct: 21, risk_level: "medium", capital_at_risk_brl: 7800, capital_brl: 51000, revenue_brl: 98000, margin_pct: 27.9, gmroi: 1.6, financial_risk_priority_brl: 21000 },
+    { node_id: 103, node_name: "Metais", risk_pct: 18, risk_level: "low", capital_at_risk_brl: 5400, capital_brl: 86000, revenue_brl: 175000, margin_pct: 22.7, gmroi: 1.4, financial_risk_priority_brl: 12000 },
+    { node_id: 106, node_name: "Hidráulica", risk_pct: 14, risk_level: "low", capital_at_risk_brl: 4200, capital_brl: 48000, revenue_brl: 88000, margin_pct: 21.2, gmroi: 1.2, financial_risk_priority_brl: 9800 },
+    { node_id: 104, node_name: "Louças", risk_pct: 11, risk_level: "low", capital_at_risk_brl: 2100, capital_brl: 54000, revenue_brl: 96000, margin_pct: 20.3, gmroi: 1.3, financial_risk_priority_brl: 7600 },
+    { node_id: 108, node_name: "Elétrica", risk_pct: 9, risk_level: "low", capital_at_risk_brl: 1700, capital_brl: 39000, revenue_brl: 64000, margin_pct: 19.6, gmroi: 1.05, financial_risk_priority_brl: 5200 },
+  ];
+
   return {
+    message: "",
+    kpis: {
+      active_entities: metric(72, 1.4, 6),
+      gross_revenue_6m_brl: metric(452000, 2.1, 6),
+      margin_total_brl: metric(122300, 1.2, 6),
+      margin_pct: metric(27.1, 0.4, 6),
+      capital_total_brl: metric(144200, -0.9, 6, { is_imputed: false }),
+      capital_at_risk_brl: metric(28600, 3.8, 6),
+      potential_revenue_internal_brl: metric(158000, 0.7, 6),
+      potential_revenue_market_brl: metric(512000, 1.1, 6),
+    },
     scope: {
+      level_label: "Grupo",
+      trend_window_months: 6,
+      window: { window_months: 6 },
+      margin_policy: { low_pct: 12, good_pct: 25 },
       filter_options: {
-        marcas: ["Portobello", "Deca", "Suvinil", "Tigre"],
+        marcas: ["Portobello", "Deca", "Suvinil", "Tigre", "Tramontina", "Eliane", "Quartzolit"],
       },
       analysis_cards: {
         abc_mix: {
           a_max_cum_pct: 80,
           b_max_cum_pct: 95,
+          a_count: 4,
+          b_count: 12,
+          c_count: 56,
+          a_revenue_pct: 62.4,
+          b_revenue_pct: 27.1,
+          c_revenue_pct: 10.5,
         },
+        gmroi_global: 1.18,
+        capital_travado_brl: 80400,
+        risco_global_pct: 22.7,
+        margem_contrib_real_pct: 14.3,
       },
     },
     panels: {
-      capital_efficiency: [
-        { node_id: 1, node_name: "Revestimentos", capital_brl: 120000, risk_pct: 32, gmroi: 1.1, revenue_brl: 245000, gross_margin_brl: 60300 },
-        { node_id: 2, node_name: "Metais", capital_brl: 86000, risk_pct: 18, gmroi: 1.4, revenue_brl: 175000, gross_margin_brl: 43000 },
-      ],
-      top_nodes_by_revenue: [
-        { node_id: 10, node_name: "Porcelanato", revenue_brl: 210000, margin_pct: 24.1 },
-        { node_id: 11, node_name: "Loucas", revenue_brl: 96000, margin_pct: 20.3 },
-        { node_id: 12, node_name: "Ferragens", revenue_brl: 71000, margin_pct: 18.8 },
+      top_nodes_by_revenue: topNodesByRevenue,
+      revenue_concentration: {
+        top3_pct: 47.1,
+        top5_pct: 62.2,
+        top10_pct: 84.6,
+        top3_mom_delta_pct: 0.8,
+        top5_mom_delta_pct: 0.4,
+        top10_mom_delta_pct: -0.1,
+        risk_level: "medium",
+        risk_reason: "Concentracao moderada em poucos grupos, mas com tendencia controlada.",
+        is_trend_available: true,
+        trend_source: "SNAPSHOT",
+        trend_basis: "MoM",
+        trend_window_months: 1,
+        target_month_ref: "2026-03",
+        base_month_ref: "2026-02",
+      },
+      capital_allocation_map: capitalAllocationBase.map((row) => ({
+        ...row,
+        size_weight: row.capital_brl,
+      })),
+      capital_allocation_map_spotlight: capitalAllocationBase.map((row) => ({
+        ...row,
+      })),
+      capital_efficiency: capitalEfficiency,
+      rankings: {
+        top_margin: topMargin,
+        nodes_at_risk: nodesAtRisk,
+      },
+      backlog: [
+        { priority: "P0", title: "Reduzir imobilização", text: "Priorizar grupos com capital parado e risco alto.", cta: "Abrir spotlight", tone: "red" },
+        { priority: "P0", title: "Ajustar preço", text: "Rever bandas de preço com perda de competitividade.", cta: "Ver ações", tone: "primary" },
+        { priority: "P1", title: "Rever compras", text: "Ajustar cobertura para evitar excesso em baixa tração.", cta: "Abrir fila", tone: "neutral" },
+        { priority: "P1", title: "Otimizar mix", text: "Melhorar pareto ABC e elevar GMROI por categoria.", cta: "Como ler", tone: "green" },
+        { priority: "P2", title: "Higienizar dados", text: "Corrigir marca/classificação nos itens críticos.", cta: "Ver dados", tone: "neutral" },
       ],
     },
   };
