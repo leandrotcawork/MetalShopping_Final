@@ -1,96 +1,63 @@
 ---
 name: metalshopping-legacy-migration
-description: Migrate MetalShopping legacy frontend modules into the new app with a legacy-first visual parity workflow. Use when the goal is to copy a legacy page or flow first, make it runnable with mocks and adapters, reach 1:1 visual parity, and only then replace mocks with contracts, SDK, and real backend integration.
+description: Migrate MetalShopping legacy frontend modules with a visual-parity-first workflow: literal copy, runnable mocks/shims, parity validation, and only then backend/SDK adaptation.
 ---
 
 # MetalShopping Legacy Migration
 
 Read first: `tasks/lessons.md`, `tasks/todo.md`, `AGENTS.md`.
 
-## Core rule
+## Core principle
 
-Freeze the visual baseline before redesigning anything.
+When request is “copy legacy”, “visual first”, or “deixar igual”, freeze visual baseline first and avoid premature redesign/integration.
 
-If the user says "copy legacy", "leave identical", "visual first", or provides a legacy HTML/CSS/TSX source, use this skill before normal frontend adaptation.
+## Required sequence
 
-## Migration sequence
+1. **Inventory**
+   - identify legacy entrypoint, CSS, shared widgets, payload keys
+2. **Freeze must-match**
+   - shell/header, tabs, first fold, card hierarchy, spacing rhythm, states
+3. **Literal copy**
+   - preserve DOM hierarchy and class boundaries
+4. **Compatibility shims**
+   - local mocks/adapters/context helpers to make page compile/run
+5. **Styling prerequisites**
+   - token fallbacks for critical surfaces and borders
+   - same shell wrapper structure as legacy
+6. **Parity validation**
+   - structure → data shape → CSS/tokens → interactions/animations
+7. **Only after sign-off**
+   - contracts/backend/SDK integration and gradual mock replacement
 
-1. Inventory the legacy source:
-   - page entrypoints
-   - CSS modules/global CSS
-   - shared widgets
-   - app/session dependencies
-   - payload shape expected by the viewmodel
-2. Freeze the must-match surface:
-   - shell/header/tab rail
-   - first fold
-   - card hierarchy
-   - spacing rhythm
-   - states/chips/badges
-3. Copy literal structure first:
-   - preserve markup hierarchy
-   - preserve class boundaries
-   - preserve tab labels and IA ordering
-   - do not simplify layout before parity
-4. Add compatibility shims so the copy runs:
-   - local `AppSessionProvider` or equivalent
-   - mock DTOs shaped like legacy payloads
-   - adapters for registry/text helpers
-   - temporary UI wrappers only when existing components block compile/runtime
-5. Restore styling prerequisites:
-   - local token defaults for legacy CSS variables
-   - shell container structure identical to legacy (`header` vs inner wrapper, rails, pills)
-   - animation fallbacks must not hide content by default
-6. Validate parity in this order:
-   - structure
-   - data shape
-   - CSS/tokens
-   - animation/state polish
-7. Only after visual sign-off:
-   - write/read contracts
-   - implement backend
-   - regenerate SDK
-   - replace mocks incrementally without changing the visual shell
+## Non-negotiables
 
-## Non-negotiable rules
+- do not start backend integration before visual sign-off on visual-first requests
+- do not infer parity from screenshots only when source HTML/CSS/TSX exists
+- do not “clean rewrite” before a runnable matching baseline exists
+- do not leave copied pages with missing payload keys
+- do not hide essential UI behind animation default states
 
-- Do not start with backend integration if the task is explicitly visual-first.
-- Do not judge parity from screenshots alone if legacy source files exist; inspect the actual legacy HTML/CSS/TSX.
-- Do not replace the copied page with a clean rewrite before a matching baseline exists.
-- Do not leave copied components starved of data; if real data is not ready, mock the exact payload keys the legacy viewmodel expects.
-- Do not rely on animation to reveal essential UI; default state must be visible.
+## Blank/flat screen diagnostics (ordered)
 
-## Architecture check
+1. DTO exists and matches expected keys?
+2. Shell route renders the intended page (not fallback/MVP block)?
+3. Critical CSS tokens have fallback values?
+4. Overlay/drawer/backdrop state is reset on tab switch?
+5. Chart/canvas lifecycle guarded in StrictMode?
+6. Runtime exception swallowed by shell error boundary?
 
-State only:
-- module type: `frontend-only` now, `read-only` later
-- exact files/folders to change
-- dependencies that require shims
-- what is parity-critical now vs deferred integration later
+## Deliverable format
 
-## Required diagnostics when something looks blank or flat
-
-Check in this order:
-
-1. Is the copied page receiving the DTO it expects?
-2. Are payload keys aligned with what the viewmodel reads?
-3. Are token variables like `--surface`, `--surface-border`, `--radius-lg`, `--grid-gap` defined in scope?
-4. Is shell markup structure identical to legacy (`header > inner`, tab rail wrapper, right controls)?
-5. Are any elements hidden by default with `opacity: 0` outside keyframes?
-6. Is a runtime exception being swallowed by the route shell?
-
-## Deliverable pattern
-
-For a complex migration, keep phases explicit:
-
-- T5-A inventory + freeze baseline
+For complex migrations, keep explicit phases:
+- T5-A inventory + baseline
 - T5-B literal copy
-- T5-C compatibility adapters
+- T5-C shims/adapters
 - T5-D visual parity pass
 - T5-E remaining visual sections with mocks
-- T1/T2/T4 only after visual sign-off
+- T1/T2/T4 only after sign-off
 
-## References
+## Lessons policy for migration work
 
-- `references/migration-checklist.md` - field checklist and common failure modes
-- `../metalshopping-frontend/references/migration-rules.md` - frontend adaptation rules after parity
+- `tasks/lessons.md` receives only structural/global lessons
+- page-specific spacing/color tweaks stay in feature notes or PR description
+- if a migration issue repeats across pages, then promote it to a lesson
