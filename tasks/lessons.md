@@ -424,3 +424,9 @@ Wrong:   Restricting `Access-Control-Allow-Methods` to GET/POST/OPTIONS while Sh
 Correct: Include `PUT` in CORS allowed methods and assert it in preflight unit tests.
 Rule:    Browser write calls that use preflight must have matching CORS methods, or SDK errors become generic network/interceptor failures.
 Layer:   Go platform
+## Lesson 54 — Manual URL filters must not depend on catalog mode
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Using `catalogBrandOptions`/`catalogLeaf0Options` without populating them when the user is not in catalog mode, leaving manual filters empty.
+Correct: When the manual URL panel opens and filters are not loaded, call `productsApi.listProductsPortfolio` to fetch brand/taxonomy options.
+Rule:    Manual URL configuration must load its filter options independently of catalog selection mode.
+Layer:   Frontend

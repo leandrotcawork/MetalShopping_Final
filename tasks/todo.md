@@ -1,3 +1,26 @@
+# Feature: Shopping manual filters show brand/group
+Type: frontend  |  Events: no  |  ADR: no
+
+## Phase 1 — Architectural thinking
+Module type:
+- `apps/web/src/pages/ShoppingPage.tsx`: carregar filtros de marca/grupo mesmo quando input mode não é catálogo.
+
+Risks:
+- Filtros de URL manual dependem indevidamente do carregamento do catálogo e ficam vazios.
+
+Level scope:
+- Level 1 (now): buscar filtros do portfolio ao abrir o painel manual quando ainda não carregados.
+
+## Tasks
+- [x] T5: frontend — $metalshopping-frontend
+      - carregar filtros via `productsApi.listProductsPortfolio` quando o painel manual é aberto
+      commit: "fix(web): load manual brand/group filters"
+
+## Acceptance tests
+- [x] npm.cmd run web:typecheck passes
+- [ ] Browser: `/shopping` → Configurar URLs manuais → filtros Marca/Grupo aparecem
+
+---
 # Feature: Shopping manual URL save CORS preflight
 Type: backend  |  Events: no  |  ADR: no
 

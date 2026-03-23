@@ -430,6 +430,44 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     };
   }, [productsApi, inputMode, catalogSearch, catalogBrand, catalogLeaf0, catalogStatus, catalogOffset]);
 
+  const manualFiltersReady =
+    catalogBrandOptions.length > 1 || catalogLeaf0Options.length > 1;
+
+  useEffect(() => {
+    if (!showManualUrlPanel || manualFiltersReady) {
+      return;
+    }
+    let cancelled = false;
+
+    async function loadManualFilters() {
+      try {
+        const response = await productsApi.listProductsPortfolio({
+          limit: 1,
+          offset: 0,
+        });
+        if (cancelled) {
+          return;
+        }
+        const filters = response.filters;
+        const leaf0Label = filters.taxonomy_leaf0_label.trim() || "Grupo";
+        setCatalogLeaf0Label(leaf0Label);
+        setCatalogBrandOptions(toSelectOptions(filters.brands, "Todas as marcas"));
+        setCatalogLeaf0Options(toSelectOptions(filters.taxonomy_leaf0_names, `Todos os ${leaf0Label.toLowerCase()}s`));
+      } catch (loadError) {
+        if (!cancelled) {
+          const message =
+            loadError instanceof Error ? loadError.message : "Falha ao carregar filtros de produtos.";
+          setError(message);
+        }
+      }
+    }
+
+    void loadManualFilters();
+    return () => {
+      cancelled = true;
+    };
+  }, [productsApi, showManualUrlPanel, manualFiltersReady]);
+
   useEffect(() => {
     const runRequestId = createdRunRequestId;
     if (!runRequestId) {
