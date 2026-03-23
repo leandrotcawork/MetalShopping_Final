@@ -561,3 +561,10 @@ Wrong:   Rendering export success/error feedback inline in the Products hero asi
 Correct: Show transient top-right toast notifications (success/error) with dismiss + auto-hide while keeping modal-level validation messages in place.
 Rule:    Cross-page operation outcomes should use non-blocking toast feedback instead of occupying permanent hero layout slots.
 Layer:   Frontend
+
+## Lesson 74 — Toast feedback must animate with reduced-motion fallback
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Showing toast notifications without motion cues, making feedback appear abruptly.
+Correct: Add a short enter animation for toast viewport and disable it when `prefers-reduced-motion` is enabled.
+Rule:    UX microfeedback should animate subtly, while always honoring accessibility motion preferences.
+Layer:   Frontend
