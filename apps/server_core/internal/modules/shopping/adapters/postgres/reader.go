@@ -415,12 +415,14 @@ WHERE tenant_id = current_tenant_id()
 		return ports.RunItemList{}, fmt.Errorf("count shopping run items: %w", err)
 	}
 
-	const listQuery = `
+const listQuery = `
 SELECT
   i.run_item_id,
   i.run_id,
   i.product_id,
   p.name,
+  idf.pn_interno,
+  idf.reference,
   i.supplier_code,
   i.item_status,
   i.observed_price,
@@ -438,6 +440,14 @@ FROM shopping_price_run_items i
 JOIN catalog_products p
   ON p.tenant_id = i.tenant_id
  AND p.product_id = i.product_id
+LEFT JOIN LATERAL (
+  SELECT
+    MAX(CASE WHEN identifier_type = 'pn_interno' THEN identifier_value END) AS pn_interno,
+    MAX(CASE WHEN identifier_type = 'reference' THEN identifier_value END) AS reference
+  FROM catalog_product_identifiers
+  WHERE tenant_id = i.tenant_id
+    AND product_id = i.product_id
+) idf ON TRUE
 LEFT JOIN supplier_driver_manifests m
   ON m.tenant_id = i.tenant_id
  AND m.supplier_code = i.supplier_code
@@ -1436,6 +1446,8 @@ func scanRun(s scanner) (ports.Run, error) {
 func scanRunItem(s scanner) (ports.RunItem, error) {
 	var item ports.RunItem
 	var observedAt time.Time
+	var pnInterno sql.NullString
+	var reference sql.NullString
 	var productURL sql.NullString
 	var httpStatus sql.NullInt64
 	var elapsedSeconds sql.NullFloat64
@@ -1447,6 +1459,8 @@ func scanRunItem(s scanner) (ports.RunItem, error) {
 		&item.RunID,
 		&item.ProductID,
 		&item.ProductLabel,
+		&pnInterno,
+		&reference,
 		&item.SupplierCode,
 		&item.ItemStatus,
 		&item.ObservedPrice,
@@ -1466,6 +1480,18 @@ func scanRunItem(s scanner) (ports.RunItem, error) {
 	item.ObservedAt = observedAt.UTC()
 	item.SupplierCode = strings.TrimSpace(item.SupplierCode)
 	item.ItemStatus = strings.TrimSpace(item.ItemStatus)
+	if pnInterno.Valid {
+		value := strings.TrimSpace(pnInterno.String)
+		if value != "" {
+			item.PNInterno = &value
+		}
+	}
+	if reference.Valid {
+		value := strings.TrimSpace(reference.String)
+		if value != "" {
+			item.Reference = &value
+		}
+	}
 	if productURL.Valid {
 		value := strings.TrimSpace(productURL.String)
 		if value != "" {

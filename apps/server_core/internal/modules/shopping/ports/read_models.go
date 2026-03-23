@@ -61,6 +61,8 @@ type RunItem struct {
 	RunID          string
 	ProductID      string
 	ProductLabel   string
+	PNInterno      *string
+	Reference      *string
 	SupplierCode   string
 	ItemStatus     string
 	ObservedPrice  float64

@@ -203,6 +203,24 @@ function deriveRunItemUrl(item: ShoppingRunItemRow): string | null {
   return sanitizeUrlCandidate(httpMatch?.[0] ?? null);
 }
 
+function deriveRunItemPnInterno(item: ShoppingRunItemRow): string | null {
+  const value = (item as { pnInterno?: unknown }).pnInterno;
+  if (typeof value !== "string") {
+    return null;
+  }
+  const token = value.trim();
+  return token === "" ? null : token;
+}
+
+function deriveRunItemReference(item: ShoppingRunItemRow): string | null {
+  const value = (item as { reference?: unknown }).reference;
+  if (typeof value !== "string") {
+    return null;
+  }
+  const token = value.trim();
+  return token === "" ? null : token;
+}
+
 function StepPill(props: { step: WizardStep; activeStep: WizardStep; label: string; onClick: () => void }) {
   const isCompleted = props.activeStep > props.step;
   const isActive = props.activeStep === props.step;
@@ -823,9 +841,13 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     }
     return rows.filter((item) => {
       const lookupUrl = deriveRunItemUrl(item) ?? "";
+      const pnInterno = deriveRunItemPnInterno(item) ?? "";
+      const reference = deriveRunItemReference(item) ?? "";
       const haystack = [
         item.productLabel,
         item.productId,
+        pnInterno,
+        reference,
         item.supplierCode,
         item.itemStatus,
         item.lookupTerm ?? "",
@@ -1989,6 +2011,8 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                   <ul className={styles.logList}> 
                     {filteredRunLogRows.map((item) => { 
                       const url = deriveRunItemUrl(item); 
+                      const pnInterno = deriveRunItemPnInterno(item);
+                      const reference = deriveRunItemReference(item);
                       const foundPrice =
                         item.itemStatus === "OK" ? formatMoney(item.observedPrice, item.currencyCode) : "--";
                       return ( 
@@ -1996,7 +2020,7 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                           <span className={styles.logItemMain}> 
                             <strong>{item.productLabel}</strong> 
                             <small> 
-                              Fornecedor: {item.supplierCode} | Status: {item.itemStatus} | Lookup: {item.lookupTerm ?? "-"} | Preco encontrado:{" "}
+                              PN: {pnInterno ?? "-"} | Ref: {reference ?? "-"} | Fornecedor: {item.supplierCode} | Status: {item.itemStatus} | Lookup: {item.lookupTerm ?? "-"} | Preco encontrado:{" "}
                               {foundPrice}
                             </small> 
                           </span> 

@@ -445,6 +445,8 @@ func (h *Handler) handleRunByID(w http.ResponseWriter, r *http.Request) {
 				"runId":          item.RunID,
 				"productId":      item.ProductID,
 				"productLabel":   item.ProductLabel,
+				"pnInterno":      nil,
+				"reference":      nil,
 				"supplierCode":   item.SupplierCode,
 				"itemStatus":     item.ItemStatus,
 				"observedPrice":  item.ObservedPrice,
@@ -466,6 +468,12 @@ func (h *Handler) handleRunByID(w http.ResponseWriter, r *http.Request) {
 			}
 			if item.ElapsedSeconds != nil {
 				row["elapsedSeconds"] = *item.ElapsedSeconds
+			}
+			if item.PNInterno != nil {
+				row["pnInterno"] = *item.PNInterno
+			}
+			if item.Reference != nil {
+				row["reference"] = *item.Reference
 			}
 			if item.LookupTerm != nil {
 				row["lookupTerm"] = *item.LookupTerm

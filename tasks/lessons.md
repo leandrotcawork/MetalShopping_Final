@@ -540,3 +540,10 @@ Wrong:   Forcing users to scan long log lists manually without any search/filter
 Correct: Add local search over the loaded run-item log rows (product, supplier, status, lookup, URL, notes) with a visible matched/total counter.
 Rule:    High-volume operational logs must provide immediate client-side filtering when data is already loaded in memory.
 Layer:   Frontend
+
+## Lesson 71 — Run item observability fields must be propagated end-to-end
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Exposing `pnInterno` and `reference` in contracts but not selecting/mapping them in run-item read surfaces, causing the UI log to miss key identifiers.
+Correct: Select identifiers in reader, map in HTTP handler, parse in SDK runtime, and render in the log UI.
+Rule:    Any observability field used by UI must be wired through adapter -> transport -> SDK -> frontend consistently.
+Layer:   Go adapter + handler + SDK + Frontend

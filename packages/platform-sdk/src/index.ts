@@ -474,7 +474,15 @@ function parseShoppingRunItem(raw: unknown): ShoppingRunItemV1 {
   if (raw.productUrl !== undefined && raw.productUrl !== null) {
     assertString(raw.productUrl, "ShoppingRunItemV1.productUrl");
   }
+  if (raw.pnInterno !== undefined && raw.pnInterno !== null) {
+    assertString(raw.pnInterno, "ShoppingRunItemV1.pnInterno");
+  }
+  if (raw.reference !== undefined && raw.reference !== null) {
+    assertString(raw.reference, "ShoppingRunItemV1.reference");
+  }
   const productUrl = (raw.productUrl as string | null | undefined) ?? null;
+  const pnInterno = (raw.pnInterno as string | null | undefined) ?? null;
+  const reference = (raw.reference as string | null | undefined) ?? null;
   if (raw.httpStatus !== undefined && raw.httpStatus !== null) {
     assertNumber(raw.httpStatus, "ShoppingRunItemV1.httpStatus");
   }
@@ -492,7 +500,10 @@ function parseShoppingRunItem(raw: unknown): ShoppingRunItemV1 {
   }
   const notes = (raw.notes as string | null | undefined) ?? null;
 
-  return {
+  const parsed: ShoppingRunItemV1 & {
+    pnInterno?: string | null;
+    reference?: string | null;
+  } = {
     runItemId: raw.runItemId,
     runId: raw.runId,
     productId: raw.productId,
@@ -505,11 +516,20 @@ function parseShoppingRunItem(raw: unknown): ShoppingRunItemV1 {
     sellerName: raw.sellerName,
     channel: raw.channel,
     productUrl: productUrl === null ? null : productUrl,
+    pnInterno: pnInterno === null ? null : pnInterno,
+    reference: reference === null ? null : reference,
     httpStatus: httpStatus === null ? null : httpStatus,
     elapsedSeconds: elapsedSeconds === null ? null : elapsedSeconds,
     lookupTerm: lookupTerm === null ? null : lookupTerm,
     notes: notes === null ? null : notes,
   };
+  if (pnInterno !== null) {
+    parsed.pnInterno = pnInterno;
+  }
+  if (reference !== null) {
+    parsed.reference = reference;
+  }
+  return parsed;
 }
 
 function parseShoppingRunItemList(raw: unknown): ShoppingRunItemListV1 {
