@@ -575,3 +575,10 @@ Wrong:   Using `var(--surface)` / `var(--surface-border)` without fallback in mi
 Correct: Add fallback values and use local surface variables for panel backgrounds/borders.
 Rule:    Visual-parity migrations must define safe CSS token fallbacks for critical surfaces.
 Layer:   Frontend
+
+## Lesson 52 — Duplicate card rules must use same solid surface token
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Leaving mixed card backgrounds (`color-mix(... transparent)` and `var(--surface)` without fallback) in duplicate selectors for stats/backlog cards.
+Correct: Force both selectors to use `--tx-surface-solid` and `--tx-border-soft` consistently.
+Rule:    When legacy CSS duplicates card blocks, all variants must share the same non-transparent surface token.
+Layer:   Frontend
