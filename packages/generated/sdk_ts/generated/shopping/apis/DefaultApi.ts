@@ -22,6 +22,8 @@ import type {
   ShoppingCreateRunResponseV1,
   ShoppingManualUrlCandidateListV1,
   ShoppingProductLatestV1,
+  ShoppingRunExportXlsxRequestV1,
+  ShoppingRunExportXlsxResponseV1,
   ShoppingRunItemListV1,
   ShoppingRunItemStatusSummaryV1,
   ShoppingRunListV1,
@@ -48,6 +50,10 @@ import {
     ShoppingManualUrlCandidateListV1ToJSON,
     ShoppingProductLatestV1FromJSON,
     ShoppingProductLatestV1ToJSON,
+    ShoppingRunExportXlsxRequestV1FromJSON,
+    ShoppingRunExportXlsxRequestV1ToJSON,
+    ShoppingRunExportXlsxResponseV1FromJSON,
+    ShoppingRunExportXlsxResponseV1ToJSON,
     ShoppingRunItemListV1FromJSON,
     ShoppingRunItemListV1ToJSON,
     ShoppingRunItemStatusSummaryV1FromJSON,
@@ -72,6 +78,11 @@ import {
 
 export interface CreateShoppingRunRequestRequest {
     shoppingCreateRunRequestV1: ShoppingCreateRunRequestV1;
+}
+
+export interface ExportShoppingRunXlsxRequest {
+    runId: string;
+    shoppingRunExportXlsxRequestV1: ShoppingRunExportXlsxRequestV1;
 }
 
 export interface GetShoppingProductLatestRequest {
@@ -179,6 +190,61 @@ export class DefaultApi extends runtime.BaseAPI {
      */
     async createShoppingRunRequest(requestParameters: CreateShoppingRunRequestRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ShoppingCreateRunResponseV1> {
         const response = await this.createShoppingRunRequestRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for exportShoppingRunXlsx without sending the request
+     */
+    async exportShoppingRunXlsxRequestOpts(requestParameters: ExportShoppingRunXlsxRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['runId'] == null) {
+            throw new runtime.RequiredError(
+                'runId',
+                'Required parameter "runId" was null or undefined when calling exportShoppingRunXlsx().'
+            );
+        }
+
+        if (requestParameters['shoppingRunExportXlsxRequestV1'] == null) {
+            throw new runtime.RequiredError(
+                'shoppingRunExportXlsxRequestV1',
+                'Required parameter "shoppingRunExportXlsxRequestV1" was null or undefined when calling exportShoppingRunXlsx().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/shopping/runs/{run_id}/export-xlsx`;
+        urlPath = urlPath.replace(`{${"run_id"}}`, encodeURIComponent(String(requestParameters['runId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ShoppingRunExportXlsxRequestV1ToJSON(requestParameters['shoppingRunExportXlsxRequestV1']),
+        };
+    }
+
+    /**
+     * Export shopping run items to XLSX
+     */
+    async exportShoppingRunXlsxRaw(requestParameters: ExportShoppingRunXlsxRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ShoppingRunExportXlsxResponseV1>> {
+        const requestOptions = await this.exportShoppingRunXlsxRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ShoppingRunExportXlsxResponseV1FromJSON(jsonValue));
+    }
+
+    /**
+     * Export shopping run items to XLSX
+     */
+    async exportShoppingRunXlsx(requestParameters: ExportShoppingRunXlsxRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ShoppingRunExportXlsxResponseV1> {
+        const response = await this.exportShoppingRunXlsxRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

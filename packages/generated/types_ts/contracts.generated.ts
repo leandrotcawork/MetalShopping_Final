@@ -40,6 +40,8 @@ export const schemaIds = {
   "shopping_manual_url_candidate_list_v1.schema": "https://schemas.metalshopping.local/api/shopping_manual_url_candidate_list_v1.schema.json",
   "shopping_manual_url_candidate_v1.schema": "https://schemas.metalshopping.local/api/shopping_manual_url_candidate_v1.schema.json",
   "shopping_product_latest_v1.schema": "https://schemas.metalshopping.local/api/shopping_product_latest_v1.schema.json",
+  "shopping_run_export_xlsx_request_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_export_xlsx_request_v1.schema.json",
+  "shopping_run_export_xlsx_response_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_export_xlsx_response_v1.schema.json",
   "shopping_run_item_list_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_item_list_v1.schema.json",
   "shopping_run_item_status_summary_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_item_status_summary_v1.schema.json",
   "shopping_run_item_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_item_v1.schema.json",
@@ -487,6 +489,19 @@ export type ShoppingProductLatestV1 = {
   channel: string;
   observedPrice: number;
   currency: string;
+};
+
+export type ShoppingRunExportXlsxRequestV1 = {
+  supplierCodes?: Array<string>;
+  outputFilePath: string;
+};
+
+export type ShoppingRunExportXlsxResponseV1 = {
+  runId: string;
+  outputFilePath: string;
+  exportedAt: string;
+  totalRows: number;
+  supplierCodes?: Array<string>;
 };
 
 export type ShoppingRunItemListV1 = {
