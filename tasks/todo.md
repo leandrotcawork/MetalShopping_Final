@@ -561,3 +561,74 @@ Type: frontend-first migration  |  Events: no  |  ADR: no
 - [x] npm.cmd run web:typecheck passes
 - [x] npm.cmd run web:build passes
 
+---
+
+# Feature: Shopping CONDEC driver hardening
+Type: scraping  |  Events: no  |  ADR: no
+
+## Phase 1 — Architectural thinking
+Module type:
+- `scraping`: Python worker runtime strategy/parser hardening for `CONDEC`.
+
+Exact folder structure (target):
+- `apps/integration_worker/src/shopping_price_runtime/http/strategies.py`
+- `apps/integration_worker/src/shopping_price_runtime/shared/*` (if parser helpers are extracted)
+- optional tests under `apps/integration_worker/tests/*` if adjacent coverage exists
+
+Risks:
+- Overfitting `CONDEC` as a one-off branch would weaken the runtime framework.
+- Regex-only parsing is unsafe for HTML search pages with unrelated numeric tokens.
+- Lookup policy drift can reintroduce false positives if `CONDEC` is not kept reference/search-card based.
+
+Level scope:
+- Level 1 (now): port the legacy card-based parsing behavior into the runtime in a reusable framework shape.
+- Level 2 (later): generalize the same structural card parser for other HTML-search suppliers if needed.
+
+## Tasks
+- [ ] T2: worker — $metalshopping-implement
+      - extract reusable HTML search-card parsing helpers
+      - add `CONDEC`-specific card mapping/selection using the runtime framework
+      - preserve structured runtime notes/status semantics
+      commit: "fix(worker): harden condec html search parsing"
+
+## Acceptance tests
+- [ ] Real run: `CONDEC` no longer collapses all `observed_price` values to `2.00`
+- [ ] Real run: `CONDEC` returns `OK/AMBIGUOUS/NOT_FOUND` based on card structure, not first numeric token
+
+---
+
+# Feature: Legacy DB migration for pricing and inventory
+Type: write+migration  |  Events: no  |  ADR: no
+
+## Phase 1 — Architectural thinking
+Module type:
+- `write+migration`: import legacy `metalshopping_db` price/cost/stock data into current `metalshopping`.
+
+Exact folder structure (target):
+- migration/import script under repo (`scripts/*` or module-local tooling)
+- optional SQL mapping notes under `docs/` or `tasks/`
+- target writes into current pricing/inventory tables only
+
+Risks:
+- Wrong business-key mapping can attach legacy values to the wrong current product.
+- Inventory/pricing writes must stay tenant-scoped and idempotent.
+- Legacy schema may not map 1:1 to current semantic fields (`price`, `replacement cost`, `average cost`, stock positions).
+
+Level scope:
+- Level 1 (now): inspect both schemas and define exact source→target field mapping.
+- Level 2 (now if mapping is safe): implement import tooling for price/cost/stock with idempotent upsert semantics.
+
+## Tasks
+- [ ] T2-A: analysis — inspect `metalshopping_db` and current `metalshopping`
+      - identify source tables/columns for price, cost and stock
+      - identify reliable join key to current catalog
+
+- [ ] T2-B: implementation — $metalshopping-implement
+      - create migration/import tooling with tenant-safe upserts
+      - validate imported counts and spot-check products
+      commit: "feat(data): import legacy pricing and inventory"
+
+## Acceptance tests
+- [ ] SQL validation: current `metalshopping` has non-zero rows in pricing/inventory target tables after import
+- [ ] Browser: Products/Shopping surfaces show imported own price/cost/stock for migrated products
+

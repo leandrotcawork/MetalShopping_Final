@@ -11,7 +11,34 @@ from typing import Any
 
 from ..headers import build_runtime_headers
 from ..models import RuntimeObservation, SupplierRuntimeConfig, SupplierSignal
-from ..shared.parsing import b64json, decode_price_text, extract_by_paths, safe_float, safe_int, safe_str
+from ..shared.parsing import (
+    HtmlSearchCardProfile,
+    b64json,
+    decode_price_text,
+    extract_by_paths,
+    extract_html_search_cards,
+    safe_float,
+    safe_int,
+    safe_str,
+)
+
+
+_BUILTIN_HTML_CARD_PROFILES: dict[str, HtmlSearchCardProfile] = {
+    "condec_search_v1": HtmlSearchCardProfile(
+        profile_name="condec_search_v1",
+        card_tag="div",
+        card_class_tokens=("wrapper-hover",),
+        title_tag="h3",
+        full_price_class_tokens=("price",),
+        sale_price_class_tokens=("price-off",),
+        minimum_price=1.0,
+        fallback_to_regex=False,
+    ),
+}
+
+_DEFAULT_SUPPLIER_HTML_CARD_PROFILE: dict[str, str] = {
+    "CONDEC": "condec_search_v1",
+}
 
 
 def _retry_http_statuses(config: SupplierRuntimeConfig) -> set[int]:
@@ -208,6 +235,15 @@ def _render_debug_search_url(config: SupplierRuntimeConfig, lookup_term: str) ->
         return None
     encoded = urllib.parse.quote(str(lookup_term or "").strip(), safe="")
     return template.replace("EAN", encoded).replace("{term}", encoded)
+
+
+def _resolve_html_card_profile(config: SupplierRuntimeConfig) -> HtmlSearchCardProfile | None:
+    profile_name = safe_str(config.config_json.get("htmlCardProfile"), "").lower()
+    if profile_name == "":
+        profile_name = _DEFAULT_SUPPLIER_HTML_CARD_PROFILE.get(config.supplier_code.upper(), "")
+    if profile_name == "":
+        return None
+    return _BUILTIN_HTML_CARD_PROFILES.get(profile_name)
 
 
 def _build_vtex_url(
@@ -796,6 +832,8 @@ def _execute_http_html_search_strategy(
     last_error = "html_runtime_failed"
     price_regex = safe_str(config.config_json.get("priceRegex"), r"(\d{1,3}(?:\.\d{3})*,\d{2}|\d+(?:\.\d{2})?)")
     seller_regex = safe_str(config.config_json.get("sellerRegex"), "")
+    card_profile = _resolve_html_card_profile(config)
+    top_n = safe_int(config.config_json.get("topN"), 12, 1, 100)
     strategy = _strategy_for_config(config)
     retry_statuses = _retry_http_statuses(config)
 
@@ -819,6 +857,53 @@ def _execute_http_html_search_strategy(
                         channel_default="HTTP_HTML",
                     )
                     return RuntimeObservation("OK", observed_price, seller_name, channel, int(response.status), _with_search_url(f"http_html_json attempt={attempt}", url), strategy, lookup_term) 
+
+                if card_profile is not None:
+                    cards = extract_html_search_cards(raw_body, profile=card_profile, top_n=top_n)
+                    valid_cards = [card for card in cards if card.effective_price is not None and card.effective_price > card_profile.minimum_price]
+                    if len(valid_cards) == 1:
+                        matched = valid_cards[0]
+                        return RuntimeObservation(
+                            "OK",
+                            safe_float(matched.effective_price, base_price),
+                            seller_default,
+                            "HTTP_HTML",
+                            int(response.status),
+                            _with_search_url(
+                                f"html_card_profile={card_profile.profile_name} unique_card cards={len(cards)} attempt={attempt}",
+                                url,
+                            ),
+                            strategy,
+                            lookup_term,
+                        )
+                    if len(valid_cards) > 1:
+                        return RuntimeObservation(
+                            "AMBIGUOUS",
+                            safe_float(base_price, base_price),
+                            seller_default,
+                            "HTTP_HTML",
+                            int(response.status),
+                            _with_search_url(
+                                f"html_card_profile={card_profile.profile_name} multiple_complete_cards={len(valid_cards)} attempt={attempt}",
+                                url,
+                            ),
+                            strategy,
+                            lookup_term,
+                        )
+                    if not card_profile.fallback_to_regex:
+                        return RuntimeObservation(
+                            "NOT_FOUND",
+                            safe_float(base_price, base_price),
+                            seller_default,
+                            "HTTP_HTML",
+                            int(response.status),
+                            _with_search_url(
+                                f"html_card_profile={card_profile.profile_name} no_complete_card attempt={attempt}",
+                                url,
+                            ),
+                            strategy,
+                            lookup_term,
+                        )
 
                 price_match = re.search(price_regex, raw_body, flags=re.IGNORECASE | re.MULTILINE)
                 if price_match is None:

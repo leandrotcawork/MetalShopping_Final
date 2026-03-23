@@ -498,3 +498,17 @@ Wrong:   Starting a CTE block with plain `WITH input_ids AS (...)` and defining 
 Correct: Start the full block with `WITH RECURSIVE` whenever any CTE in that block self-references recursively.
 Rule:    In Postgres, recursive CTE chains fail with missing-relation errors unless the block begins with `WITH RECURSIVE`.
 Layer:   Go adapter
+
+## Lesson 65 — HTML search suppliers need structural card parsing before regex fallback
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Parsing HTML search pages with a global price regex, which captured unrelated numeric tokens and persisted false prices for supplier runs.
+Correct: Add reusable structural card parsing for HTML-search suppliers and let supplier profiles opt out of regex fallback when the page shape is known.
+Rule:    For HTML search suppliers, prefer structured card extraction over whole-document regex matching whenever the page contains repeated UI numbers.
+Layer:   Worker
+
+## Lesson 66 — Legacy stock imports must normalize negative quantity before loading active positions
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Importing legacy `estoque_disponivel` directly into `inventory_product_positions.on_hand_quantity`, even when the source carried negative values that violate the target invariant.
+Correct: Clamp legacy stock to zero during import and report how many rows were normalized.
+Rule:    Legacy inventory imports must satisfy the target non-negative stock invariant explicitly instead of assuming the source data already does.
+Layer:   Process
