@@ -15,6 +15,7 @@
       "@/*": ["src/*"],
       "@metalshopping/ui": ["../../packages/ui/src/index.ts"],
       "@metalshopping/feature-auth-session": ["../../packages/feature-auth-session/src/index.ts"],
+      "@metalshopping/feature-analytics": ["../../packages/feature-analytics/src/index.ts"],
       "@metalshopping/feature-products": ["../../packages/feature-products/src/index.ts"]
     }
   },
@@ -25,6 +26,8 @@
     "../../packages/ui/src/**/*.tsx",
     "../../packages/feature-auth-session/src/**/*.ts",
     "../../packages/feature-auth-session/src/**/*.tsx",
+    "../../packages/feature-analytics/src/**/*.ts",
+    "../../packages/feature-analytics/src/**/*.tsx",
     "../../packages/feature-products/src/**/*.ts",
     "../../packages/feature-products/src/**/*.tsx",
     "../../packages/platform-sdk/src/**/*.ts",

@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@metalshopping/feature-auth-session": "*",
+    "@metalshopping/feature-analytics": "*",
     "@metalshopping/feature-products": "*",
     "@metalshopping/sdk-runtime": "*",
     "@metalshopping/sdk-types": "*",

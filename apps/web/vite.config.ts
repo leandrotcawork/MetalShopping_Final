@@ -15,6 +15,10 @@ export default defineConfig({
         __dirname,
         "../../packages/feature-auth-session/src",
       ),
+      "@metalshopping/feature-analytics": path.resolve(
+        __dirname,
+        "../../packages/feature-analytics/src",
+      ),
       "@metalshopping/feature-products": path.resolve(
         __dirname,
         "../../packages/feature-products/src",
@@ -31,6 +35,8 @@ export default defineConfig({
       "src/**/*.test.tsx",
       "../../packages/feature-auth-session/src/**/*.test.ts",
       "../../packages/feature-auth-session/src/**/*.test.tsx",
+      "../../packages/feature-analytics/src/**/*.test.ts",
+      "../../packages/feature-analytics/src/**/*.test.tsx",
       "../../packages/feature-products/src/**/*.test.ts",
       "../../packages/feature-products/src/**/*.test.tsx",
     ],

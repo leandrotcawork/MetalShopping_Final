@@ -1,0 +1,391 @@
+﻿.historyRoot {
+  display: grid;
+  gap: 16px;
+  font-family: "Space Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+.mono {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.historyIndicators {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.indicatorCard {
+  border-radius: 16px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--muted) 24%, transparent);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: blur(12px) saturate(140%);
+  display: grid;
+  gap: 8px;
+}
+
+.indicatorLabel {
+  font-size: 11px;
+  letter-spacing: 0.26px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.indicatorValue {
+  font-size: 22px;
+  letter-spacing: -0.4px;
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.toneGood {
+  color: #16a34a;
+}
+
+.toneWarn {
+  color: #ca8a04;
+}
+
+.toneBad {
+  color: #dc2626;
+}
+
+.toneNeutral {
+  color: #64748b;
+}
+
+.indicatorBar {
+  height: 8px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--muted) 24%, transparent);
+  overflow: hidden;
+}
+
+.indicatorFill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #8b1538 0%, #b83b5f 100%);
+}
+
+.fillGood {
+  background: linear-gradient(90deg, #16a34a, #22c55e);
+}
+
+.fillWarn {
+  background: linear-gradient(90deg, #ca8a04, #facc15);
+}
+
+.fillBad {
+  background: linear-gradient(90deg, #dc2626, #ef4444);
+}
+
+.fillNeutral {
+  background: linear-gradient(90deg, #475569, #64748b);
+}
+
+.historyInfoBar {
+  border-radius: 16px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--muted) 24%, transparent);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: blur(12px) saturate(140%);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.infoItem {
+  display: grid;
+  gap: 4px;
+}
+
+.infoLabel {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.24px;
+  font-weight: 800;
+}
+
+.infoValue {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.chartsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.chartCard {
+  min-width: 0;
+  border-radius: 18px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--muted) 24%, transparent);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: blur(12px) saturate(140%);
+  display: grid;
+  gap: 12px;
+}
+
+.chartHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.chartTitleWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.chartIcon {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--wine) 12%, transparent);
+}
+
+.chartTitle {
+  font-size: 18px;
+  font-weight: 850;
+  letter-spacing: -0.32px;
+  color: var(--ink);
+  margin: 0;
+  min-width: 0;
+}
+
+.timeRange {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  flex-wrap: wrap;
+}
+
+.timeBtn {
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 9px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.timeBtnActive {
+  color: var(--wine);
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.08);
+}
+
+.statsRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  min-width: 0;
+}
+
+.statCard {
+  border-radius: 12px;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--muted) 20%, transparent);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  display: grid;
+  gap: 4px;
+}
+
+.statLabel {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.24px;
+  font-weight: 800;
+}
+
+.statValue {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 900;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.statPositive {
+  color: #16a34a;
+}
+
+.statNegative {
+  color: #dc2626;
+}
+
+.chartWrap {
+  height: 300px;
+  position: relative;
+  width: 100%;
+}
+
+.chartWrap :global(canvas) {
+  display: block;
+  max-width: 100% !important;
+  max-height: 100% !important;
+}
+
+.chartFooterSlot {
+  min-height: 30px;
+}
+
+.priceLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+  min-height: 30px;
+  margin-top: 2px;
+}
+
+.priceLegendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.priceLegendSwatch {
+  --legend-color: #64748b;
+  width: 18px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--legend-color);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--legend-color) 20%, transparent);
+}
+
+.priceLegendSwatchDashed {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--legend-color) 0 5px,
+    transparent 5px 8px
+  );
+}
+
+.priceLegendLabel {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.priceLegendLink {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.chartTooltip {
+  position: absolute;
+  min-width: 200px;
+  max-width: 250px;
+  padding: 6px 9px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(10, 14, 24, 0.92);
+  backdrop-filter: blur(12px) saturate(120%);
+  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.38);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: opacity 0.08s ease;
+  z-index: 8;
+}
+
+.chartTooltipVisible {
+  opacity: 1;
+}
+
+.tooltipDate {
+  font-size: 10px;
+  font-weight: 800;
+  color: rgba(241, 245, 249, 0.96);
+  margin-bottom: 4px;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+  margin-bottom: 2px;
+}
+
+.tooltipLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(226, 232, 240, 0.92);
+}
+
+.tooltipDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.tooltipValue {
+  color: rgba(248, 250, 252, 0.98);
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 700;
+}
+
+@media (max-width: 1240px) {
+  .historyIndicators {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .historyInfoBar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .chartsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .historyIndicators {
+    grid-template-columns: 1fr;
+  }
+
+  .historyInfoBar {
+    grid-template-columns: 1fr;
+  }
+
+  .statsRow {
+    grid-template-columns: 1fr;
+  }
+
+  .chartHeader {
+    display: grid;
+    justify-items: start;
+  }
+
+  .timeRange {
+    flex-wrap: wrap;
+  }
+}
+

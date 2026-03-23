@@ -1,0 +1,551 @@
+.page {
+  display: grid;
+  gap: 18px;
+  --brand-surface-solid: var(--surface);
+  --brand-surface-card: color-mix(in srgb, var(--surface) 94%, transparent);
+  --brand-border-soft: var(--surface-border);
+  --brand-border: color-mix(in srgb, var(--surface-border) 86%, transparent);
+  --brand-text-soft: color-mix(in srgb, var(--muted) 88%, #64748b 12%);
+}
+
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.title {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.1;
+  font-weight: 900;
+  color: var(--ink);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.subtitle {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.headerChip,
+.secondaryBtn,
+.rolePill,
+.riskBadge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.headerChip,
+.secondaryBtn,
+.rolePill {
+  padding: 9px 14px;
+  border: 1px solid color-mix(in srgb, var(--muted) 24%, transparent);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  color: var(--ink);
+}
+
+.secondaryBtn {
+  cursor: pointer;
+}
+
+.kpiGrid6 {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.twoCol {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.twoCol > * {
+  min-width: 0;
+}
+
+.panel {
+  border: 1px solid var(--brand-border-soft);
+  border-radius: 14px;
+  background: var(--brand-surface-card);
+  padding: 16px;
+  box-shadow: var(--shadow-soft), 0 1px 0 rgba(255, 255, 255, 0.35) inset;
+  backdrop-filter: blur(22px) saturate(170%);
+  -webkit-backdrop-filter: blur(22px) saturate(170%);
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.panel::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75), transparent);
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+.panelSolid {
+  background: var(--brand-surface-solid);
+  border-color: var(--brand-border-soft);
+}
+
+.panelHead {
+  display: grid;
+  gap: 5px;
+}
+
+.panelHeadRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 900;
+  color: var(--ink);
+}
+
+.panelSub {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.panelHint {
+  margin: 0;
+  color: var(--wine);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.textWarn {
+  color: #b91c1c;
+}
+
+.panelActionText {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--wine);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.riskBadge {
+  padding: 7px 12px;
+  color: #b91c1c;
+  background: color-mix(in srgb, #b91c1c 10%, transparent);
+  border: 1px solid color-mix(in srgb, #b91c1c 18%, transparent);
+}
+
+.categoryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.categoryCard,
+.abcCard,
+.momentumCard,
+.concStatCard {
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--surface-border) 72%, transparent);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+}
+
+.categoryCard {
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.categoryHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.categoryBadge {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--wine), color-mix(in srgb, var(--wine) 60%, #0ea5e9 40%));
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.categoryName {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.categoryMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.metricItem {
+  display: grid;
+  gap: 4px;
+}
+
+.metricLabel,
+.table th,
+.axisX,
+.axisY,
+.quadrant {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.metricLabel {
+  color: var(--brand-text-soft);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.metricValue {
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--ink);
+}
+
+.metricSub {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.trendPositive,
+.trendNegative {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.trendPositive {
+  color: #16a34a;
+}
+
+.trendNegative {
+  color: #dc2626;
+}
+
+.concStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.concStatCard {
+  padding: 12px 14px;
+  display: grid;
+  gap: 6px;
+}
+
+.concStatCard span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.concStatCard strong {
+  font-size: 18px;
+  color: var(--ink);
+}
+
+.concentrationList {
+  display: grid;
+  gap: 12px;
+}
+
+.concItem {
+  display: grid;
+  gap: 6px;
+}
+
+.concMeta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.concTrack {
+  height: 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-border) 40%, transparent);
+  overflow: hidden;
+}
+
+.concFill {
+  height: 100%;
+  border-radius: inherit;
+}
+
+.concTop3 { background: linear-gradient(90deg, var(--wine), #ef4444); }
+.concTop5 { background: linear-gradient(90deg, #f97316, #f59e0b); }
+.concTop10 { background: linear-gradient(90deg, #0ea5e9, #22c55e); }
+
+.quote {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mapShell {
+  position: relative;
+  min-height: 430px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--surface-border) 72%, transparent);
+  background:
+    linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px) 0 0 / 100% 25%,
+    linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px) 0 0 / 25% 100%,
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015));
+  overflow: hidden;
+}
+
+.quadrant {
+  position: absolute;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--surface) 84%, transparent);
+}
+
+.q1 { top: 14px; left: 14px; }
+.q2 { top: 14px; right: 14px; }
+.q3 { bottom: 36px; left: 14px; }
+.q4 { bottom: 36px; right: 14px; }
+
+.axisY,
+.axisX {
+  position: absolute;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.axisY {
+  left: -14px;
+  top: 50%;
+  transform: rotate(-90deg);
+}
+
+.axisX {
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+}
+
+.bubble {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #fff;
+  box-shadow: 0 20px 32px rgba(2, 6, 23, 0.24);
+}
+
+.bubble strong {
+  font-size: 12px;
+  line-height: 1.1;
+}
+
+.bubble span {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.bubbleReady { background: radial-gradient(circle at 30% 30%, rgba(16, 185, 129, 0.85), rgba(5, 46, 22, 0.92)); }
+.bubbleCaution { background: radial-gradient(circle at 30% 30%, rgba(245, 158, 11, 0.88), rgba(92, 45, 0, 0.94)); }
+.bubbleBlocked { background: radial-gradient(circle at 30% 30%, rgba(239, 68, 68, 0.9), rgba(69, 10, 10, 0.94)); }
+
+.qualityList,
+.abcList,
+.momentumList {
+  display: grid;
+  gap: 12px;
+}
+
+.qualityRow {
+  display: grid;
+  grid-template-columns: 140px 1fr 40px;
+  gap: 12px;
+  align-items: center;
+}
+
+.qualityMeta span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.qualityTrack {
+  height: 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-border) 45%, transparent);
+  overflow: hidden;
+}
+
+.qualityFill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--wine), #0ea5e9);
+}
+
+.qualityValue,
+.abcShare {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--ink);
+}
+
+.abcCard {
+  padding: 14px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 14px;
+  align-items: center;
+}
+
+.abcBand {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--wine), color-mix(in srgb, var(--wine) 50%, #f59e0b 50%));
+  color: #fff;
+  font-weight: 900;
+}
+
+.abcCard strong,
+.momentumCard strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.abcCard p,
+.momentumCard p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.momentumCard {
+  padding: 14px;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  text-align: left;
+  font-size: 11px;
+  color: var(--muted);
+  padding: 0 12px 12px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--surface-border) 72%, transparent);
+}
+
+.table td {
+  padding: 14px 12px 14px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--surface-border) 58%, transparent);
+  vertical-align: middle;
+  font-size: 13px;
+}
+
+.table td strong {
+  display: block;
+}
+
+.table td span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.rolePill {
+  color: var(--wine);
+  background: color-mix(in srgb, var(--wine) 12%, transparent);
+  border-color: color-mix(in srgb, var(--wine) 20%, transparent);
+}
+
+@media (max-width: 1180px) {
+  .kpiGrid6 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .twoCol {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .kpiGrid6,
+  .categoryGrid,
+  .categoryMetrics,
+  .concStats,
+  .qualityRow,
+  .abcCard {
+    grid-template-columns: 1fr;
+  }
+
+  .panel {
+    padding: 14px;
+  }
+
+  .mapShell {
+    min-height: 360px;
+  }
+}

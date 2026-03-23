@@ -9,6 +9,8 @@ import { ProductsPortfolioPage } from "@metalshopping/feature-products";
 import { AppFrame } from "@metalshopping/ui";
 
 import logoMetalNobre from "../assets/logo_metal_nobre.svg";
+import { AnalyticsPage } from "../pages/AnalyticsPage";
+import { AnalyticsProductsWorkspaceRoute } from "../pages/AnalyticsProductsWorkspacePage";
 import { HomePage } from "../pages/HomePage";
 import { ShoppingPage } from "../pages/ShoppingPage";
 import { AppShell } from "./layouts/AppShell";
@@ -32,6 +34,14 @@ function ShoppingRoute() {
   return <ShoppingPage shoppingApi={sdk.shopping} productsApi={sdk.products} />;
 }
 
+function AnalyticsRoute() {
+  return <AnalyticsPage />;
+}
+
+function AnalyticsProductsWorkspace() {
+  return <AnalyticsProductsWorkspaceRoute />;
+}
+
 function PlaceholderRoute(props: { title: string; subtitle: string }) {
   return <AppFrame eyebrow="MetalShopping" title={props.title} subtitle={props.subtitle} />;
 }
@@ -53,15 +63,8 @@ function RoutedApp() {
             <Route path="home" element={<HomeRoute />} />
             <Route path="products" element={<ProductsRoute />} />
             <Route path="shopping" element={<ShoppingRoute />} />
-            <Route
-              path="analytics"
-              element={
-                <PlaceholderRoute
-                  title="Analytics"
-                  subtitle="Surface reservada. Abertura bloqueada ate fecharmos o hardening de Products."
-                />
-              }
-            />
+            <Route path="analytics/products/:pn/*" element={<AnalyticsProductsWorkspace />} />
+            <Route path="analytics/:tab?" element={<AnalyticsRoute />} />
             <Route
               path="settings"
               element={

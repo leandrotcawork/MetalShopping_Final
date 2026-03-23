@@ -1,0 +1,45 @@
+{
+  "kpi_help": {
+    "portfolio_ativo": {
+      "items": [
+        "Total de SKUs no recorte atual (com filtros).",
+        "A tendencia indica se o ritmo medio de vendas do portfolio esta subindo ou caindo.",
+        "Ex.: +0,6% = crescimento medio de 0,6% nas vendas por mes.",
+        "Nao representa margem, receita ou quantidade de SKUs."
+      ]
+    },
+    "capital_imobilizado": {
+      "items": [
+        "Soma do capital parado em estoque no recorte atual.",
+        "Calculo por SKU: estoque_un x custo_medio.",
+        "Se custo_medio nao existir, usa nosso preco como fallback e marca dados imputados."
+      ]
+    },
+    "capital_em_risco": {
+      "items": [
+        "Parcela do capital imobilizado concentrada em itens com risco de encalhe.",
+        "Considera produtos com DOS alto ou muitos dias sem venda.",
+        "Use esse valor para priorizar acoes de desova, precificacao e compras."
+      ]
+    },
+    "receita_potencial_interna": {
+      "items": [
+        "Estimativa de receita potencial baseada no estoque atual.",
+        "Calculo por SKU: estoque_un x (our_price - custo_medio)."
+      ]
+    },
+    "receita_potencial_mercado": {
+      "items": [
+        "Estimativa de receita potencial usando preco medio de mercado.",
+        "Calculo por SKU: estoque_un x (comp_price_mean - custo_medio).",
+        "Se comp_price_mean nao existir, usa our_price como fallback e marca dados imputados."
+      ]
+    },
+    "margem_ponderada": {
+      "items": [
+        "Media ponderada de margem no recorte atual.",
+        "Usa margem_contrib_pct com peso max(1, venda_1m_un) por SKU."
+      ]
+    }
+  }
+}

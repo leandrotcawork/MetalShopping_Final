@@ -6,6 +6,7 @@
     "packages/generated-types",
     "packages/platform-sdk",
     "packages/ui",
+    "packages/feature-analytics",
     "packages/feature-products",
     "packages/feature-auth-session"
   ],

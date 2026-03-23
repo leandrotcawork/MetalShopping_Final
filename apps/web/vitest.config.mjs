@@ -9,6 +9,8 @@ export default defineConfig({
       "src/**/*.test.tsx",
       "../../packages/feature-auth-session/src/**/*.test.ts",
       "../../packages/feature-auth-session/src/**/*.test.tsx",
+      "../../packages/feature-analytics/src/**/*.test.ts",
+      "../../packages/feature-analytics/src/**/*.test.tsx",
       "../../packages/feature-products/src/**/*.test.ts",
       "../../packages/feature-products/src/**/*.test.tsx",
     ],

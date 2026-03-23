@@ -1,0 +1,366 @@
+.ah-page {
+  --wine: #8f1538;
+  --ink: #1f1c1d;
+  --muted: #6f6469;
+  --line: #e8e2e5;
+  --ok: #0c7a46;
+  --warn: #a16207;
+  --err: #b91c1c;
+  display: grid;
+  gap: 14px;
+}
+
+[data-theme="dark"] .ah-page {
+  --ink: #e2e8f0;
+  --muted: #94a3b8;
+  --line: rgba(148, 163, 184, 0.28);
+}
+
+.ah-shortcuts button,
+.ah-mini button,
+.ah-drawer button,
+.ah-chip-card {
+  font-family: inherit;
+}
+
+.ah-shortcuts button,
+.ah-mini button,
+.ah-drawer-actions button,
+.ah-kanban-card button {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: #3f3438;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.ah-shortcuts button:hover,
+.ah-mini button:hover,
+.ah-drawer-actions button:hover,
+.ah-kanban-card button:hover {
+  border-color: #cfbbc4;
+}
+
+.ah-banner {
+  border-radius: 12px;
+  border: 1px solid #d7e0ea;
+  background: #f7fafc;
+  color: #334155;
+  font-size: 13px;
+  padding: 9px 12px;
+}
+
+.ah-banner.error {
+  border-color: #ffd2d2;
+  background: #fff3f3;
+  color: #9f1239;
+}
+
+.ah-banner.warning {
+  border-color: #f7e2b0;
+  background: #fff8e8;
+  color: #9a6a0b;
+}
+
+.ah-hero {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 12px;
+}
+
+.ah-hero-main,
+.ah-command,
+.ah-lane,
+.ah-simple {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  padding: 14px;
+}
+
+.ah-hero-main h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 24px;
+}
+
+.ah-hero-main p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.ah-shortcuts {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ah-shortcuts button {
+  text-align: left;
+  display: grid;
+  gap: 4px;
+}
+
+.ah-shortcuts small {
+  color: var(--muted);
+}
+
+.ah-command-head h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.ah-command-head small {
+  color: var(--muted);
+}
+
+.ah-chips {
+  margin-top: 10px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ah-chips button {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #61575b;
+  padding: 5px 9px;
+  cursor: pointer;
+}
+
+.ah-chips button.active {
+  background: rgba(143, 21, 56, 0.12);
+  border-color: rgba(143, 21, 56, 0.25);
+  color: var(--wine);
+}
+
+.ah-search {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 16px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: #fff;
+}
+
+.ah-search input {
+  border: none;
+  outline: none;
+  font-size: 13px;
+  color: #2a2528;
+}
+
+.ah-search small {
+  color: #6b7280;
+  font-size: 11px;
+}
+
+.ah-mini {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.ah-mini button {
+  text-align: left;
+  display: grid;
+  gap: 2px;
+}
+
+.ah-mini b {
+  font-size: 23px;
+  line-height: 1;
+  color: #1e1b1c;
+}
+
+.ah-mini small {
+  color: var(--muted);
+}
+
+.ah-kanban {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ah-lane > header h3 {
+  margin: 0 0 8px;
+}
+
+.ah-kanban-card {
+  border: 1px solid #efe9ec;
+  border-radius: 10px;
+  padding: 9px;
+  display: grid;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.ah-kanban-card small,
+.ah-kanban-card p {
+  color: var(--muted);
+  margin: 0;
+  font-size: 12px;
+}
+
+.ah-kanban-card > div {
+  display: flex;
+  gap: 6px;
+}
+
+.ah-kanban-card select {
+  border: 1px solid #ddd2d7;
+  border-radius: 8px;
+  padding: 6px;
+  font-size: 12px;
+  color: #352d31;
+}
+
+.ah-simple header h3 {
+  margin: 0;
+}
+
+.ah-simple header p {
+  margin: 4px 0 10px;
+  color: var(--muted);
+}
+
+.ah-chip-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ah-chip-card {
+  border: 1px solid #efe9ec;
+  border-radius: 10px;
+  padding: 9px;
+  text-align: left;
+  background: #fff;
+  display: grid;
+  gap: 3px;
+}
+
+.ah-chip-card small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.ah-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.ah-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.ah-drawer {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  bottom: 10px;
+  width: min(560px, 94vw);
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: #fff;
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.2);
+  transform: translateX(108%);
+  transition: transform 0.22s ease;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  z-index: 60;
+}
+
+.ah-drawer.open {
+  transform: translateX(0);
+}
+
+.ah-drawer header {
+  border-bottom: 1px solid #efe9ec;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+
+.ah-drawer h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.ah-drawer > div {
+  padding: 12px;
+  overflow: auto;
+  display: grid;
+  gap: 10px;
+}
+
+.ah-drawer h4 {
+  margin: 0;
+  font-size: 13px;
+}
+
+.ah-drawer p {
+  margin: 0;
+  color: #374151;
+}
+
+.ah-drawer-actions,
+.ah-drawer-skus {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ah-drawer-skus button {
+  border: 1px solid #d9c8d0;
+  border-radius: 999px;
+  background: #fff;
+  padding: 6px 9px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+@media (max-width: 1180px) {
+  .ah-hero {
+    grid-template-columns: 1fr;
+  }
+  .ah-kanban {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ah-chip-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .ah-shortcuts {
+    grid-template-columns: 1fr;
+  }
+  .ah-mini {
+    grid-template-columns: 1fr;
+  }
+  .ah-kanban {
+    grid-template-columns: 1fr;
+  }
+}
