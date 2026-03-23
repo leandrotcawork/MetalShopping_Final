@@ -36,6 +36,11 @@ type ExportDraft = {
   outputFilePath: string;
 };
 
+type ProductsToast = {
+  tone: "success" | "error";
+  message: string;
+};
+
 function readExportDraft(): ExportDraft {
   if (typeof window === "undefined") {
     return { runId: "", supplierCodes: [], outputFilePath: "" };
@@ -98,6 +103,7 @@ export function ProductsPortfolioPage(props: { api: ProductsPortfolioApi; shoppi
   const [exporting, setExporting] = useState(false);
   const [exportStatus, setExportStatus] = useState<{ tone: "success" | "error"; message: string } | null>(null);
   const [exportResult, setExportResult] = useState<ShoppingMarketReportExportXlsxResponseV1 | null>(null);
+  const [toast, setToast] = useState<ProductsToast | null>(null);
 
   useEffect(() => {
     startTransition(() => {
@@ -209,6 +215,28 @@ export function ProductsPortfolioPage(props: { api: ProductsPortfolioApi; shoppi
     setExportResult(null);
     setExportStatus(null);
   }, [exportRunId, exportSupplierCodes, exportOutputPath, exportModalOpen]);
+
+  useEffect(() => {
+    if (!exportStatus) {
+      return;
+    }
+    setToast(exportStatus);
+  }, [exportStatus]);
+
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
+    setToast({ tone: "error", message: error });
+  }, [error]);
+
+  useEffect(() => {
+    if (!toast) {
+      return;
+    }
+    const timeout = window.setTimeout(() => setToast(null), toast.tone === "success" ? 3200 : 4800);
+    return () => window.clearTimeout(timeout);
+  }, [toast]);
 
   const summary = useMemo(() => buildProductsPortfolioSummary(result), [result]);
   const rows = result?.rows ?? [];
@@ -420,12 +448,22 @@ export function ProductsPortfolioPage(props: { api: ProductsPortfolioApi; shoppi
         totalSelected={totalSelected}
         totalProducts={summary.totalProducts}
         totalRuns={totalRuns}
-        error={error}
         exportDisabled={exportDisabled}
-        exportStatus={exportStatus}
         onConfigureReport={openExportModal}
         onExportReport={() => void handleExport()}
       />
+      {toast ? (
+        <div className={styles.toastViewport} role="status" aria-live="polite">
+          <StatusBanner className={styles[`toastBanner${toast.tone === "success" ? "Success" : "Error"}`]} tone={toast.tone}>
+            <div className={styles.toastContent}>
+              <span>{toast.message}</span>
+              <button type="button" className={styles.toastCloseButton} onClick={() => setToast(null)} aria-label="Fechar notificação">
+                ×
+              </button>
+            </div>
+          </StatusBanner>
+        </div>
+      ) : null}
 
       <ProductsFiltersCard
         searchDraft={searchDraft}

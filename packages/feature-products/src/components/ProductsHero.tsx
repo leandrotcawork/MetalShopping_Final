@@ -1,4 +1,4 @@
-import { AppFrame, Button, MetricChip, StatusBanner } from "@metalshopping/ui";
+import { AppFrame, Button, MetricChip } from "@metalshopping/ui";
 
 import styles from "../ProductsPortfolioPage.module.css";
 
@@ -7,9 +7,7 @@ export function ProductsHero(props: {
   totalSelected: number;
   totalProducts: number;
   totalRuns: number;
-  error: string | null;
   exportDisabled: boolean;
-  exportStatus: { tone: "success" | "error"; message: string } | null;
   onConfigureReport: () => void;
   onExportReport: () => void;
 }) {
@@ -38,16 +36,6 @@ export function ProductsHero(props: {
               Exportar relatório
             </Button>
           </div>
-          {props.exportStatus ? (
-            <StatusBanner className={styles.heroStatusBanner} tone={props.exportStatus.tone}>
-              {props.exportStatus.message}
-            </StatusBanner>
-          ) : null}
-          {props.error ? (
-            <StatusBanner className={styles.heroStatusBanner} tone="error">
-              {props.error}
-            </StatusBanner>
-          ) : null}
         </div>
       }
     />

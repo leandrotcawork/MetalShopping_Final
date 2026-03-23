@@ -554,3 +554,10 @@ Wrong:   Picking price from the first parsed HTML card even when the card is mar
 Correct: Parse card-scoped entries and ignore cards matching configurable `unavailableHints`; return `NOT_FOUND` when all candidates are unavailable.
 Rule:    In HTML search/card strategies, availability checks must run before price extraction to avoid persisting non-buyable prices.
 Layer:   Worker
+
+## Lesson 73 — Global operation feedback belongs in toast, not hero card body
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Rendering export success/error feedback inline in the Products hero aside, increasing visual noise and shrinking actionable space.
+Correct: Show transient top-right toast notifications (success/error) with dismiss + auto-hide while keeping modal-level validation messages in place.
+Rule:    Cross-page operation outcomes should use non-blocking toast feedback instead of occupying permanent hero layout slots.
+Layer:   Frontend
