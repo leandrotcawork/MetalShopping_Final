@@ -430,3 +430,9 @@ Wrong:   Using `catalogBrandOptions`/`catalogLeaf0Options` without populating th
 Correct: When the manual URL panel opens and filters are not loaded, call `productsApi.listProductsPortfolio` to fetch brand/taxonomy options.
 Rule:    Manual URL configuration must load its filter options independently of catalog selection mode.
 Layer:   Frontend
+## Lesson 55 — Export panel must render without selected run
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Rendering the XLSX export panel only when a run was selected, leaving no UI after "configurar relatorio".
+Correct: Always render the export panel and allow selecting the run from the dropdown.
+Rule:    Export UX must be visible even before a run is selected.
+Layer:   Frontend

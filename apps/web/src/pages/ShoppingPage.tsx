@@ -1857,71 +1857,71 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                       <p className={styles.empty}>Sem dados por fornecedor para este run.</p>
                     )}
                   </div>
-
-                  <div className={styles.exportCard}>
-                    <div className={styles.exportHeader}>
-                      <div>
-                        <h4>Relatorio XLSX</h4>
-                        <p className={styles.exportSubtitle}>
-                          Selecione run, fornecedores e o destino do arquivo para exportar o relatorio completo.
-                        </p>
-                      </div>
-                    </div>
-                    <div className={styles.exportGrid}>
-                      <label>
-                        Run
-                        <FilterDropdown
-                          id="export-run"
-                          options={exportRunOptions}
-                          value={exportRunId}
-                          onSelect={(value) => {
-                            setExportRunId(value);
-                            setExportResult(null);
-                          }}
-                          disabled={exportRunOptions.length === 0}
-                        />
-                      </label>
-                      <label>
-                        Fornecedores
-                        <FilterDropdown
-                          id="export-suppliers"
-                          options={manualSupplierOptions}
-                          values={exportSupplierCodes}
-                          selectionMode="duo"
-                          allLabel="Todos fornecedores"
-                          onSelect={(value) => setExportSupplierCodes((current) => toggleMultiSelection(current, value))}
-                          disabled={manualSupplierOptions.length === 0}
-                        />
-                      </label>
-                      <label className={styles.exportPath}>
-                        Caminho do arquivo XLSX
-                        <input
-                          type="text"
-                          value={exportOutputPath}
-                          onChange={(event) => setExportOutputPath(event.target.value)}
-                          placeholder="C:\\exports\\shopping\\run.xlsx"
-                        />
-                      </label>
-                    </div>
-                    {exportError ? <p className={styles.error}>{exportError}</p> : null}
-                    {exportResult ? (
-                      <p className={styles.exportSuccess}>
-                        Exportado para {exportResult.outputFilePath} ({exportResult.totalRows} linhas)
-                      </p>
-                    ) : null}
-                    <div className={styles.exportActions}>
-                      <button
-                        type="button"
-                        className={`${styles.btn} ${styles.btnPrimary} ${styles.btnCompact}`}
-                        onClick={() => void exportRunReport()}
-                        disabled={exporting}
-                      >
-                        {exporting ? "Exportando..." : "Exportar XLSX"}
-                      </button>
-                    </div>
-                  </div>
                 </>
               )}
+
+              <div className={styles.exportCard}>
+                <div className={styles.exportHeader}>
+                  <div>
+                    <h4>Relatorio XLSX</h4>
+                    <p className={styles.exportSubtitle}>
+                      Selecione run, fornecedores e o destino do arquivo para exportar o relatorio completo.
+                    </p>
+                  </div>
+                </div>
+                <div className={styles.exportGrid}>
+                  <label>
+                    Run
+                    <FilterDropdown
+                      id="export-run"
+                      options={exportRunOptions}
+                      value={exportRunId}
+                      onSelect={(value) => {
+                        setExportRunId(value);
+                        setExportResult(null);
+                      }}
+                      disabled={exportRunOptions.length === 0}
+                    />
+                  </label>
+                  <label>
+                    Fornecedores
+                    <FilterDropdown
+                      id="export-suppliers"
+                      options={manualSupplierOptions}
+                      values={exportSupplierCodes}
+                      selectionMode="duo"
+                      allLabel="Todos fornecedores"
+                      onSelect={(value) => setExportSupplierCodes((current) => toggleMultiSelection(current, value))}
+                      disabled={manualSupplierOptions.length === 0}
+                    />
+                  </label>
+                  <label className={styles.exportPath}>
+                    Caminho do arquivo XLSX
+                    <input
+                      type="text"
+                      value={exportOutputPath}
+                      onChange={(event) => setExportOutputPath(event.target.value)}
+                      placeholder="C:\\exports\\shopping\\run.xlsx"
+                    />
+                  </label>
+                </div>
+                {exportError ? <p className={styles.error}>{exportError}</p> : null}
+                {exportResult ? (
+                  <p className={styles.exportSuccess}>
+                    Exportado para {exportResult.outputFilePath} ({exportResult.totalRows} linhas)
+                  </p>
+                ) : null}
+                <div className={styles.exportActions}>
+                  <button
+                    type="button"
+                    className={`${styles.btn} ${styles.btnPrimary} ${styles.btnCompact}`}
+                    onClick={() => void exportRunReport()}
+                    disabled={exporting}
+                  >
+                    {exporting ? "Exportando..." : "Exportar XLSX"}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
