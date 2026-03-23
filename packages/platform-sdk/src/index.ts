@@ -8,6 +8,8 @@ import type {
   ShoppingBootstrapV1,
   ShoppingCreateRunRequestV1,
   ShoppingCreateRunResponseV1,
+  ShoppingMarketReportExportXlsxRequestV1,
+  ShoppingMarketReportExportXlsxResponseV1,
   ShoppingManualUrlCandidateListV1,
   ShoppingManualUrlCandidateV1,
   ShoppingRunItemListV1,
@@ -141,6 +143,10 @@ export type ServerCoreSdk = {
     getRunSupplierItemStatusSummary(runId: string): Promise<ShoppingRunSupplierItemStatusSummaryV1>;
     listRunItems(runId: string, query?: ListShoppingRunItemsQueryParams): Promise<ShoppingRunItemListV1>;
     exportRunXlsx(runId: string, payload: ShoppingRunExportXlsxRequestV1): Promise<ShoppingRunExportXlsxResponseV1>;
+    exportMarketReportXlsx(
+      runId: string,
+      payload: ShoppingMarketReportExportXlsxRequestV1,
+    ): Promise<ShoppingMarketReportExportXlsxResponseV1>;
     getProductLatest(productId: string): Promise<ShoppingProductLatestV1>;
     listSupplierSignals(query?: ListShoppingSupplierSignalsQueryParams): Promise<ShoppingSupplierSignalListV1>;
     listManualUrlCandidates(
@@ -545,6 +551,30 @@ function parseShoppingRunExportXlsxResponse(raw: unknown): ShoppingRunExportXlsx
     outputFilePath: raw.outputFilePath,
     exportedAt,
     totalRows: raw.totalRows,
+    supplierCodes,
+  };
+}
+
+function parseShoppingMarketReportExportXlsxResponse(raw: unknown): ShoppingMarketReportExportXlsxResponseV1 {
+  if (!isRecord(raw)) {
+    throw new Error("[sdk-runtime] ShoppingMarketReportExportXlsxResponseV1 response must be an object");
+  }
+  assertString(raw.runId, "ShoppingMarketReportExportXlsxResponseV1.runId");
+  assertString(raw.outputFilePath, "ShoppingMarketReportExportXlsxResponseV1.outputFilePath");
+  assertNumber(raw.totalProducts, "ShoppingMarketReportExportXlsxResponseV1.totalProducts");
+  const exportedAt = normalizeDateTime(raw.exportedAt, "ShoppingMarketReportExportXlsxResponseV1.exportedAt");
+
+  let supplierCodes: string[] = [];
+  if (raw.supplierCodes !== undefined) {
+    assertStringArray(raw.supplierCodes, "ShoppingMarketReportExportXlsxResponseV1.supplierCodes");
+    supplierCodes = raw.supplierCodes;
+  }
+
+  return {
+    runId: raw.runId,
+    outputFilePath: raw.outputFilePath,
+    exportedAt,
+    totalProducts: raw.totalProducts,
     supplierCodes,
   };
 }
@@ -1132,6 +1162,15 @@ export function createServerCoreSdk(client: GeneratedHttpClient): ServerCoreSdk 
           }),
         );
         return parseShoppingRunExportXlsxResponse(raw);
+      },
+      async exportMarketReportXlsx(runId, payload) {
+        const raw = await runGeneratedCall(() =>
+          shoppingApi.exportShoppingMarketReportXlsx({
+            runId,
+            shoppingMarketReportExportXlsxRequestV1: payload,
+          }),
+        );
+        return parseShoppingMarketReportExportXlsxResponse(raw);
       },
       async getProductLatest(productId) {
         const raw = await runGeneratedCall(() => shoppingApi.getShoppingProductLatest({ productId }));

@@ -1,7 +1,7 @@
-# Feature: Products market report XLSX (pivot)
+﻿# Feature: Products market report XLSX (pivot)
 Type: read-only  |  Events: no  |  ADR: no
 
-## Phase 1 â€” Architectural thinking
+## Phase 1 Ã¢â‚¬â€ Architectural thinking
 Module type:
 - `apps/server_core/internal/modules/shopping` (read-only + side-effect file write): read run items + pricing and write a pivoted XLSX report under an export root.
 - `packages/feature-products`: product selection + run/supplier selection UI.
@@ -30,26 +30,26 @@ Level scope:
 - Level 2 (later): download-from-browser and/or background export job for very large runs.
 
 ## Tasks
-- [ ] T1: contract â€” $metalshopping-openapi-contracts
+- [x] T1: contract Ã¢â‚¬â€ $metalshopping-openapi-contracts
       - `POST /api/v1/shopping/runs/{run_id}/export-market-report-xlsx`
       - schemas: request/response for market report export
       commit: "feat(shopping): add market report export contract"
-- [ ] T2: Go module â€” implement export endpoint
+- [x] T2: Go module Ã¢â‚¬â€ implement export endpoint
       - validate output path under export root
       - query product meta + pricing and run items
       - pivot rows (1 row per product) with supplier price columns
       commit: "feat(shopping): export market report xlsx"
-- [ ] T4: SDK â€” $metalshopping-sdk-generation
+- [x] T4: SDK Ã¢â‚¬â€ $metalshopping-sdk-generation
       commit: "chore(sdk): regenerate shopping market report contract"
-- [ ] T5: frontend â€” $metalshopping-frontend
+- [x] T5: frontend Ã¢â‚¬â€ $metalshopping-frontend
       - Products UI modal to select run + suppliers + export path
       - collect product ids for explicit/filtered selections
       - remove export panel from Shopping
       commit: "feat(web): add products market report export"
 
 ## Acceptance tests
-- [ ] go test ./apps/server_core/... passes
-- [ ] npm.cmd run web:typecheck passes
+- [x] go test ./apps/server_core/... passes
+- [x] npm.cmd run web:typecheck passes
 - [ ] Browser: `/products` export generates XLSX with pivot columns and costs
 - [ ] Browser: `/shopping` no longer shows export panel
 
@@ -58,7 +58,7 @@ Level scope:
 # Feature: Shopping export report XLSX
 Type: read-only  |  Events: no  |  ADR: no
 
-## Phase 1 — Architectural thinking
+## Phase 1 â€” Architectural thinking
 Module type:
 - `apps/server_core/internal/modules/shopping` (read-only + side-effect file write): read run items and write an XLSX report to a configured export directory.
 - `apps/web/src/pages/ShoppingPage.tsx`: add UI to pick run + suppliers + output path and trigger export.
@@ -81,18 +81,18 @@ Level scope:
 - Level 2 (later): download-from-browser and/or background export job for very large runs.
 
 ## Tasks
-- [ ] T1: contract — $metalshopping-openapi-contracts
+- [ ] T1: contract â€” $metalshopping-openapi-contracts
       - `POST /api/v1/shopping/runs/{run_id}/export-xlsx`
       - schemas: request/response for export
       commit: "feat(shopping): add run export xlsx contract"
-- [ ] T2: Go module — implement export endpoint
+- [ ] T2: Go module â€” implement export endpoint
       - validate output path under export root
       - query run items for selected suppliers
       - write XLSX and return metadata
       commit: "feat(shopping): export run report to xlsx"
-- [ ] T4: SDK — $metalshopping-sdk-generation
+- [ ] T4: SDK â€” $metalshopping-sdk-generation
       commit: "chore(sdk): regenerate shopping export contract"
-- [ ] T5: frontend — $metalshopping-frontend
+- [ ] T5: frontend â€” $metalshopping-frontend
       - UI: select run + suppliers + output file name/path; trigger export
       commit: "feat(web): add shopping run export"
 
@@ -105,91 +105,91 @@ Level scope:
 # Feature: Shopping catalog select all
 Type: frontend  |  Events: no  |  ADR: no
 
-## Phase 1 — Architectural thinking
+## Phase 1 â€” Architectural thinking
 Module type:
-- `apps/web/src/pages/ShoppingPage.tsx`: adicionar seleção total no upload por catálogo.
+- `apps/web/src/pages/ShoppingPage.tsx`: adicionar seleÃ§Ã£o total no upload por catÃ¡logo.
 
 Risks:
-- Seleção total pode exigir múltiplas páginas; precisa paginar com limite máximo do endpoint.
+- SeleÃ§Ã£o total pode exigir mÃºltiplas pÃ¡ginas; precisa paginar com limite mÃ¡ximo do endpoint.
 
 Level scope:
-- Level 1 (now): botão "Selecionar todos" carrega todos os IDs do filtro atual e seleciona.
+- Level 1 (now): botÃ£o "Selecionar todos" carrega todos os IDs do filtro atual e seleciona.
 
 ## Tasks
-- [x] T5: frontend — $metalshopping-frontend
-      - adicionar botão "Selecionar todos" com loading
+- [x] T5: frontend â€” $metalshopping-frontend
+      - adicionar botÃ£o "Selecionar todos" com loading
       - buscar IDs em batches usando `productsApi.listProductsPortfolio`
       commit: "fix(web): add catalog select all"
 
 ## Acceptance tests
 - [x] npm.cmd run web:typecheck passes
-- [ ] Browser: `/shopping` → Produtos Cadastrados → botão "Selecionar todos" seleciona todos os itens do filtro
+- [ ] Browser: `/shopping` â†’ Produtos Cadastrados â†’ botÃ£o "Selecionar todos" seleciona todos os itens do filtro
 
 ---
 # Feature: Shopping manual filters show brand/group
 Type: frontend  |  Events: no  |  ADR: no
 
-## Phase 1 — Architectural thinking
+## Phase 1 â€” Architectural thinking
 Module type:
-- `apps/web/src/pages/ShoppingPage.tsx`: carregar filtros de marca/grupo mesmo quando input mode não é catálogo.
+- `apps/web/src/pages/ShoppingPage.tsx`: carregar filtros de marca/grupo mesmo quando input mode nÃ£o Ã© catÃ¡logo.
 
 Risks:
-- Filtros de URL manual dependem indevidamente do carregamento do catálogo e ficam vazios.
+- Filtros de URL manual dependem indevidamente do carregamento do catÃ¡logo e ficam vazios.
 
 Level scope:
-- Level 1 (now): buscar filtros do portfolio ao abrir o painel manual quando ainda não carregados.
+- Level 1 (now): buscar filtros do portfolio ao abrir o painel manual quando ainda nÃ£o carregados.
 
 ## Tasks
-- [x] T5: frontend — $metalshopping-frontend
-      - carregar filtros via `productsApi.listProductsPortfolio` quando o painel manual é aberto
+- [x] T5: frontend â€” $metalshopping-frontend
+      - carregar filtros via `productsApi.listProductsPortfolio` quando o painel manual Ã© aberto
       commit: "fix(web): load manual brand/group filters"
 
 ## Acceptance tests
 - [x] npm.cmd run web:typecheck passes
-- [ ] Browser: `/shopping` → Configurar URLs manuais → filtros Marca/Grupo aparecem
+- [ ] Browser: `/shopping` â†’ Configurar URLs manuais â†’ filtros Marca/Grupo aparecem
 
 ---
 # Feature: Shopping manual URL save CORS preflight
 Type: backend  |  Events: no  |  ADR: no
 
-## Phase 1 — Architectural thinking
+## Phase 1 â€” Architectural thinking
 Module type:
-- `apps/server_core/internal/platform/observability/cors.go`: ajustar preflight para métodos de escrita usados pelo Shopping (`PUT`).
+- `apps/server_core/internal/platform/observability/cors.go`: ajustar preflight para mÃ©todos de escrita usados pelo Shopping (`PUT`).
 
 Risks:
-- Se CORS não expõe `PUT`, o browser bloqueia preflight e o SDK retorna erro genérico de interceptor.
+- Se CORS nÃ£o expÃµe `PUT`, o browser bloqueia preflight e o SDK retorna erro genÃ©rico de interceptor.
 
 Level scope:
-- Level 1 (now): incluir `PUT` no `Access-Control-Allow-Methods` e validar com teste unitário de CORS.
+- Level 1 (now): incluir `PUT` no `Access-Control-Allow-Methods` e validar com teste unitÃ¡rio de CORS.
 
 ## Tasks
-- [x] T2: Go module — liberar `PUT` no CORS
-      - adicionar `http.MethodPut` na lista de métodos permitidos
-      - reforçar teste para garantir `PUT` no header de preflight
+- [x] T2: Go module â€” liberar `PUT` no CORS
+      - adicionar `http.MethodPut` na lista de mÃ©todos permitidos
+      - reforÃ§ar teste para garantir `PUT` no header de preflight
       commit: "fix(server): allow cors preflight for shopping put"
 
 ## Acceptance tests
 - [x] go test ./apps/server_core/internal/platform/observability/... passes
-- [ ] Browser: `/shopping` → salvar URL manual não retorna mais erro de interceptor
+- [ ] Browser: `/shopping` â†’ salvar URL manual nÃ£o retorna mais erro de interceptor
 
 ---
 # Feature: Shopping manual URL save button
 Type: frontend  |  Events: no  |  ADR: no
 
-## Phase 1 — Architectural thinking
+## Phase 1 â€” Architectural thinking
 Module type:
 - `apps/web/src/pages/ShoppingPage.tsx`: corrigir o fluxo de salvar URLs manuais sem alterar contrato ou backend.
 
 Risks:
-- O footer pode continuar mostrando um CTA inerte se não houver rastreamento correto de drafts alterados.
-- Salvar em lote não pode sobrescrever `lookupMode` com valor fixo quando o candidato já traz o modo correto.
+- O footer pode continuar mostrando um CTA inerte se nÃ£o houver rastreamento correto de drafts alterados.
+- Salvar em lote nÃ£o pode sobrescrever `lookupMode` com valor fixo quando o candidato jÃ¡ traz o modo correto.
 
 Level scope:
-- Level 1 (now): habilitar o botão Salvar, salvar apenas linhas alteradas da página visível e recarregar a lista manual.
-- Level 2 (later): adicionar feedback de sucesso mais rico ou persistir drafts entre páginas, se necessário.
+- Level 1 (now): habilitar o botÃ£o Salvar, salvar apenas linhas alteradas da pÃ¡gina visÃ­vel e recarregar a lista manual.
+- Level 2 (later): adicionar feedback de sucesso mais rico ou persistir drafts entre pÃ¡ginas, se necessÃ¡rio.
 
 ## Tasks
-- [x] T5: frontend — $metalshopping-frontend
+- [x] T5: frontend â€” $metalshopping-frontend
       - detectar drafts realmente alterados
       - habilitar o CTA de salvar em lote
       - adicionar salvar por linha e Enter no campo URL
@@ -199,13 +199,13 @@ Level scope:
 ## Acceptance tests
 - [x] npm.cmd run web:typecheck passes
 - [x] npm.cmd run web:test passes
-- [ ] Browser: `/shopping` → Configurar URLs manuais → editar URL válida → botão Salvar habilita e persiste
+- [ ] Browser: `/shopping` â†’ Configurar URLs manuais â†’ editar URL vÃ¡lida â†’ botÃ£o Salvar habilita e persiste
 
 ---
 # Feature: Workflow skill compaction + manual /plan gate
 Type: process  |  Events: no  |  ADR: no
 
-## Phase 1 — Architectural thinking
+## Phase 1 â€” Architectural thinking
 Module type:
 - `docs/process`: compact skill instructions and align `$ms` with the real harness behavior.
 
@@ -218,14 +218,14 @@ Level scope:
 - Level 2 (later): archive completed feature blocks out of `tasks/todo.md` if the file grows again.
 
 ## Tasks
-- [x] T1: process — compact `$ms` and add manual `/plan` gate
+- [x] T1: process â€” compact `$ms` and add manual `/plan` gate
       - remove the false "enters plan mode automatically" claim
       - add complexity gate + operational gate
       commit: "docs(skills): compact ms workflow and add manual plan gate"
-- [x] T2: process — compact `metalshopping-implement`
+- [x] T2: process â€” compact `metalshopping-implement`
       - keep invariants in the skill and move concrete code to references
       commit: "docs(skills): compact implement skill"
-- [x] T3: process — record lesson and keep workflow source-of-truth updated
+- [x] T3: process â€” record lesson and keep workflow source-of-truth updated
       commit: "docs(process): align skill workflow with harness"
 
 ## Acceptance tests
@@ -237,7 +237,7 @@ Level scope:
 # Feature: Shopping run observability + UX (history, filters, logs)
 Type: read-only  |  Events: no  |  ADR: no
 
-## Phase 1 — Architectural thinking
+## Phase 1 â€” Architectural thinking
 Module type:
 - `apps/server_core/internal/modules/shopping` (read-only): add new read endpoints for run item details + per-supplier status breakdown.
 - `apps/web/src/pages/ShoppingPage.*`: UX tweaks (history scroll/height), fix status filter, show richer run details and log.
@@ -252,16 +252,16 @@ Exact folder structure (existing module; extensions only):
 - `apps/web/src/pages/ShoppingPage.tsx` + `apps/web/src/pages/ShoppingPage.module.css`
 
 Risks:
-- Run item list can be large → must be paginated and capped (`limit` <= 200) to avoid slow UI and heavy DB reads.
+- Run item list can be large â†’ must be paginated and capped (`limit` <= 200) to avoid slow UI and heavy DB reads.
 - Avoid N+1: run items endpoint must join `catalog_products` once to return `productLabel` (so UI does not fan out).
 - Ensure tenant isolation: every query uses `pgdb.BeginTenantTx` + `WHERE tenant_id=current_tenant_id()`.
 
 Level scope:
 - Level 1 (now): real data in browser; scrollable history; status filter works; per-supplier breakdown (OK/NF/AMB/ERROR); log shows per-item lines using run items endpoint.
-- Level 2 (defer): capture “URL efetivamente tentada” no worker (hoje só temos `product_url` do signal + `lookup_term`).
+- Level 2 (defer): capture â€œURL efetivamente tentadaâ€ no worker (hoje sÃ³ temos `product_url` do signal + `lookup_term`).
 
 ## Tasks
-- [ ] T1: contract — $metalshopping-openapi-contracts
+- [ ] T1: contract â€” $metalshopping-openapi-contracts
       Add:
       - `GET /api/v1/shopping/runs/{run_id}/supplier-item-status-summary`
       - `GET /api/v1/shopping/runs/{run_id}/items` (paged)
@@ -270,13 +270,13 @@ Level scope:
       - `shopping_run_item_v1.schema.json`
       - `shopping_run_item_list_v1.schema.json`
       commit: "feat(shopping): add run item detail contracts"
-- [x] T2: Go module — implement reader + handler
+- [x] T2: Go module â€” implement reader + handler
       - Reader: `ListRunItems`, `GetRunSupplierItemStatusSummary`
       - Handler: route suffixes under `handleRunByID`
       commit: "feat(shopping): add run item detail endpoints"
-- [x] T4: SDK — $metalshopping-sdk-generation
+- [x] T4: SDK â€” $metalshopping-sdk-generation
       commit: "chore(sdk): regenerate shopping contracts"
-- [x] T5: frontend — $metalshopping-frontend
+- [x] T5: frontend â€” $metalshopping-frontend
       - Historico recente: menor altura + scroll interno (sem layout jump)
       - Filtro Todos/Queued/Running/etc: corrigir para recarregar lista corretamente
       - Detalhe do run: tabela por fornecedor (OK/NF/AMB/ERROR)
@@ -295,35 +295,35 @@ Level scope:
 # Feature: Shopping run UI bugfixes (history layout + log URL)
 Type: frontend  |  Events: no  |  ADR: no
 
-## Phase 1 — Architectural thinking
+## Phase 1 â€” Architectural thinking
 Module type:
-- `apps/web/src/pages/ShoppingPage.*`: ajustes de layout e log (sem mudança de contrato/API).
+- `apps/web/src/pages/ShoppingPage.*`: ajustes de layout e log (sem mudanÃ§a de contrato/API).
 
 Risks:
 - Scroll dentro de grid/flex pode quebrar sem `min-height: 0` nos containers.
-- `productUrl` é URL durável (manual/sinal). A URL tentada pode existir apenas em `notes` (debug).
+- `productUrl` Ã© URL durÃ¡vel (manual/sinal). A URL tentada pode existir apenas em `notes` (debug).
 
 Level scope:
-- Level 1 (now): log mostra URL quando existir em `notes` (ex: `final_url=`); histórico recente sempre scrollável e sem “Ver tudo”.
+- Level 1 (now): log mostra URL quando existir em `notes` (ex: `final_url=`); histÃ³rico recente sempre scrollÃ¡vel e sem â€œVer tudoâ€.
 - Level 2 (defer): persistir `request_url/final_url` em campo dedicado no backend/worker.
 
 ## Tasks
-- [x] T5: frontend — $metalshopping-frontend
-      - Histórico recente: remover “Ver tudo” e manter scroll interno com altura que acompanha o detalhe do run
+- [x] T5: frontend â€” $metalshopping-frontend
+      - HistÃ³rico recente: remover â€œVer tudoâ€ e manter scroll interno com altura que acompanha o detalhe do run
       - Log detalhado: exibir URL derivada de `notes` quando `productUrl` estiver vazio
       commit: "fix(web): improve shopping run history and log url"
 
 ## Acceptance tests
 - [x] npm.cmd run web:typecheck passes
-- [ ] Browser: `/shopping` → selecionar run com `notes` contendo `final_url=` → URL aparece no log
-- [ ] Browser: `/shopping` → run com muitos fornecedores → histórico recente não quebra e permanece scrollável
+- [ ] Browser: `/shopping` â†’ selecionar run com `notes` contendo `final_url=` â†’ URL aparece no log
+- [ ] Browser: `/shopping` â†’ run com muitos fornecedores â†’ histÃ³rico recente nÃ£o quebra e permanece scrollÃ¡vel
 
 ---
 
 # Feature: Shopping run log search URL (computed, non-persistent)
 Type: read-only  |  Events: no  |  ADR: no
 
-## Phase 1 � Architectural thinking
+## Phase 1 ï¿½ Architectural thinking
 Module type:
 - `apps/server_core/internal/modules/shopping` (read-only): calcular URL de busca em leitura no endpoint `/runs/{run_id}/items`, sem persistir em DB.
 
@@ -336,7 +336,7 @@ Level scope:
 - Level 2 (defer): criar campo dedicado `searchUrl` no contrato para separar semantica.
 
 ## Tasks
-- [x] T2: Go module � compute search URL at read-time
+- [x] T2: Go module ï¿½ compute search URL at read-time
       - Reader `ListRunItems`: join manifest ativo e renderizar URL a partir de `lookup_term`
       - Sem gravacao em tabela; somente resposta da API
       commit: "fix(shopping): compute run item search url on read"
@@ -350,7 +350,7 @@ Level scope:
 # Feature: Shopping run log search URL (driver notes)
 Type: scraping  |  Events: no  |  ADR: no
 
-## Phase 1 � Architectural thinking
+## Phase 1 ï¿½ Architectural thinking
 Module type:
 - `apps/integration_worker/src/shopping_price_runtime/http/strategies.py`: registrar `search_url=` nos `notes` do RuntimeObservation.
 
@@ -362,7 +362,7 @@ Level scope:
 - Level 1 (now): VTEX/HTML/Leroy reportam `search_url=` nos notes para aparecer no log.
 
 ## Tasks
-- [ ] T3: worker � append search_url to observation notes
+- [ ] T3: worker ï¿½ append search_url to observation notes
       commit: "fix(worker): add search_url to http runtime notes"
 
 ## Acceptance tests
@@ -370,10 +370,10 @@ Level scope:
 
 ---
 
-# Feature: Analytics New — Home tranche
+# Feature: Analytics New â€” Home tranche
 Type: read-only  |  Events: no  |  ADR: no
 
-## Phase 1 — Architectural thinking
+## Phase 1 â€” Architectural thinking
 Module type:
 - `contracts/api/*`: freeze initial Analytics Home read contract.
 - `apps/server_core/internal/modules/analytics_serving` (read-only): tenant-safe analytics home payload.
@@ -390,19 +390,19 @@ Level scope:
 - Level 2 (defer): advanced analytics blocks (actions, alerts, portfolio, timeline) move from `NOT_READY` to real data.
 
 ## Tasks
-- [x] T1: contract — $metalshopping-openapi-contracts
+- [x] T1: contract â€” $metalshopping-openapi-contracts
       - add `contracts/api/openapi/analytics_v1.openapi.yaml`
       - add `analytics_home_v1`, `analytics_home_block_v1`, `analytics_block_error_v1` schemas
       commit: "feat(analytics): add analytics home read contracts"
-- [ ] T2: Go module — $metalshopping-implement
+- [ ] T2: Go module â€” $metalshopping-implement
       - implement `analytics_serving` reader/service/handler (`GET /api/v1/analytics/home`)
       - register module in `composition_modules.go`
       commit: "feat(analytics): add analytics home read endpoint"
-- [ ] T4: SDK — $metalshopping-sdk-generation
+- [ ] T4: SDK â€” $metalshopping-sdk-generation
       - include analytics in generation script and regenerate artifacts
       - extend `sdk-runtime` with `analytics.getHome()`
       commit: "chore(sdk): regenerate with analytics contract"
-- [ ] T5: frontend — $metalshopping-frontend
+- [ ] T5: frontend â€” $metalshopping-frontend
       - create `packages/feature-analytics` Home page
       - wire route `/analytics` in `apps/web/src/app/App.tsx`
       - add workspace + tsconfig wiring for new feature package
@@ -416,11 +416,11 @@ Level scope:
 
 ---
 
-# Feature: Analytics New — Legacy visual parity (tabs + cards)
+# Feature: Analytics New â€” Legacy visual parity (tabs + cards)
 Type: frontend  |  Events: no  |  ADR: no
 
 ## Tasks
-- [ ] T5: frontend — $metalshopping-frontend
+- [ ] T5: frontend â€” $metalshopping-frontend
       - copy legacy `.tsx/.css` references into `packages/feature-analytics/legacy_snapshot/*`
       - deliver runnable analytics shell with legacy-style navigation tabs + card layout
       - keep data partially mocked when integration is not ready
@@ -432,10 +432,10 @@ Type: frontend  |  Events: no  |  ADR: no
 
 ---
 
-# Feature: Analytics New � Legacy-first full phase plan (source of truth)
+# Feature: Analytics New ï¿½ Legacy-first full phase plan (source of truth)
 Type: frontend-first migration  |  Events: no  |  ADR: no
 
-## Phase 1 � Architectural thinking
+## Phase 1 ï¿½ Architectural thinking
 Module type:
 - `frontend-only` now (visual parity first, no real backend binding).
 - `read-only` later (contract/backend/sdk wiring after visual sign-off).
@@ -460,40 +460,40 @@ Level scope:
 - Level 3 (final): remove temporary adapters/shims and close contract/backend/sdk tranche.
 
 ## Tasks
-- [x] T5-A: frontend � inventory + freeze visual baseline from legacy
+- [x] T5-A: frontend ï¿½ inventory + freeze visual baseline from legacy
       - map all files under legacy `analytics` + `analytics_home` and lock them as migration baseline
       - define "must-match" sections (top nav tabs, hero gradient, command panel, first fold cards, spotlight shell)
       commit: "docs(analytics): freeze legacy visual parity baseline"
 
-- [x] T5-B: frontend � literal copy tranche (home shell)
+- [x] T5-B: frontend ï¿½ literal copy tranche (home shell)
       - copy legacy TSX/CSS structure into runnable package surface (without real backend)
       - preserve class names/layout primitives; avoid redesign
       commit: "feat(web): copy legacy analytics home shell"
 
-- [x] T5-C: frontend � compatibility adapters for compile/runtime
+- [x] T5-C: frontend ï¿½ compatibility adapters for compile/runtime
       - add temporary mock/session adapters required by copied components
       - keep route `/analytics` stable and loadable
       commit: "refactor(web): add analytics legacy compatibility adapters"
 
-- [ ] T5-D: frontend � visual parity pass (pixel/structure)
+- [ ] T5-D: frontend ï¿½ visual parity pass (pixel/structure)
       - align spacing, typography, chip states, cards and first fold composition with legacy
-      - ensure tabs (`Home`, `Produtos`, `Taxonomia`, `Marcas`, `A��es`) mirror legacy behavior
+      - ensure tabs (`Home`, `Produtos`, `Taxonomia`, `Marcas`, `Aï¿½ï¿½es`) mirror legacy behavior
       commit: "fix(web): align analytics legacy visual parity"
 
-- [ ] T5-E: frontend � remaining legacy sections (still mocked)
+- [ ] T5-E: frontend ï¿½ remaining legacy sections (still mocked)
       - wire spotlight/drawer shell and sample blocks used by legacy home flow
       - keep backend integration disabled; mock-only for missing data
       commit: "feat(web): complete analytics legacy visual sections with mocks"
 
-- [ ] T1 (defer): contract � $metalshopping-openapi-contracts
+- [ ] T1 (defer): contract ï¿½ $metalshopping-openapi-contracts
       - only start after T5 visual sign-off
       commit: "feat(analytics): finalize read contracts after visual parity"
 
-- [ ] T2 (defer): Go module � $metalshopping-implement
+- [ ] T2 (defer): Go module ï¿½ $metalshopping-implement
       - only start after T1
       commit: "feat(analytics): implement analytics serving reads"
 
-- [ ] T4 (defer): SDK � $metalshopping-sdk-generation
+- [ ] T4 (defer): SDK ï¿½ $metalshopping-sdk-generation
       - only start after T1/T2
       commit: "chore(sdk): regenerate analytics sdk"
 
@@ -535,21 +535,21 @@ Type: frontend-first migration  |  Events: no  |  ADR: no
 Type: frontend-first migration  |  Events: no  |  ADR: no
 
 ## Tasks
-- [x] T5-A: frontend � inventory + baseline (legacy snapshot)
+- [x] T5-A: frontend ï¿½ inventory + baseline (legacy snapshot)
       - source of truth: `packages/feature-analytics/legacy_snapshot/analytics/TaxonomyHomePage.tsx` + `taxonomy_home.module.css` + `legacy_snapshot/analytics/components/*`
 
-- [x] T5-B: frontend � literal copy + wiring (runnable)
+- [x] T5-B: frontend ï¿½ literal copy + wiring (runnable)
       - copy page + CSS + components into `packages/feature-analytics/src/pages/analytics/*`
       - add missing helper `taxonomy_visuals`
 
-- [x] T5-C: frontend � dependencies (charts)
+- [x] T5-C: frontend ï¿½ dependencies (charts)
       - add `chart.js`, `react-chartjs-2`, `chartjs-chart-treemap`, `recharts`, `@tanstack/react-table`
 
-- [x] T5-D: frontend � shell integration
+- [x] T5-D: frontend ï¿½ shell integration
       - render `<TaxonomyHomePage />` on tab/route `/analytics/taxonomy`
       - remove MVP taxonomy state/effects to avoid redundant loads
 
-- [x] T5-E: frontend � mock payload parity
+- [x] T5-E: frontend ï¿½ mock payload parity
       - expand `AnalyticsTaxonomyScopeOverviewV1Dto` keys used by legacy
       - enrich `buildMockTaxonomyScopeOverview()` with non-empty panels (treemap + charts + tables)
       commit: "feat(web): migrate analytics taxonomy legacy page"
@@ -560,3 +560,4 @@ Type: frontend-first migration  |  Events: no  |  ADR: no
 - [ ] Browser: spotlights open/close restores body scroll (no stuck overlay)
 - [x] npm.cmd run web:typecheck passes
 - [x] npm.cmd run web:build passes
+

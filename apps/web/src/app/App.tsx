@@ -19,7 +19,7 @@ import { AppRuntimeProvider, useAppRuntime } from "./providers/AppRuntimeProvide
 function ProductsRoute() {
   const { sdk } = useAppRuntime();
 
-  return <ProductsPortfolioPage api={sdk.products} />;
+  return <ProductsPortfolioPage api={sdk.products} shoppingApi={sdk.shopping} />;
 }
 
 function HomeRoute() {

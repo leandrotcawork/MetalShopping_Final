@@ -8,6 +8,10 @@ export function ProductsHero(props: {
   totalProducts: number;
   totalRuns: number;
   error: string | null;
+  exportDisabled: boolean;
+  exportStatus: { tone: "success" | "error"; message: string } | null;
+  onConfigureReport: () => void;
+  onExportReport: () => void;
 }) {
   return (
     <AppFrame
@@ -22,13 +26,23 @@ export function ProductsHero(props: {
           <MetricChip label="Total base">{props.totalProducts}</MetricChip>
           <MetricChip label="Runs">{props.totalRuns}</MetricChip>
           <div className={styles.heroActions}>
-            <Button className={styles.actionButton} variant="secondary">
+            <Button className={styles.actionButton} variant="secondary" onClick={props.onConfigureReport}>
               Configurar relatório
             </Button>
-            <Button className={styles.actionButtonPrimary} variant="primary" disabled>
+            <Button
+              className={styles.actionButtonPrimary}
+              variant="primary"
+              disabled={props.exportDisabled}
+              onClick={props.onExportReport}
+            >
               Exportar relatório
             </Button>
           </div>
+          {props.exportStatus ? (
+            <StatusBanner className={styles.heroStatusBanner} tone={props.exportStatus.tone}>
+              {props.exportStatus.message}
+            </StatusBanner>
+          ) : null}
           {props.error ? (
             <StatusBanner className={styles.heroStatusBanner} tone="error">
               {props.error}

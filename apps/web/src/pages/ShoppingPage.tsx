@@ -167,13 +167,6 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
   const [runItemsLog, setRunItemsLog] = useState<ShoppingRunItemListV1 | null>(null);
   const [runItemsLogLoading, setRunItemsLogLoading] = useState(false);
   const [runItemsLogError, setRunItemsLogError] = useState<string | null>(null);
-  const [exportRunId, setExportRunId] = useState("");
-  const [exportSupplierCodes, setExportSupplierCodes] = useState<string[]>([]);
-  const [exportOutputPath, setExportOutputPath] = useState("");
-  const [exporting, setExporting] = useState(false);
-  const [exportError, setExportError] = useState<string | null>(null);
-  const [exportResult, setExportResult] =
-    useState<Awaited<ReturnType<ServerCoreSdk["shopping"]["exportRunXlsx"]>> | null>(null);
   const [loadingShopping, setLoadingShopping] = useState(true);
   const [creatingRun, setCreatingRun] = useState(false);
   const [createRunInfo, setCreateRunInfo] = useState<string | null>(null);
@@ -757,16 +750,6 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     [bootstrap],
   );
 
-  const exportRunOptions = useMemo(
-    () =>
-      runs.map((run) => ({
-        value: run.runId,
-        label: `${run.runId} - ${formatDateTime(run.startedAt)}`,
-      })),
-    [runs],
-  );
-
-
   const manualBrandOptions = useMemo(
     () => catalogBrandOptions.filter((option) => option.value !== allOptionValue),
     [catalogBrandOptions],
@@ -823,21 +806,6 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     };
   }, [selectedRun?.runId, supplierSummaryLoading, runItemsLogLoading, runItemsLog?.rows.length, showLog]);
 
-  useEffect(() => {
-    const nextRunId = selectedRun?.runId ?? runRequest?.runId ?? "";
-    if (!nextRunId) {
-      return;
-    }
-    setExportRunId((current) => (current ? current : nextRunId));
-  }, [selectedRun?.runId, runRequest?.runId]);
-
-  useEffect(() => {
-    if (exportSupplierCodes.length > 0 || supplierCodes.length === 0) {
-      return;
-    }
-    setExportSupplierCodes(supplierCodes);
-  }, [supplierCodes, exportSupplierCodes.length]);
-
   async function handleRunSelect(runId: string) { 
     setError(null); 
     try { 
@@ -847,40 +815,6 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     } catch (selectError) {
       const message = selectError instanceof Error ? selectError.message : "Falha ao carregar detalhe do run.";
       setError(message);
-    }
-  }
-
-  async function exportRunReport() {
-    if (exporting) {
-      return;
-    }
-    setExportError(null);
-    setExportResult(null);
-
-    const runId = exportRunId.trim();
-    if (!runId) {
-      setExportError("Selecione um run para exportar.");
-      return;
-    }
-
-    const outputFilePath = exportOutputPath.trim();
-    if (!outputFilePath) {
-      setExportError("Informe o caminho do arquivo XLSX.");
-      return;
-    }
-
-    setExporting(true);
-    try {
-      const response = await shoppingApi.exportRunXlsx(runId, {
-        outputFilePath,
-        supplierCodes: exportSupplierCodes.length > 0 ? exportSupplierCodes : undefined,
-      });
-      setExportResult(response);
-    } catch (exportError) {
-      const message = exportError instanceof Error ? exportError.message : "Falha ao exportar o relatorio.";
-      setExportError(message);
-    } finally {
-      setExporting(false);
     }
   }
 
@@ -1860,68 +1794,6 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                 </>
               )}
 
-              <div className={styles.exportCard}>
-                <div className={styles.exportHeader}>
-                  <div>
-                    <h4>Relatorio XLSX</h4>
-                    <p className={styles.exportSubtitle}>
-                      Selecione run, fornecedores e o destino do arquivo para exportar o relatorio completo.
-                    </p>
-                  </div>
-                </div>
-                <div className={styles.exportGrid}>
-                  <label>
-                    Run
-                    <FilterDropdown
-                      id="export-run"
-                      options={exportRunOptions}
-                      value={exportRunId}
-                      onSelect={(value) => {
-                        setExportRunId(value);
-                        setExportResult(null);
-                      }}
-                      disabled={exportRunOptions.length === 0}
-                    />
-                  </label>
-                  <label>
-                    Fornecedores
-                    <FilterDropdown
-                      id="export-suppliers"
-                      options={manualSupplierOptions}
-                      values={exportSupplierCodes}
-                      selectionMode="duo"
-                      allLabel="Todos fornecedores"
-                      onSelect={(value) => setExportSupplierCodes((current) => toggleMultiSelection(current, value))}
-                      disabled={manualSupplierOptions.length === 0}
-                    />
-                  </label>
-                  <label className={styles.exportPath}>
-                    Caminho do arquivo XLSX
-                    <input
-                      type="text"
-                      value={exportOutputPath}
-                      onChange={(event) => setExportOutputPath(event.target.value)}
-                      placeholder="C:\\exports\\shopping\\run.xlsx"
-                    />
-                  </label>
-                </div>
-                {exportError ? <p className={styles.error}>{exportError}</p> : null}
-                {exportResult ? (
-                  <p className={styles.exportSuccess}>
-                    Exportado para {exportResult.outputFilePath} ({exportResult.totalRows} linhas)
-                  </p>
-                ) : null}
-                <div className={styles.exportActions}>
-                  <button
-                    type="button"
-                    className={`${styles.btn} ${styles.btnPrimary} ${styles.btnCompact}`}
-                    onClick={() => void exportRunReport()}
-                    disabled={exporting}
-                  >
-                    {exporting ? "Exportando..." : "Exportar XLSX"}
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
 

@@ -439,6 +439,107 @@
   font-weight: 700;
 }
 
+.exportBackdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+  background: color-mix(in srgb, var(--color-text-primary) 20%, transparent);
+  z-index: 40;
+}
+
+.exportModal {
+  width: min(100%, 72ch);
+  display: grid;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-default);
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+  box-shadow: 0 22px 60px color-mix(in srgb, var(--color-text-primary) 24%, transparent);
+}
+
+.exportHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+}
+
+.exportTitle {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+}
+
+.exportSubtitle {
+  margin: var(--spacing-xs) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.exportSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.exportSummary strong {
+  color: var(--color-text-primary);
+}
+
+.exportGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-md);
+}
+
+.exportField {
+  display: grid;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.exportInput {
+  min-height: calc(var(--spacing-xl) + var(--spacing-xs));
+  padding: 0 var(--spacing-sm);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-primary);
+  color: var(--color-text-primary);
+}
+
+.exportFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.exportActions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.exportMeta {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.exportStatus {
+  display: grid;
+  gap: var(--spacing-xs);
+}
+
 @media (max-width: 1180px) {
   .heroAside {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -478,5 +579,9 @@
 
   .filterLogic {
     text-align: left;
+  }
+
+  .exportGrid {
+    grid-template-columns: 1fr;
   }
 }

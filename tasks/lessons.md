@@ -442,3 +442,17 @@ Wrong:   Using `unnest($1::text[])` with `generate_series(...)` and assuming row
 Correct: Use `unnest($1::text[]) WITH ORDINALITY` to keep product order stable.
 Rule:    When SQL depends on input order, use `WITH ORDINALITY` to preserve it.
 Layer:   Go adapter
+
+## Lesson 57 — Required request fields must never be omitted
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Sending `supplierCodes: undefined` to `ShoppingMarketReportExportXlsxRequestV1` when "all suppliers" was selected.
+Correct: Always send a concrete array; when the user selects "all", pass every supplier code from the bootstrap list.
+Rule:    Required contract fields must always be populated, even when the UI uses an "all" shortcut.
+Layer:   Frontend
+
+## Lesson 58 — Scope edits to the target feature block in tasks/todo.md
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Running a global replace on `- [ ] T1:`... which unintentionally marked tasks in other feature blocks as done.
+Correct: Update only the intended feature block (e.g., split on the first `---` or edit with a scoped patch).
+Rule:    When updating `tasks/todo.md`, always scope automated edits to the specific feature block.
+Layer:   Process
