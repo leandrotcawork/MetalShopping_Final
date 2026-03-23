@@ -860,6 +860,47 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     return `${productId}::${supplierCode.toUpperCase()}`;
   }
 
+  async function upsertManualSignal(candidate: ShoppingManualUrlCandidateV1, nextUrl: string) {
+    await shoppingApi.upsertSupplierSignal({
+      productId: candidate.productId,
+      supplierCode: candidate.supplierCode,
+      productUrl: nextUrl || null,
+      lookupMode: candidate.lookupMode,
+      urlStatus: nextUrl ? "ACTIVE" : "STALE",
+      manualOverride: true,
+    });
+  }
+
+  async function saveManualSignalRow(candidate: ShoppingManualUrlCandidateV1) {
+    const key = manualRowKey(candidate.productId, candidate.supplierCode);
+    const nextUrl = (manualEditUrls[key] ?? candidate.productUrl ?? "").trim();
+    const currentUrl = (candidate.productUrl ?? "").trim();
+    if (nextUrl === currentUrl) {
+      return;
+    }
+    if (nextUrl && !/^https?:\/\//i.test(nextUrl)) {
+      setError("A URL manual deve iniciar com http ou https.");
+      return;
+    }
+
+    setManualSignalSaving(true);
+    setError(null);
+    try {
+      await upsertManualSignal(candidate, nextUrl);
+      setManualEditUrls((current) => {
+        const nextState = { ...current };
+        delete nextState[key];
+        return nextState;
+      });
+      setManualReloadTick((current) => current + 1);
+    } catch (saveError) {
+      const message = saveError instanceof Error ? saveError.message : "Falha ao salvar configuracao manual de URL.";
+      setError(message);
+    } finally {
+      setManualSignalSaving(false);
+    }
+  }
+
   async function saveManualSignals() {
     if (manualPendingRows.length === 0) {
       return;
@@ -872,14 +913,7 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
           setError("A URL manual deve iniciar com http ou https.");
           return;
         }
-        await shoppingApi.upsertSupplierSignal({
-          productId: pendingRow.candidate.productId,
-          supplierCode: pendingRow.candidate.supplierCode,
-          productUrl: pendingRow.nextUrl || null,
-          lookupMode: pendingRow.candidate.lookupMode,
-          urlStatus: pendingRow.nextUrl ? "ACTIVE" : "STALE",
-          manualOverride: true,
-        });
+        await upsertManualSignal(pendingRow.candidate, pendingRow.nextUrl);
       }
       setManualEditUrls((current) => {
         const nextState = { ...current };
@@ -1383,27 +1417,44 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                     </div>
                   </td>
                   <td>
-                    <input
-                      type="text"
-                      value={draftUrl}
-                      onChange={(event) =>
-                        setManualEditUrls((current) => {
-                          const nextValue = event.target.value;
-                          const normalizedNextValue = nextValue.trim();
-                          const normalizedCurrentValue = (candidate.productUrl ?? "").trim();
-                          if (normalizedNextValue === normalizedCurrentValue) {
-                            const nextState = { ...current };
-                            delete nextState[rowKey];
-                            return nextState;
+                    <div className={styles.manualActionsRow}>
+                      <input
+                        type="text"
+                        value={draftUrl}
+                        onChange={(event) =>
+                          setManualEditUrls((current) => {
+                            const nextValue = event.target.value;
+                            const normalizedNextValue = nextValue.trim();
+                            const normalizedCurrentValue = (candidate.productUrl ?? "").trim();
+                            if (normalizedNextValue === normalizedCurrentValue) {
+                              const nextState = { ...current };
+                              delete nextState[rowKey];
+                              return nextState;
+                            }
+                            return {
+                              ...current,
+                              [rowKey]: nextValue,
+                            };
+                          })
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key !== "Enter") {
+                            return;
                           }
-                          return {
-                            ...current,
-                            [rowKey]: nextValue,
-                          };
-                        })
-                      }
-                      placeholder="https://fornecedor/pdp/produto"
-                    />
+                          event.preventDefault();
+                          void saveManualSignalRow(candidate);
+                        }}
+                        placeholder="https://fornecedor/pdp/produto"
+                      />
+                      <button
+                        type="button"
+                        className={`${styles.btn} ${styles.btnGhost} ${styles.btnCompact}`}
+                        disabled={manualSignalSaving}
+                        onClick={() => void saveManualSignalRow(candidate)}
+                      >
+                        Salvar
+                      </button>
+                    </div>
                   </td>
                   <td className={styles.manualColTight}>{candidate.urlStatus}</td>
                   <td className={styles.manualColTight}>{nextDiscovery}</td>

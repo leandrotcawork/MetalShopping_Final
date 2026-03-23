@@ -412,3 +412,9 @@ Wrong:   Leaving the footer save button permanently disabled and persisting manu
 Correct: Detect pending edits from the visible candidates, enable batch save only when rows changed, and reuse each candidate's current `lookupMode` when upserting the manual signal.
 Rule:    Manual URL save flows must be driven by real pending drafts and preserve the candidate lookup semantics.
 Layer:   Frontend
+## Lesson 52 — Manual URL editing needs row-level save fallback
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Relying only on footer batch save for manual URL edits, which can hide action feedback and make validation ambiguous.
+Correct: Keep batch save, and also support row-level save button and Enter-to-save on each URL field.
+Rule:    Editable table flows should provide direct per-row commit actions in addition to batch actions.
+Layer:   Frontend

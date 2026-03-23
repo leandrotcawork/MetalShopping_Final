@@ -17,11 +17,13 @@ Level scope:
 - [x] T5: frontend — $metalshopping-frontend
       - detectar drafts realmente alterados
       - habilitar o CTA de salvar em lote
+      - adicionar salvar por linha e Enter no campo URL
       - reutilizar `lookupMode` do candidato ao persistir a URL manual
       commit: "fix(web): enable shopping manual url save"
 
 ## Acceptance tests
 - [x] npm.cmd run web:typecheck passes
+- [x] npm.cmd run web:test passes
 - [ ] Browser: `/shopping` → Configurar URLs manuais → editar URL válida → botão Salvar habilita e persiste
 
 ---
