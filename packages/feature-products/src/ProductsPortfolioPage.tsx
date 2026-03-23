@@ -1,4 +1,4 @@
-import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
+﻿import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
 
 import type {
   ProductsPortfolioApi,
@@ -186,7 +186,7 @@ export function ProductsPortfolioPage(props: { api: ProductsPortfolioApi; shoppi
         }
       } catch (loadError) {
         if (!cancelled) {
-          const message = loadError instanceof Error ? loadError.message : "Falha ao carregar configuracoes do relatorio.";
+          const message = loadError instanceof Error ? loadError.message : "Falha ao carregar configurações do relatório.";
           setExportConfigError(message);
         }
       } finally {
@@ -357,13 +357,13 @@ export function ProductsPortfolioPage(props: { api: ProductsPortfolioApi; shoppi
     setExportResult(null);
 
     if (exportSelectionCount === 0) {
-      setExportStatus({ tone: "error", message: "Selecione produtos para exportar o relatÃ³rio." });
+      setExportStatus({ tone: "error", message: "Selecione produtos para exportar o relatório." });
       return;
     }
     if (exportOverLimit) {
       setExportStatus({
         tone: "error",
-        message: `SeleÃ§Ã£o acima de ${exportMaxRows} itens. Ajuste os filtros antes de exportar.`,
+        message: `Seleção acima de ${exportMaxRows} itens. Ajuste os filtros antes de exportar.`,
       });
       return;
     }
@@ -374,7 +374,7 @@ export function ProductsPortfolioPage(props: { api: ProductsPortfolioApi; shoppi
 
     const runId = exportRunId.trim();
     if (!runId) {
-      setExportStatus({ tone: "error", message: "Selecione uma run para exportar o relatÃ³rio." });
+      setExportStatus({ tone: "error", message: "Selecione uma run para exportar o relatório." });
       return;
     }
     const outputFilePath = exportOutputPath.trim();
@@ -395,7 +395,7 @@ export function ProductsPortfolioPage(props: { api: ProductsPortfolioApi; shoppi
     try {
       const productIds = await resolveExportProductIds();
       if (productIds.length === 0) {
-        setExportStatus({ tone: "error", message: "Nenhum produto encontrado para exportaÃ§Ã£o." });
+        setExportStatus({ tone: "error", message: "Nenhum produto encontrado para exportação." });
         return;
       }
       const response = await props.shoppingApi.exportMarketReportXlsx(runId, {
@@ -404,9 +404,9 @@ export function ProductsPortfolioPage(props: { api: ProductsPortfolioApi; shoppi
         outputFilePath,
       });
       setExportResult(response);
-      setExportStatus({ tone: "success", message: `RelatÃ³rio exportado em ${response.outputFilePath}.` });
+      setExportStatus({ tone: "success", message: `Relatório exportado em ${response.outputFilePath}.` });
     } catch (exportError) {
-      const message = exportError instanceof Error ? exportError.message : "Falha ao exportar relatÃ³rio.";
+      const message = exportError instanceof Error ? exportError.message : "Falha ao exportar relatório.";
       setExportStatus({ tone: "error", message });
     } finally {
       setExporting(false);
@@ -520,51 +520,33 @@ export function ProductsPortfolioPage(props: { api: ProductsPortfolioApi; shoppi
 
       {exportModalOpen ? (
         <div className={styles.exportBackdrop} role="presentation" onClick={closeExportModal}>
-          <div className={styles.exportModal} role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-            <div className={styles.exportHeader}>
+          <section
+            className={styles.exportModal}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Configurar exportação de relatório de mercado"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className={styles.exportHeader}>
               <div>
-                <h3 className={styles.exportTitle}>Configurar relatÃ³rio de mercado</h3>
+                <h3 className={styles.exportTitle}>Configurar exportação (.xlsx)</h3>
                 <p className={styles.exportSubtitle}>
-                  Escolha a run, fornecedores e o caminho do XLSX para exportar o comparativo de preÃ§os.
+                  Defina run, fornecedores e saída do arquivo antes de gerar o relatório.
                 </p>
               </div>
-              <Button className={styles.secondaryActionButton} variant="secondary" onClick={closeExportModal}>
-                Fechar
-              </Button>
-            </div>
-
-            <div className={styles.exportSummary}>
-              <span>
-                Origem: <strong>{selectionMode === "filtered" ? "Filtros atuais" : "SeleÃ§Ã£o manual"}</strong>
-              </span>
-              <span>
-                Produtos: <strong>{exportSelectionCount}</strong>
-              </span>
-              <span>
-                Fornecedores: <strong>{selectedSuppliersLabel}</strong>
-              </span>
-            </div>
-
-            {exportConfigLoading ? <p className={styles.exportMeta}>Carregando configuracoes...</p> : null}
-            {exportConfigError ? (
-              <StatusBanner className={styles.exportStatus} tone="error">
-                {exportConfigError}
-              </StatusBanner>
-            ) : null}
-            {exportOverLimit ? (
-              <StatusBanner className={styles.exportStatus} tone="error">
-                SelecÃ£o acima de {exportMaxRows} itens. Ajuste os filtros antes de exportar.
-              </StatusBanner>
-            ) : null}
-            {exportStatus ? (
-              <StatusBanner className={styles.exportStatus} tone={exportStatus.tone}>
-                {exportStatus.message}
-              </StatusBanner>
-            ) : null}
+              <button
+                type="button"
+                className={styles.exportCloseButton}
+                onClick={closeExportModal}
+                aria-label="Fechar"
+              >
+                ×
+              </button>
+            </header>
 
             <div className={styles.exportGrid}>
               <label className={styles.exportField}>
-                Run
+                <span>Run de referência</span>
                 <FilterDropdown
                   id="products-export-run"
                   options={exportRunOptions}
@@ -574,7 +556,7 @@ export function ProductsPortfolioPage(props: { api: ProductsPortfolioApi; shoppi
                 />
               </label>
               <label className={styles.exportField}>
-                Fornecedores
+                <span>Fornecedores</span>
                 <FilterDropdown
                   id="products-export-suppliers"
                   options={exportSupplierOptions}
@@ -585,8 +567,8 @@ export function ProductsPortfolioPage(props: { api: ProductsPortfolioApi; shoppi
                   disabled={exportConfigLoading || exportSupplierOptions.length === 0}
                 />
               </label>
-              <label className={styles.exportField}>
-                Caminho do arquivo XLSX
+              <label className={`${styles.exportField} ${styles.exportFieldFull}`}>
+                <span>Saída do arquivo (.xlsx)</span>
                 <input
                   className={styles.exportInput}
                   type="text"
@@ -597,29 +579,59 @@ export function ProductsPortfolioPage(props: { api: ProductsPortfolioApi; shoppi
               </label>
             </div>
 
-            <div className={styles.exportFooter}>
-              <span className={styles.exportMeta}>
+            <div className={styles.exportSummary}>
+              <span>
+                Modo seleção: <strong>{selectionMode === "filtered" ? "Filtrados" : "Explícito"}</strong>
+              </span>
+              <span>
+                Itens: <strong>{exportSelectionCount}</strong>
+              </span>
+              <span>
+                Fornecedores: <strong>{selectedSuppliersLabel}</strong>
+              </span>
+            </div>
+
+            {exportConfigLoading ? <p className={styles.exportMeta}>Carregando configurações...</p> : null}
+            {exportConfigError ? (
+              <StatusBanner className={styles.exportStatus} tone="error">
+                {exportConfigError}
+              </StatusBanner>
+            ) : null}
+            {exportOverLimit ? (
+              <StatusBanner className={styles.exportStatus} tone="error">
+                Seleção acima de {exportMaxRows} itens. Ajuste os filtros antes de exportar.
+              </StatusBanner>
+            ) : null}
+            {exportStatus ? (
+              <StatusBanner className={styles.exportStatus} tone={exportStatus.tone}>
+                {exportStatus.message}
+              </StatusBanner>
+            ) : null}
+
+            <footer className={styles.exportFooter}>
+              <p className={styles.exportMeta}>
                 {exportResult
                   ? `Exportado em ${exportResult.outputFilePath} (${exportResult.totalProducts} produtos).`
-                  : "O arquivo serÃ¡ gravado no servidor conforme o caminho informado."}
-              </span>
+                  : "O arquivo será gravado no servidor conforme o caminho informado."}
+              </p>
               <div className={styles.exportActions}>
-                <Button className={styles.secondaryActionButton} variant="secondary" onClick={closeExportModal}>
+                <Button className={styles.exportSecondaryButton} variant="secondary" onClick={closeExportModal}>
                   Cancelar
                 </Button>
                 <Button
-                  className={styles.actionButtonPrimary}
+                  className={styles.exportPrimaryButton}
                   variant="primary"
                   disabled={exporting || exportConfigLoading}
                   onClick={() => void handleExport()}
                 >
-                  {exporting ? "Exportando..." : "Exportar XLSX"}
+                  {exporting ? "Gerando XLSX..." : "Exportar relatório"}
                 </Button>
               </div>
-            </div>
-          </div>
+            </footer>
+          </section>
         </div>
       ) : null}
     </div>
   );
 }
+

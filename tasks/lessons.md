@@ -456,3 +456,10 @@ Wrong:   Running a global replace on `- [ ] T1:`... which unintentionally marked
 Correct: Update only the intended feature block (e.g., split on the first `---` or edit with a scoped patch).
 Rule:    When updating `tasks/todo.md`, always scope automated edits to the specific feature block.
 Layer:   Process
+
+## Lesson 59 — Legacy export modal needs explicit surface styling
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Styling the Products export modal only with generic surface tokens and shared buttons, which made the box look translucent and drift from the legacy hierarchy.
+Correct: Keep the legacy modal structure (`backdrop`, `header`, compact `×`, bordered footer) and give it explicit opaque surface/button styling inside the feature CSS.
+Rule:    For visual-parity modals, preserve the legacy container hierarchy and explicit surface treatment instead of relying only on generic theme tokens.
+Layer:   Frontend

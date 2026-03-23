@@ -442,102 +442,165 @@
 .exportBackdrop {
   position: fixed;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-lg);
-  background: color-mix(in srgb, var(--color-text-primary) 20%, transparent);
-  z-index: 40;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 14px;
+  background: rgba(17, 21, 31, 0.58);
+  backdrop-filter: blur(2px);
 }
 
 .exportModal {
-  width: min(100%, 72ch);
+  width: min(760px, 100%);
   display: grid;
-  gap: var(--spacing-md);
-  padding: var(--spacing-lg);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border-default);
-  background: var(--color-surface-elevated);
-  color: var(--color-text-primary);
-  box-shadow: 0 22px 60px color-mix(in srgb, var(--color-text-primary) 24%, transparent);
+  gap: 12px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid #eadfe4;
+  background: #fff;
+  color: #251b22;
+  box-shadow: 0 26px 60px rgba(12, 14, 24, 0.34);
 }
 
 .exportHeader {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: var(--spacing-md);
+  gap: 12px;
 }
 
 .exportTitle {
   margin: 0;
+  color: #251b22;
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);
 }
 
 .exportSubtitle {
-  margin: var(--spacing-xs) 0 0;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
+  margin: 5px 0 0;
+  color: #73606a;
+  font-size: 0.82rem;
+}
+
+.exportCloseButton {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid #d8c9cf;
+  border-radius: 10px;
+  background: #fff;
+  color: #4d3e47;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.exportCloseButton:hover {
+  border-color: #c23b54;
+  color: #8a1735;
 }
 
 .exportSummary {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-md);
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
+  gap: 12px;
+  color: #73606a;
+  font-size: 0.82rem;
 }
 
 .exportSummary strong {
-  color: var(--color-text-primary);
+  color: #251b22;
 }
 
 .exportGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--spacing-md);
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
 }
 
 .exportField {
   display: grid;
-  gap: var(--spacing-xs);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  gap: 6px;
+  color: #73606a;
+  font-size: 0.82rem;
+}
+
+.exportField span {
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #73606a;
+}
+
+.exportFieldFull {
+  grid-column: 1 / -1;
 }
 
 .exportInput {
-  min-height: calc(var(--spacing-xl) + var(--spacing-xs));
-  padding: 0 var(--spacing-sm);
-  border: 1px solid var(--color-border-default);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-primary);
-  color: var(--color-text-primary);
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(145, 19, 42, 0.22);
+  border-radius: 12px;
+  background: #fff;
+  color: #251b22;
+}
+
+.exportInput:focus {
+  outline: none;
+  border-color: #c23b54;
+  box-shadow: 0 0 0 3px rgba(184, 56, 79, 0.14);
 }
 
 .exportFooter {
+  border-top: 1px solid #eadfe4;
+  padding-top: 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--spacing-md);
+  gap: 10px;
   flex-wrap: wrap;
 }
 
 .exportActions {
   display: inline-flex;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .exportMeta {
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
+  margin: 0;
+  color: #73606a;
+  font-size: 0.82rem;
 }
 
 .exportStatus {
   display: grid;
-  gap: var(--spacing-xs);
+  gap: 4px;
+}
+
+.exportSecondaryButton,
+.exportPrimaryButton {
+  min-height: 36px;
+  padding: 7px 12px;
+  font-size: 0.88rem;
+}
+
+.exportSecondaryButton {
+  border-color: #d8c9cf;
+  background: #fff;
+  color: #4d3e47;
+}
+
+.exportPrimaryButton {
+  border-color: rgba(194, 59, 84, 0.82);
+  background: linear-gradient(180deg, #d45a74, #a92a46);
+  color: #fff;
 }
 
 @media (max-width: 1180px) {
@@ -583,5 +646,10 @@
 
   .exportGrid {
     grid-template-columns: 1fr;
+  }
+
+  .exportFooter {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

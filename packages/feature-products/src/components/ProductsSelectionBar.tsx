@@ -29,13 +29,28 @@ export function ProductsSelectionBar(props: {
           >
             Exportar selecionados
           </Button>
-          <Button className={styles.secondaryActionButton} variant="secondary" disabled={props.rowsCount === 0} onClick={props.onToggleCurrentPage}>
+          <Button
+            className={styles.secondaryActionButton}
+            variant="secondary"
+            disabled={props.rowsCount === 0}
+            onClick={props.onToggleCurrentPage}
+          >
             {props.allVisibleSelected ? "Desmarcar página" : "Selecionar página"}
           </Button>
-          <Button className={styles.secondaryActionButton} variant="secondary" disabled={props.rowsCount === 0} onClick={props.onSelectFiltered}>
+          <Button
+            className={styles.secondaryActionButton}
+            variant="secondary"
+            disabled={props.rowsCount === 0}
+            onClick={props.onSelectFiltered}
+          >
             Selecionar filtrados
           </Button>
-          <Button className={styles.secondaryActionButton} variant="secondary" disabled={props.totalSelected === 0} onClick={props.onClearSelection}>
+          <Button
+            className={styles.secondaryActionButton}
+            variant="secondary"
+            disabled={props.totalSelected === 0}
+            onClick={props.onClearSelection}
+          >
             Limpar
           </Button>
         </div>
