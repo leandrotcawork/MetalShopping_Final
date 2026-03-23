@@ -384,3 +384,10 @@ Wrong:   Reusing the treemap canvas across renders without forcing destroy, caus
 Correct: Use `redraw` on `react-chartjs-2` treemap instances to destroy and recreate the chart on updates.
 Rule:    Chart.js instances must be destroyed before reusing the same canvas when data/options change.
 Layer:   Frontend
+
+## Lesson 48 — StrictMode + react-chartjs-2 redraw can reuse canvas
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Using `react-chartjs-2` with `redraw` for treemap charts under `React.StrictMode`, leading to canvas reuse errors.
+Correct: Manage Chart.js treemap instances manually and destroy them before recreation.
+Rule:    For treemap + StrictMode, avoid wrapper redraw and control Chart.js lifecycle directly.
+Layer:   Frontend

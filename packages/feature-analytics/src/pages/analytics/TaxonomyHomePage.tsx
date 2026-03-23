@@ -14,8 +14,7 @@ import {
   type ChartData,
   type ChartOptions,
 } from "chart.js";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Chart } from "react-chartjs-2";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { TreemapController, TreemapElement } from "chartjs-chart-treemap";
 import {
   ResponsiveContainer,
@@ -48,6 +47,55 @@ ChartJSCore.register(
   Tooltip,
   Legend,
 );
+
+type TreemapChartProps = {
+  data: ChartData<"treemap">;
+  options: ChartOptions<"treemap">;
+  className?: string;
+  style?: CSSProperties;
+  canvasId?: string;
+};
+
+function TreemapChart({
+  data,
+  options,
+  className,
+  style,
+  canvasId,
+}: TreemapChartProps) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const chartRef = useRef<ChartJSCore<"treemap"> | null>(null);
+  const dataRef = useRef(data);
+  const optionsRef = useRef(options);
+
+  dataRef.current = data;
+  optionsRef.current = options;
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+
+    if (chartRef.current) {
+      chartRef.current.destroy();
+      chartRef.current = null;
+    }
+
+    chartRef.current = new ChartJSCore(canvas, {
+      type: "treemap",
+      data: dataRef.current,
+      options: optionsRef.current,
+    });
+
+    return () => {
+      if (chartRef.current) {
+        chartRef.current.destroy();
+        chartRef.current = null;
+      }
+    };
+  }, [data, options]);
+
+  return <canvas ref={canvasRef} className={className} style={style} id={canvasId} />;
+}
 
 type KpiCard = {
   label: string;
@@ -2131,12 +2179,10 @@ export function TaxonomyHomePage() {
             <span><i className={styles.allocLegendHigh} /> Alto risco</span>
           </div>
           <div className={styles.allocTreemapWrap}>
-            <Chart
-              key={allocationTreeKey}
-              type="treemap"
+            <TreemapChart
               data={allocationTreeData}
               options={allocationTreeOptions}
-              redraw
+              canvasId={`allocation-treemap-${allocationTreeKey}`}
             />
           </div>
         </article>
@@ -2637,12 +2683,10 @@ export function TaxonomyHomePage() {
 
         <section className={styles.allocationSpotlightTop}>
           <div className={styles.allocationSpotlightTreemap} style={{ height: `${allocationTopHeight}px` }}>
-            <Chart
-              key={allocationSpotlightTreeKey}
-              type="treemap"
+            <TreemapChart
               data={allocationSpotlightTreeData}
               options={allocationSpotlightTreeOptions}
-              redraw
+              canvasId={`allocation-spotlight-treemap-${allocationSpotlightTreeKey}`}
             />
           </div>
           <aside ref={allocationPriorityRef} className={styles.allocationSpotlightPriority}>
