@@ -1,3 +1,50 @@
+# Feature: Shopping export report XLSX
+Type: read-only  |  Events: no  |  ADR: no
+
+## Phase 1 — Architectural thinking
+Module type:
+- `apps/server_core/internal/modules/shopping` (read-only + side-effect file write): read run items and write an XLSX report to a configured export directory.
+- `apps/web/src/pages/ShoppingPage.tsx`: add UI to pick run + suppliers + output path and trigger export.
+
+Exact folder structure (extensions only):
+- `contracts/api/openapi/shopping_v1.openapi.yaml` (+ new request/response schemas)
+- `apps/server_core/internal/modules/shopping/ports/read_models.go` (new input/output models)
+- `apps/server_core/internal/modules/shopping/adapters/postgres/reader.go` (list run items for export)
+- `apps/server_core/internal/modules/shopping/application/service.go` (ExportRunReportXlsx)
+- `apps/server_core/internal/modules/shopping/transport/http/handler.go` (POST route under `/runs/{run_id}/...`)
+- `apps/server_core/internal/platform/runtime_config/*` (export root config, if needed)
+- `apps/web/src/pages/ShoppingPage.tsx` (+ minor CSS if needed)
+
+Risks:
+- Export can be large; must cap rows and keep memory bounded.
+- Writing to arbitrary paths is unsafe; must restrict to an export root and sanitize relative paths.
+
+Level scope:
+- Level 1 (now): export XLSX to server filesystem under configured root; user selects run + suppliers; show success with output path.
+- Level 2 (later): download-from-browser and/or background export job for very large runs.
+
+## Tasks
+- [ ] T1: contract — $metalshopping-openapi-contracts
+      - `POST /api/v1/shopping/runs/{run_id}/export-xlsx`
+      - schemas: request/response for export
+      commit: "feat(shopping): add run export xlsx contract"
+- [ ] T2: Go module — implement export endpoint
+      - validate output path under export root
+      - query run items for selected suppliers
+      - write XLSX and return metadata
+      commit: "feat(shopping): export run report to xlsx"
+- [ ] T4: SDK — $metalshopping-sdk-generation
+      commit: "chore(sdk): regenerate shopping export contract"
+- [ ] T5: frontend — $metalshopping-frontend
+      - UI: select run + suppliers + output file name/path; trigger export
+      commit: "feat(web): add shopping run export"
+
+## Acceptance tests
+- [x] go test ./apps/server_core/... passes
+- [x] npm.cmd run web:typecheck passes
+- [ ] Browser: `/shopping` export generates XLSX file on disk and shows the saved path
+
+---
 # Feature: Shopping catalog select all
 Type: frontend  |  Events: no  |  ADR: no
 
