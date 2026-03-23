@@ -246,6 +246,7 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
   const [runItemsLog, setRunItemsLog] = useState<ShoppingRunItemListV1 | null>(null);
   const [runItemsLogLoading, setRunItemsLogLoading] = useState(false);
   const [runItemsLogError, setRunItemsLogError] = useState<string | null>(null);
+  const [runLogSearch, setRunLogSearch] = useState("");
   const [loadingShopping, setLoadingShopping] = useState(true);
   const [creatingRun, setCreatingRun] = useState(false);
   const [createRunInfo, setCreateRunInfo] = useState<string | null>(null);
@@ -813,6 +814,29 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     }
     return `Produto ${product}`;
   }, [runRequest]);
+
+  const filteredRunLogRows = useMemo(() => {
+    const rows = runItemsLog?.rows ?? [];
+    const query = runLogSearch.trim().toLowerCase();
+    if (query === "") {
+      return rows;
+    }
+    return rows.filter((item) => {
+      const lookupUrl = deriveRunItemUrl(item) ?? "";
+      const haystack = [
+        item.productLabel,
+        item.productId,
+        item.supplierCode,
+        item.itemStatus,
+        item.lookupTerm ?? "",
+        item.notes ?? "",
+        lookupUrl,
+      ]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [runItemsLog?.rows, runLogSearch]);
 
   const kpis = useMemo(
     () => {
@@ -1944,13 +1968,26 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
               )}
               <div className={styles.logItems}>
                 <h4>Itens processados</h4>
+                <div className={styles.logSearchRow}>
+                  <input
+                    type="search"
+                    value={runLogSearch}
+                    onChange={(event) => setRunLogSearch(event.target.value)}
+                    className={styles.logSearchInput}
+                    placeholder="Buscar no log por produto, fornecedor, status, lookup, URL..."
+                    aria-label="Buscar itens no log detalhado"
+                  />
+                  <small className={styles.logSearchMeta}>
+                    {filteredRunLogRows.length}/{runItemsLog?.rows.length ?? 0}
+                  </small>
+                </div>
                 {runItemsLogLoading ? (
                   <p className={styles.logMuted}>Carregando log detalhado...</p>
                 ) : runItemsLogError ? (
                   <p className={styles.logError}>{runItemsLogError}</p>
-                ) : runItemsLog && runItemsLog.rows.length > 0 ? ( 
+                ) : filteredRunLogRows.length > 0 ? ( 
                   <ul className={styles.logList}> 
-                    {runItemsLog.rows.map((item) => { 
+                    {filteredRunLogRows.map((item) => { 
                       const url = deriveRunItemUrl(item); 
                       const foundPrice =
                         item.itemStatus === "OK" ? formatMoney(item.observedPrice, item.currencyCode) : "--";
@@ -1979,7 +2016,9 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                     })} 
                   </ul> 
                 ) : ( 
-                  <p className={styles.logMuted}>Nenhum item encontrado para este run.</p> 
+                  <p className={styles.logMuted}>
+                    {runLogSearch.trim() ? "Nenhum item corresponde ao filtro do log." : "Nenhum item encontrado para este run."}
+                  </p> 
                 )} 
               </div>
             </div>

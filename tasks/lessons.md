@@ -533,3 +533,10 @@ Wrong:   Keeping Shopping wizard step/run only in component state, which resets 
 Correct: Persist `step` and selected `runId` in URL query + session storage, then rehydrate on Shopping mount.
 Rule:    Multi-step operational pages must persist route context across unmount/remount cycles.
 Layer:   Frontend
+
+## Lesson 70 — Detailed log filtering should run client-side over loaded rows
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Forcing users to scan long log lists manually without any search/filter capability.
+Correct: Add local search over the loaded run-item log rows (product, supplier, status, lookup, URL, notes) with a visible matched/total counter.
+Rule:    High-volume operational logs must provide immediate client-side filtering when data is already loaded in memory.
+Layer:   Frontend
