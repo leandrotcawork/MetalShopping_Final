@@ -391,3 +391,10 @@ Wrong:   Using `react-chartjs-2` with `redraw` for treemap charts under `React.S
 Correct: Manage Chart.js treemap instances manually and destroy them before recreation.
 Rule:    For treemap + StrictMode, avoid wrapper redraw and control Chart.js lifecycle directly.
 Layer:   Frontend
+
+## Lesson 49 — Treemap must guard empty data and destroy any existing canvas chart
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Mounting treemap during empty/loading states and relying only on local refs for Chart.js cleanup.
+Correct: Gate treemap render on ready/non-empty data and call `Chart.getChart(canvas)?.destroy()` before new instantiation.
+Rule:    In StrictMode, chart wrappers need defensive canvas cleanup plus data-ready mount guards.
+Layer:   Frontend

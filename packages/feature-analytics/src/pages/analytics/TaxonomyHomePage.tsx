@@ -75,6 +75,12 @@ function TreemapChart({
     const canvas = canvasRef.current;
     if (!canvas) return undefined;
 
+    // Defensive destroy: ensures no stale Chart.js instance remains bound to this canvas.
+    const existingChart = ChartJSCore.getChart(canvas);
+    if (existingChart) {
+      existingChart.destroy();
+    }
+
     if (chartRef.current) {
       chartRef.current.destroy();
       chartRef.current = null;
@@ -1353,6 +1359,7 @@ export function TaxonomyHomePage() {
   );
   const backlog: ActionCard[] = (dto?.panels.backlog || []).slice(0, 4);
   const allocationMax = Math.max(1, ...allocation.map((item) => item.capital_brl || 0));
+  const hasAllocationData = Boolean(dto) && allocation.length > 0;
   const allocationTreeData = useMemo<ChartData<"treemap">>(() => {
     // chartjs-chart-treemap gera `data` internamente a partir de `tree`; manter sem `data`
     // evita inconsistência de hitbox/hover após refresh do payload.
@@ -1446,6 +1453,7 @@ export function TaxonomyHomePage() {
     },
   }), [leaf0Label]);
   const allocationSpotlightTreeMax = Math.max(1, ...allocationSpotlightRows.map((row) => row.capital_brl || 0));
+  const hasAllocationSpotlightData = Boolean(dto) && allocationSpotlightRows.length > 0;
   const allocationSpotlightTreeData = useMemo<ChartData<"treemap">>(() => {
     const maxCapital = Number.isFinite(allocationSpotlightTreeMax) && allocationSpotlightTreeMax > 0 ? allocationSpotlightTreeMax : 1;
     const resolveFill = (row?: { rl?: string; cap?: number }): string => {
@@ -2179,11 +2187,15 @@ export function TaxonomyHomePage() {
             <span><i className={styles.allocLegendHigh} /> Alto risco</span>
           </div>
           <div className={styles.allocTreemapWrap}>
-            <TreemapChart
-              data={allocationTreeData}
-              options={allocationTreeOptions}
-              canvasId={`allocation-treemap-${allocationTreeKey}`}
-            />
+            {hasAllocationData ? (
+              <TreemapChart
+                data={allocationTreeData}
+                options={allocationTreeOptions}
+                canvasId="allocation-treemap"
+              />
+            ) : (
+              <p className={styles.spotlightEmpty}>Sem dados de alocacao para exibir.</p>
+            )}
           </div>
         </article>
 
@@ -2683,11 +2695,15 @@ export function TaxonomyHomePage() {
 
         <section className={styles.allocationSpotlightTop}>
           <div className={styles.allocationSpotlightTreemap} style={{ height: `${allocationTopHeight}px` }}>
-            <TreemapChart
-              data={allocationSpotlightTreeData}
-              options={allocationSpotlightTreeOptions}
-              canvasId={`allocation-spotlight-treemap-${allocationSpotlightTreeKey}`}
-            />
+            {hasAllocationSpotlightData ? (
+              <TreemapChart
+                data={allocationSpotlightTreeData}
+                options={allocationSpotlightTreeOptions}
+                canvasId="allocation-spotlight-treemap"
+              />
+            ) : (
+              <p className={styles.spotlightEmpty}>Sem dados para o treemap neste recorte.</p>
+            )}
           </div>
           <aside ref={allocationPriorityRef} className={styles.allocationSpotlightPriority}>
             <div className={styles.panelHeadInline}>
