@@ -1,6 +1,0 @@
-interface:
-  display_name: "MS Frontend"
-  short_description: "Implement React pages with design tokens, packages/ui widgets, platform-sdk hooks, and required loading/error/empty states."
-  default_prompt: "Use $metalshopping-frontend to implement the React page or component."
-policy:
-  allow_implicit_invocation: true
