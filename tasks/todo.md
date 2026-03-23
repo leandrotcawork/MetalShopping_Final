@@ -57,7 +57,7 @@ Level scope:
 - Level 2 (defer): capture ‚ÄúURL efetivamente tentada‚Äù no worker (hoje s√≥ temos `product_url` do signal + `lookup_term`).
 
 ## Tasks
-- [x] T1: contract ‚Äî $metalshopping-openapi-contracts
+- [ ] T1: contract ‚Äî $metalshopping-openapi-contracts
       Add:
       - `GET /api/v1/shopping/runs/{run_id}/supplier-item-status-summary`
       - `GET /api/v1/shopping/runs/{run_id}/items` (paged)
@@ -163,3 +163,164 @@ Level scope:
 
 ## Acceptance tests
 - [ ] Run real shopping with Dexco/Telha Norte shows `search_url=` in log
+
+---
+
+# Feature: Analytics New ‚Äî Home tranche
+Type: read-only  |  Events: no  |  ADR: no
+
+## Phase 1 ‚Äî Architectural thinking
+Module type:
+- `contracts/api/*`: freeze initial Analytics Home read contract.
+- `apps/server_core/internal/modules/analytics_serving` (read-only): tenant-safe analytics home payload.
+- `packages/platform-sdk`: expose `analytics.getHome()`.
+- `packages/feature-analytics` + `apps/web`: Analytics Home route and UI binding.
+
+Risks:
+- New feature package import resolution fails without `apps/web/tsconfig.json` path/include wiring.
+- Contract generation drift if `analytics_v1` is not included in `scripts/generate_contract_artifacts.ps1`.
+- Partial blocks in first slice need explicit `NOT_READY` state to avoid fake completeness.
+
+Level scope:
+- Level 1 (now): `/analytics` no longer placeholder; Home shows real operational/product metrics and explicit pending blocks.
+- Level 2 (defer): advanced analytics blocks (actions, alerts, portfolio, timeline) move from `NOT_READY` to real data.
+
+## Tasks
+- [x] T1: contract ‚Äî $metalshopping-openapi-contracts
+      - add `contracts/api/openapi/analytics_v1.openapi.yaml`
+      - add `analytics_home_v1`, `analytics_home_block_v1`, `analytics_block_error_v1` schemas
+      commit: "feat(analytics): add analytics home read contracts"
+- [ ] T2: Go module ‚Äî $metalshopping-implement
+      - implement `analytics_serving` reader/service/handler (`GET /api/v1/analytics/home`)
+      - register module in `composition_modules.go`
+      commit: "feat(analytics): add analytics home read endpoint"
+- [ ] T4: SDK ‚Äî $metalshopping-sdk-generation
+      - include analytics in generation script and regenerate artifacts
+      - extend `sdk-runtime` with `analytics.getHome()`
+      commit: "chore(sdk): regenerate with analytics contract"
+- [ ] T5: frontend ‚Äî $metalshopping-frontend
+      - create `packages/feature-analytics` Home page
+      - wire route `/analytics` in `apps/web/src/app/App.tsx`
+      - add workspace + tsconfig wiring for new feature package
+      commit: "feat(web): implement analytics home route"
+
+## Acceptance tests
+- [x] go test ./apps/server_core/... passes
+- [x] npm.cmd run web:typecheck passes
+- [x] npm.cmd run web:test passes
+- [ ] Browser: `/analytics` renders Analytics Home with real API payload and pending block list
+
+---
+
+# Feature: Analytics New ‚Äî Legacy visual parity (tabs + cards)
+Type: frontend  |  Events: no  |  ADR: no
+
+## Tasks
+- [ ] T5: frontend ‚Äî $metalshopping-frontend
+      - copy legacy `.tsx/.css` references into `packages/feature-analytics/legacy_snapshot/*`
+      - deliver runnable analytics shell with legacy-style navigation tabs + card layout
+      - keep data partially mocked when integration is not ready
+      commit: "feat(web): align analytics visual shell with legacy"
+
+## Acceptance tests
+- [x] npm.cmd run web:build passes
+- [ ] Browser: `/analytics` visually matches legacy tab navigation + home cards baseline
+
+---
+
+# Feature: Analytics New ó Legacy-first full phase plan (source of truth)
+Type: frontend-first migration  |  Events: no  |  ADR: no
+
+## Phase 1 ó Architectural thinking
+Module type:
+- `frontend-only` now (visual parity first, no real backend binding).
+- `read-only` later (contract/backend/sdk wiring after visual sign-off).
+
+Exact folder structure (target):
+- `packages/feature-analytics/src/*` (runnable visual shell used by web app)
+- `packages/feature-analytics/legacy_snapshot/analytics/*` (literal copy reference)
+- `packages/feature-analytics/legacy_snapshot/analytics_home/*` (literal copy reference)
+- `apps/web/src/pages/AnalyticsPage.tsx` + `apps/web/src/app/App.tsx` (route wiring)
+- `apps/web/vite.config.ts` + `apps/web/tsconfig.json` (workspace resolution)
+- deferred integration layer: `contracts/api/*`, `apps/server_core/internal/modules/analytics_serving/*`, `packages/platform-sdk/src/*`
+
+Risks:
+- Legacy home is split across many components/viewmodels and depends on app-level session/hooks.
+- Copying only CSS or only one TSX file will never match legacy layout.
+- Vite/TS alias drift can break build even when UI files are present.
+- Premature backend binding can distort visual parity and slow migration.
+
+Level scope:
+- Level 1 (now): visual parity only (tabs, hero, command bar, bento/cards, spotlight/drawer shell, actions list, heatmap/sample blocks) with mocks.
+- Level 2 (after visual sign-off): keep same visual, replace mocks with contract-backed data progressively.
+- Level 3 (final): remove temporary adapters/shims and close contract/backend/sdk tranche.
+
+## Tasks
+- [x] T5-A: frontend ó inventory + freeze visual baseline from legacy
+      - map all files under legacy `analytics` + `analytics_home` and lock them as migration baseline
+      - define "must-match" sections (top nav tabs, hero gradient, command panel, first fold cards, spotlight shell)
+      commit: "docs(analytics): freeze legacy visual parity baseline"
+
+- [x] T5-B: frontend ó literal copy tranche (home shell)
+      - copy legacy TSX/CSS structure into runnable package surface (without real backend)
+      - preserve class names/layout primitives; avoid redesign
+      commit: "feat(web): copy legacy analytics home shell"
+
+- [x] T5-C: frontend ó compatibility adapters for compile/runtime
+      - add temporary mock/session adapters required by copied components
+      - keep route `/analytics` stable and loadable
+      commit: "refactor(web): add analytics legacy compatibility adapters"
+
+- [ ] T5-D: frontend ó visual parity pass (pixel/structure)
+      - align spacing, typography, chip states, cards and first fold composition with legacy
+      - ensure tabs (`Home`, `Produtos`, `Taxonomia`, `Marcas`, `AÁıes`) mirror legacy behavior
+      commit: "fix(web): align analytics legacy visual parity"
+
+- [ ] T5-E: frontend ó remaining legacy sections (still mocked)
+      - wire spotlight/drawer shell and sample blocks used by legacy home flow
+      - keep backend integration disabled; mock-only for missing data
+      commit: "feat(web): complete analytics legacy visual sections with mocks"
+
+- [ ] T1 (defer): contract ó $metalshopping-openapi-contracts
+      - only start after T5 visual sign-off
+      commit: "feat(analytics): finalize read contracts after visual parity"
+
+- [ ] T2 (defer): Go module ó $metalshopping-implement
+      - only start after T1
+      commit: "feat(analytics): implement analytics serving reads"
+
+- [ ] T4 (defer): SDK ó $metalshopping-sdk-generation
+      - only start after T1/T2
+      commit: "chore(sdk): regenerate analytics sdk"
+
+## Acceptance tests
+- [ ] Browser: `/analytics` first fold is visually equivalent to legacy (tabs + hero + command panel + cards)
+- [ ] Browser: tabs switch sections with same IA labels and ordering as legacy
+- [ ] Browser: no blank/unstyled blocks on initial load (mock data allowed)
+- [x] npm.cmd run web:build passes
+- [x] npm.cmd run web:typecheck passes
+- [ ] Gate: only after visual sign-off, unlock T1/T2/T4 integration tasks
+
+
+
+---
+
+# Feature: Analytics Produtos - Legacy migration (full flow)
+Type: frontend-first migration  |  Events: no  |  ADR: no
+
+## Tasks
+- [ ] T5: frontend - copy legacy Produtos + workspace with mocks/shims and new routes
+      - Produtos index/density view
+      - Workspace tabs (overview/insights/history/simulator)
+      - Local mocks + DTO shims + assets
+      commit: "feat(web): migrate analytics products legacy flow"
+
+## Acceptance tests
+- [x] Browser: navegar entre tabs e voltar para /analytics/products nao trava (scroll ok + cliques ok)
+- [ ] Browser: /analytics/products matches legacy Produtos index/density
+- [ ] Browser: /analytics/products/:pn/overview matches legacy workspace header + hero
+- [ ] Browser: /analytics/products/:pn/insights loads with empty insights state (no crash)
+- [ ] Browser: /analytics/products/:pn/history renders series placeholders
+- [ ] Browser: /analytics/products/:pn/simulator renders simulator controls
+- [x] npm.cmd run web:typecheck passes
+- [x] npm.cmd run web:build passes

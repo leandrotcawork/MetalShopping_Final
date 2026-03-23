@@ -230,3 +230,136 @@ Wrong:   Letting `$ms` claim automatic plan mode and duplicating long implementa
 Correct: Use `update_plan` for complex work, ask the user to run `/plan` manually when needed, and keep skills short by pointing to repo references for concrete patterns.
 Rule:    Skill workflows must reflect actual tool capabilities and minimize duplicated context.
 Layer:   Process
+
+## Lesson 26 — New feature package requires tsconfig path + include wiring
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Importing `@metalshopping/feature-analytics` without adding path mapping/include in `apps/web/tsconfig.json`, breaking `tsc --noEmit`.
+Correct: Register new workspace feature package in `compilerOptions.paths` and `include` for the web app before using it in routes/pages.
+Rule:    Every new frontend feature package must be wired into web tsconfig resolution before consumption.
+Layer:   Frontend
+
+## Lesson 27 — New feature package also needs Vite alias wiring
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Adding `@metalshopping/feature-analytics` only in `tsconfig.json`, so Vite build cannot resolve package entry.
+Correct: Add the same feature package alias in `apps/web/vite.config.ts` (and test includes when applicable) before importing it in web routes/pages.
+Rule:    In this workspace, every new feature package must be wired in both TypeScript and Vite resolution.
+Layer:   Frontend
+
+## Lesson 28 — Legacy-first visual parity needs snapshot copy plus runnable shell
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Building a simplified Analytics Home that diverges from legacy layout before freezing visual parity.
+Correct: Copy legacy TSX/CSS into a local snapshot and deliver a runnable analytics shell with tabs/cards matching legacy visual structure first, then adapt integration incrementally.
+Rule:    For migration tasks marked "visual first", lock the UI parity baseline before deeper backend/SDK adaptation.
+Layer:   Frontend
+
+## Lesson 29 — Literal legacy copy requires compatibility shims before parity checks
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Copying legacy Analytics TSX/CSS without restoring expected app/session/ui dependencies, causing compile/runtime break before visual validation.
+Correct: Mirror legacy page tree and add local compatibility layer (`AppProviders`, ui wrappers, DTO adapters, registry resolver, mocks) first, then validate visual parity.
+Rule:    In visual-first migrations, boot the copied legacy surface with shims and mocks before any backend integration.
+Layer:   Frontend
+
+## Lesson 30 — Legacy Analytics parity needs top navigation shell, not only home cards
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Rendering only home cards without the legacy analytics top navigation context (tab rail/title shell).
+Correct: Add a dedicated analytics top shell (brand + tab rail) in the legacy page container and keep tab routing on `/analytics/:tab?`.
+Rule:    For visual parity on legacy analytics, replicate shell context (top rail + tab labels) before fine-tuning inner widgets.
+Layer:   Frontend
+
+## Lesson 31 — Visual parity depends on legacy payload shape, not only CSS
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Keeping mock data in a simplified schema (`matrix`, generic action codes) so legacy widgets rendered empty blocks.
+Correct: Shape mocks to the same legacy keys expected by the viewmodel (`actions_today.buckets`, `health_radar.cells`, `top_metal.best_*`, `kpis_products.capital_brl_total`).
+Rule:    In legacy-first front migration, mirror the payload contract used by the legacy viewmodel before judging CSS parity.
+Layer:   Frontend
+
+## Lesson 32 — Legacy CSS modules need local token defaults to avoid flat/unstyled cards
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Reusing legacy module classes that depend on global tokens (`--surface`, `--radius-lg`, `--grid-gap`) without defining them in the new scope.
+Correct: Define fallback token variables at the analytics home page root so cards keep radius, padding, border and shadows.
+Rule:    When migrating legacy CSS modules, provide local token defaults before visual parity tuning.
+Layer:   Frontend
+
+## Lesson 33 — Analytics Home must receive DTO and operational payload
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Rendering `<AnalyticsHomePage />` without passing `dto`, while loading home data with `includeOperational: false`.
+Correct: Render `<AnalyticsHomePage dto={dto} ... />` and request `api.home.workspace(..., { includeOperational: true })` so cards/lists receive data.
+Rule:    Legacy-first visual pages only achieve parity when the copied component gets its expected payload shape.
+Layer:   Frontend
+
+## Lesson 34 — Animations must not hide content by default
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Setting `opacity: 0` + translate on hero blocks, relying on CSS animation to reveal; when animations are disabled, the page looks blank.
+Correct: Keep elements visible by default and define the hidden state in `@keyframes from { opacity: 0; ... }`.
+Rule:    Never rely on animations to make core UI visible; animations are optional.
+Layer:   Frontend
+
+## Lesson 35 — Mock payloads must match viewmodel keys (or be defensively parsed)
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Returning `kpis_series.data` with keys like `revenue_series/margin_series` while the viewmodel reads `sales_6m/margin_6m/runs_7d`, causing `undefined.length` crash.
+Correct: Align mocks to the expected keys and default non-array fields to `[]` before reading `.length`.
+Rule:    Visual-first migrations need strict payload-shape parity; otherwise UI fails before CSS parity.
+Layer:   Frontend
+
+## Lesson 36 — Top bar parity needs a right-side status + theme control and non-stretch tab rail
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Leaving the tab rail in a `1fr` grid column without right controls, stretching the pill background across the full width and diverging from legacy.
+Correct: Add right controls (Online + theme) and make the tab rail `fit-content` so it hugs tabs like legacy.
+Rule:    For shell parity, replicate both layout slots (left/center/right) and constrain the center rail width.
+Layer:   Frontend
+
+## Lesson 37 — Legacy top bar container is a header strip, not a card
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Styling the analytics top bar with card traits (container padding, rounded border, shadow, translucent panel).
+Correct: Keep the top bar container flush and transparent, styling only inner controls (tab rail, status pill, theme button) to match legacy.
+Rule:    In visual parity tasks, preserve the same visual hierarchy level as legacy containers.
+Layer:   Frontend
+
+## Lesson 38 — Match legacy shell by preserving header + inner wrapper split
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Applying all top bar styles directly on header children without the `header > inner` structure used in legacy.
+Correct: Keep a sticky header strip for backdrop/border and a dedicated inner wrapper for spacing/alignment (`padding: 14px 28px`).
+Rule:    For pixel parity, copy both markup structure and CSS roles, not only visual tokens.
+Layer:   Frontend
+
+## Lesson 39 — Legacy migrations must neutralize missing deps and strict typing quickly
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Copying legacy pages that import unavailable libs/types, leaving `tsc --noEmit` broken.
+Correct: Add local shims (or replace deps with lightweight placeholders) and use `// @ts-nocheck` for large legacy files to keep migration runnable.
+Rule:    Visual-first legacy migrations must compile before parity review; remove missing deps and strict type blockers early.
+Layer:   Frontend
+
+## Lesson 40 — Never leave invisible backdrops mounted across tab switches
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Rendering fixed backdrops/drawers even when "closed" (relying on CSS `pointer-events: none`), allowing a style/regression to block all clicks on some routes.
+Correct: Unmount backdrops/drawers when not open and force-close on tab switches.
+Rule:    If a component can block interactions, it must not exist in the DOM when inactive.
+Layer:   Frontend
+
+## Lesson 41 — Package internals must not import their own public root
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Importing DTO builders from `@metalshopping/feature-analytics` inside `packages/feature-analytics/src/pages/...`, creating a runtime cycle through `index.ts -> LegacyAnalyticsSurface -> AnalyticsPage -> AnalyticsProductsPage`.
+Correct: Internal package files import sibling modules directly via relative paths; only external consumers use the package root.
+Rule:    A package public barrel is for consumers, not for modules inside the same package.
+Layer:   Frontend
+
+## Lesson 42 — Analytics tab switches must reset shell-only UI state and scroll
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Preserving the previous tab scroll position when switching analytics tabs, so `/analytics/products` could appear blank/frozen after navigating back from another surface.
+Correct: On every analytics tab change, clear transient shell state (drawer/backdrop) and reset `window.scrollTo(0, 0)` before rendering the next surface.
+Rule:    In SPA tab shells, unrelated surfaces must not inherit arbitrary scroll or blocking UI state from the previous tab.
+Layer:   Frontend
+
+## Lesson 43 — Context action callbacks consumed by effects must have stable identity
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Recreating `setProductsOverviewSnapshot` on each provider render, while `AnalyticsProductsPage` used it in `useEffect` deps, causing repeated overview reloads and UI lock under tab navigation.
+Correct: Expose snapshot callbacks with `useCallback` and keep lookup/read backed by a ref so effect dependencies stay stable.
+Rule:    Any context callback used in hook dependency arrays must be referentially stable to prevent render-request loops.
+Layer:   Frontend
+
+## Lesson 44 — Auth/tenant failures must preserve HTTP status in logs
+Date: 2026-03-22 | Trigger: correction
+Wrong:   After writing a 403 response for missing tenant context, the handler still recorded `statusCode=401` in its deferred logger due to a hardcoded fallback.
+Correct: Return the concrete auth status (401 vs 403) from the auth gate and propagate it to the request logger.
+Rule:    Deferred request logging must reflect the actual response status, especially for auth/tenancy gates.
+Layer:   Go handler
