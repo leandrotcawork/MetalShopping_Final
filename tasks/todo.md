@@ -1,3 +1,60 @@
+# Feature: Products market report XLSX (pivot)
+Type: read-only  |  Events: no  |  ADR: no
+
+## Phase 1 â€” Architectural thinking
+Module type:
+- `apps/server_core/internal/modules/shopping` (read-only + side-effect file write): read run items + pricing and write a pivoted XLSX report under an export root.
+- `packages/feature-products`: product selection + run/supplier selection UI.
+- `apps/web/src/app/App.tsx`: pass shopping api to products surface.
+- `apps/web/src/pages/ShoppingPage.tsx`: remove export UI (moved to Products).
+
+Exact folder structure (extensions only):
+- `contracts/api/openapi/shopping_v1.openapi.yaml` (+ new request/response schemas)
+- `contracts/api/jsonschema/shopping_market_report_export_xlsx_request_v1.schema.json`
+- `contracts/api/jsonschema/shopping_market_report_export_xlsx_response_v1.schema.json`
+- `apps/server_core/internal/modules/shopping/ports/read_models.go`
+- `apps/server_core/internal/modules/shopping/adapters/postgres/reader.go`
+- `apps/server_core/internal/modules/shopping/application/market_report_export_xlsx.go`
+- `apps/server_core/internal/modules/shopping/application/service.go`
+- `apps/server_core/internal/modules/shopping/transport/http/handler.go`
+- `packages/platform-sdk/src/index.ts`
+- `packages/feature-products/src/*` + `packages/feature-products/src/ProductsPortfolioPage.module.css`
+
+Risks:
+- Export can be large; cap rows and bound memory.
+- Writing to arbitrary paths is unsafe; enforce export root + .xlsx path.
+- Supplier label collisions in header need deterministic disambiguation.
+
+Level scope:
+- Level 1 (now): 1 row per product, dynamic supplier columns with prices, include our price + average cost + replacement cost, export from Products UI.
+- Level 2 (later): download-from-browser and/or background export job for very large runs.
+
+## Tasks
+- [ ] T1: contract â€” $metalshopping-openapi-contracts
+      - `POST /api/v1/shopping/runs/{run_id}/export-market-report-xlsx`
+      - schemas: request/response for market report export
+      commit: "feat(shopping): add market report export contract"
+- [ ] T2: Go module â€” implement export endpoint
+      - validate output path under export root
+      - query product meta + pricing and run items
+      - pivot rows (1 row per product) with supplier price columns
+      commit: "feat(shopping): export market report xlsx"
+- [ ] T4: SDK â€” $metalshopping-sdk-generation
+      commit: "chore(sdk): regenerate shopping market report contract"
+- [ ] T5: frontend â€” $metalshopping-frontend
+      - Products UI modal to select run + suppliers + export path
+      - collect product ids for explicit/filtered selections
+      - remove export panel from Shopping
+      commit: "feat(web): add products market report export"
+
+## Acceptance tests
+- [ ] go test ./apps/server_core/... passes
+- [ ] npm.cmd run web:typecheck passes
+- [ ] Browser: `/products` export generates XLSX with pivot columns and costs
+- [ ] Browser: `/shopping` no longer shows export panel
+
+---
+
 # Feature: Shopping export report XLSX
 Type: read-only  |  Events: no  |  ADR: no
 
