@@ -563,6 +563,39 @@ Type: frontend-first migration  |  Events: no  |  ADR: no
 
 ---
 
+# Feature: Analytics Marca - Legacy migration (Brand)
+Type: frontend-first migration  |  Events: no  |  ADR: no
+
+## Tasks
+- [ ] T5-A: frontend - inventory + baseline (legacy snapshot)
+      - source of truth: `packages/feature-analytics/legacy_snapshot/analytics/BrandHomePage.tsx`
+      - source of truth: `packages/feature-analytics/legacy_snapshot/analytics/brand_home.module.css`
+
+- [ ] T5-B: frontend - literal copy + runnable wiring
+      - copy page + CSS into `packages/feature-analytics/src/pages/analytics/*`
+      - preserve markup/classes hierarchy from legacy
+
+- [ ] T5-C: frontend - shell integration
+      - render `<BrandHomePage />` on tab/route `/analytics/brands`
+      - remove MVP Marca block from `AnalyticsPage` to avoid duplicate renders
+
+- [ ] T5-D: frontend - visual parity pass (CSS)
+      - ensure cards/surfaces are not transparent
+      - validate spacing and breakpoints in the existing shell
+
+- [ ] T5-E: process + validation
+      - update tasks + run build + validate navigation and console behavior manually
+      commit: "feat(web): migrate analytics brand legacy page"
+
+## Acceptance tests
+- [ ] Browser: `/analytics/brands` renders full legacy Marca surface (header, KPIs, panels, map, table)
+- [ ] Browser: tab switch `Home -> Marca -> Produtos -> Marca -> Classificacoes` works (no freeze)
+- [ ] Browser: no stuck overlay/backdrop when switching tabs
+- [ ] Browser: no console errors on Marca render
+- [ ] npm.cmd run web:build passes
+
+---
+
 # Feature: Shopping CONDEC driver hardening
 Type: scraping  |  Events: no  |  ADR: no
 

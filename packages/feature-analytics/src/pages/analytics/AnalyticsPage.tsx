@@ -6,6 +6,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAppSession } from "../../app/providers/AppProviders";
 import { AnalyticsHomePage } from "../analytics_home/AnalyticsHomePage";
 import { AnalyticsProductsPage } from "./AnalyticsProductsPage";
+import { BrandHomePage } from "./BrandHomePage";
 import { TaxonomyHomePage } from "./TaxonomyHomePage";
 import "./analytics.css";
 
@@ -363,8 +364,9 @@ export function AnalyticsPage() {
 
       {activeTab === "products" ? <AnalyticsProductsPage /> : null}
       {activeTab === "taxonomy" ? <TaxonomyHomePage /> : null}
+      {activeTab === "brands" ? <BrandHomePage /> : null}
 
-      {dto && activeTab !== "home" && activeTab !== "products" && activeTab !== "taxonomy" ? (
+      {dto && activeTab !== "home" && activeTab !== "products" && activeTab !== "taxonomy" && activeTab !== "brands" ? (
         <>
           <section className="ah-hero">
             <div className="ah-hero-main">
@@ -430,20 +432,6 @@ export function AnalyticsPage() {
             </section>
           )}
 
-          {activeTab === "brands" && (
-            <section className="ah-simple">
-              <header><h3>Marcas</h3><p>Agrupamento por impacto de acoes.</p></header>
-              <div className="ah-chip-grid">
-                {Object.entries(actions.reduce<Record<string, number>>((acc, item) => {
-                  const key = item.topBrand || "Sem marca";
-                  acc[key] = (acc[key] || 0) + item.skuCount;
-                  return acc;
-                }, {})).sort((a, b) => b[1] - a[1]).map(([brand, count]) => (
-                  <div key={brand} className="ah-chip-card"><b>{brand}</b><small>{fmtInt(count)} SKUs impactados</small></div>
-                ))}
-              </div>
-            </section>
-          )}
         </>
       ) : null}
 
