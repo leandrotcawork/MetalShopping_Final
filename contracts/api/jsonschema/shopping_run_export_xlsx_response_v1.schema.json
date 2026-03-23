@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.metalshopping.local/api/shopping_run_export_xlsx_response_v1.schema.json",
+  "title": "ShoppingRunExportXlsxResponseV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "runId",
+    "outputFilePath",
+    "exportedAt",
+    "totalRows"
+  ],
+  "properties": {
+    "runId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "outputFilePath": {
+      "type": "string",
+      "minLength": 1
+    },
+    "exportedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "totalRows": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "supplierCodes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}
