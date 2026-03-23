@@ -519,3 +519,10 @@ Wrong:   Writing `shopping_price_runs.started_at` only at completion time, which
 Correct: Capture one `run_started_at` when the request enters `running`, reuse it for both the request and the final run upsert, and stamp only `finished_at` at completion.
 Rule:    Long-running worker flows must persist the original start timestamp once and never regenerate it at completion.
 Layer:   Worker
+
+## Lesson 68 — Detailed run log must only label supplier price when the run item is a real match
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Showing `observedPrice` in the UI for `NOT_FOUND` and `ERROR` items, even though the worker stores fallback/base values in those cases.
+Correct: Render supplier found price only for `OK` items and show `--` for non-match statuses.
+Rule:    UI labels must reflect semantic match state, not raw persisted fallback values.
+Layer:   Frontend

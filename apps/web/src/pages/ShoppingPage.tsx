@@ -1861,13 +1861,15 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                   <ul className={styles.logList}> 
                     {runItemsLog.rows.map((item) => { 
                       const url = deriveRunItemUrl(item); 
+                      const foundPrice =
+                        item.itemStatus === "OK" ? formatMoney(item.observedPrice, item.currencyCode) : "--";
                       return ( 
                         <li key={item.runItemId}> 
                           <span className={styles.logItemMain}> 
                             <strong>{item.productLabel}</strong> 
                             <small> 
-                              Fornecedor: {item.supplierCode} | Status: {item.itemStatus} | Lookup: {item.lookupTerm ?? "-"} | Preco:{" "}
-                              {formatMoney(item.observedPrice, item.currencyCode)}
+                              Fornecedor: {item.supplierCode} | Status: {item.itemStatus} | Lookup: {item.lookupTerm ?? "-"} | Preco encontrado:{" "}
+                              {foundPrice}
                             </small> 
                           </span> 
                           <span className={styles.logItemMeta}> 
