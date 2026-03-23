@@ -57,6 +57,31 @@ function formatMoney(value: number | null | undefined, currencyCode: string | nu
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(value);
 }
 
+function formatDuration(startValue: string | null | undefined, endValue: string | null | undefined) {
+  if (!startValue) {
+    return "--";
+  }
+  const startedAt = new Date(startValue);
+  if (Number.isNaN(startedAt.valueOf())) {
+    return "--";
+  }
+  const endedAt = endValue ? new Date(endValue) : new Date();
+  if (Number.isNaN(endedAt.valueOf())) {
+    return "--";
+  }
+  const totalSeconds = Math.max(0, Math.round((endedAt.valueOf() - startedAt.valueOf()) / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${seconds}s`;
+  }
+  if (minutes > 0) {
+    return `${minutes}m ${seconds}s`;
+  }
+  return `${seconds}s`;
+}
+
 function statusClass(stylesheet: Record<string, string>, status: string) {
   switch (status) {
     case "completed":
@@ -1748,6 +1773,10 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                       <dd>{formatDateTime(selectedRun.finishedAt ?? null)}</dd>
                     </div>
                     <div>
+                      <dt>Tempo total</dt>
+                      <dd>{formatDuration(selectedRun.startedAt, selectedRun.finishedAt ?? null)}</dd>
+                    </div>
+                    <div>
                       <dt>Itens processados</dt>
                       <dd>{selectedRun.processedItems}</dd>
                     </div>
@@ -1837,7 +1866,8 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                           <span className={styles.logItemMain}> 
                             <strong>{item.productLabel}</strong> 
                             <small> 
-                              Fornecedor: {item.supplierCode} | Status: {item.itemStatus} | Lookup: {item.lookupTerm ?? "-"} 
+                              Fornecedor: {item.supplierCode} | Status: {item.itemStatus} | Lookup: {item.lookupTerm ?? "-"} | Preco:{" "}
+                              {formatMoney(item.observedPrice, item.currencyCode)}
                             </small> 
                           </span> 
                           <span className={styles.logItemMeta}> 

@@ -512,3 +512,10 @@ Wrong:   Importing legacy `estoque_disponivel` directly into `inventory_product_
 Correct: Clamp legacy stock to zero during import and report how many rows were normalized.
 Rule:    Legacy inventory imports must satisfy the target non-negative stock invariant explicitly instead of assuming the source data already does.
 Layer:   Process
+
+## Lesson 67 — Worker must preserve run start time through completion
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Writing `shopping_price_runs.started_at` only at completion time, which made `started_at` and `finished_at` effectively identical for completed runs.
+Correct: Capture one `run_started_at` when the request enters `running`, reuse it for both the request and the final run upsert, and stamp only `finished_at` at completion.
+Rule:    Long-running worker flows must persist the original start timestamp once and never regenerate it at completion.
+Layer:   Worker

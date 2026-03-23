@@ -557,6 +557,7 @@ def mark_request_running(
     tenant_id: str,
     run_request_id: str,
     run_id: str,
+    started_at: str,
 ) -> None:
     with conn.cursor() as cur:
         cur.execute("BEGIN")
@@ -565,13 +566,13 @@ def mark_request_running(
             """
             UPDATE shopping_price_run_requests
             SET request_status = 'running',
-                started_at = NOW(),
+                started_at = %s,
                 run_id = %s,
                 updated_at = NOW()
             WHERE tenant_id = current_tenant_id()
               AND run_request_id = %s
             """,
-            (run_id, run_request_id),
+            (started_at, run_id, run_request_id),
         )
         cur.execute("COMMIT")
 
@@ -1424,7 +1425,8 @@ def process_claimed_request(
     xlsx_fallback_limit: int,
 ) -> tuple[str, int]:
     run_id = str(uuid4())
-    mark_request_running(conn, run_request.tenant_id, run_request.run_request_id, run_id)
+    run_started_at = utc_now_iso()
+    mark_request_running(conn, run_request.tenant_id, run_request.run_request_id, run_id, run_started_at)
     progress = ProgressTracker(conn, run_request.tenant_id, run_request.run_request_id)
 
     notes = f"requested_by={run_request.requested_by}; input_mode={run_request.input_mode}"
@@ -1471,7 +1473,7 @@ def process_claimed_request(
         tenant_id=run_request.tenant_id,
         run_id=run_id,
         run_status="completed",
-        started_at=utc_now_iso(),
+        started_at=run_started_at,
         finished_at=utc_now_iso(),
         notes=notes,
         items=items,

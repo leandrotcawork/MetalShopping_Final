@@ -632,3 +632,34 @@ Level scope:
 - [ ] SQL validation: current `metalshopping` has non-zero rows in pricing/inventory target tables after import
 - [ ] Browser: Products/Shopping surfaces show imported own price/cost/stock for migrated products
 
+---
+
+# Feature: Shopping run observability polish
+Type: frontend + worker  |  Events: no  |  ADR: no
+
+## Phase 1 — Architectural thinking
+Module type:
+- `frontend + worker`: improve run diagnostics without changing contracts.
+
+Exact folder structure (target):
+- `apps/web/src/pages/ShoppingPage.tsx`
+- `apps/integration_worker/shopping_price_worker.py`
+
+Risks:
+- UI polish must reflect real persisted timestamps, not compute fake runtime values.
+- Detailed log must display the found supplier price without degrading scanability.
+
+Level scope:
+- Level 1 (now): show found price in detailed log and persist real run start/end so total duration is meaningful.
+
+## Tasks
+- [ ] T2/T5: worker + frontend — $metalshopping-implement + $metalshopping-frontend
+      - persist real run `started_at` instead of stamping completion time twice
+      - show total run duration in details
+      - show found price for each processed log item
+      commit: "fix(shopping): polish run observability"
+
+## Acceptance tests
+- [ ] Browser: detailed log shows found price per processed item
+- [ ] Browser: run details show different start/end timestamps and total duration for new runs
+
