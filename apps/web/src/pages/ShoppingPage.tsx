@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import type { ServerCoreSdk, ShoppingRunStatus } from "@metalshopping/sdk-runtime";
 import type {
@@ -29,6 +30,7 @@ type ShoppingRunItemRow = ShoppingRunItemListV1["rows"][number];
 const catalogPageLimit = 30;
 const manualPageLimit = 10;
 const allOptionValue = "all";
+const shoppingRouteStateStorageKey = "shopping:route-state";
 
 const statusOptions: Array<{ value: ShoppingRunStatus | "all"; label: string }> = [
   { value: "all", label: "Todos" },
@@ -47,6 +49,52 @@ function formatDateTime(value: string | null | undefined) {
     return value;
   }
   return parsed.toLocaleString("pt-BR");
+}
+
+function parseWizardStep(value: string | null | undefined): WizardStep | null {
+  const token = (value ?? "").trim();
+  if (token === "1") {
+    return 1;
+  }
+  if (token === "2") {
+    return 2;
+  }
+  if (token === "3") {
+    return 3;
+  }
+  return null;
+}
+
+function readShoppingRouteState(): { step: WizardStep | null; runId: string | null } {
+  if (typeof window === "undefined") {
+    return { step: null, runId: null };
+  }
+  try {
+    const raw = window.sessionStorage.getItem(shoppingRouteStateStorageKey);
+    if (!raw) {
+      return { step: null, runId: null };
+    }
+    const parsed = JSON.parse(raw) as { step?: string | number; runId?: string };
+    const step = parseWizardStep(parsed.step === undefined ? null : String(parsed.step));
+    const runId = (parsed.runId ?? "").trim() || null;
+    return { step, runId };
+  } catch {
+    return { step: null, runId: null };
+  }
+}
+
+function writeShoppingRouteState(step: WizardStep, runId: string | null): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    const payload = JSON.stringify({
+      step,
+      runId: runId && runId.trim() ? runId.trim() : null,
+    });
+    window.sessionStorage.setItem(shoppingRouteStateStorageKey, payload);
+  } catch {
+  }
 }
 
 function formatMoney(value: number | null | undefined, currencyCode: string | null | undefined) {
@@ -171,7 +219,13 @@ function StepPill(props: { step: WizardStep; activeStep: WizardStep; label: stri
 }
 
 export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
-  const [step, setStep] = useState<WizardStep>(1);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const persistedRouteState = useMemo(() => readShoppingRouteState(), []);
+  const routeStep = parseWizardStep(searchParams.get("step"));
+  const routeRunId = (searchParams.get("runId") ?? "").trim();
+  const lastRunIdRef = useRef<string>(persistedRouteState.runId ?? "");
+
+  const [step, setStep] = useState<WizardStep>(routeStep ?? persistedRouteState.step ?? 1);
   const [inputMode, setInputMode] = useState<InputMode>("xlsx");
   const [selectedStatus, setSelectedStatus] = useState<ShoppingRunStatus | "all">("all");
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -276,9 +330,18 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
         setAdvancedTopN(nextBootstrap.advancedDefaults.topN);
 
         if (nextRuns.rows.length > 0) {
-          const firstRun = await shoppingApi.getRun(nextRuns.rows[0].runId);
-          if (!cancelled) {
-            setSelectedRun(firstRun);
+          const preferredRunId = routeRunId || lastRunIdRef.current;
+          const runToLoadId = preferredRunId || nextRuns.rows[0].runId;
+          try {
+            const run = await shoppingApi.getRun(runToLoadId);
+            if (!cancelled) {
+              setSelectedRun(run);
+            }
+          } catch {
+            const fallbackRun = await shoppingApi.getRun(nextRuns.rows[0].runId);
+            if (!cancelled) {
+              setSelectedRun(fallbackRun);
+            }
           }
         } else {
           setSelectedRun(null);
@@ -299,7 +362,35 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     return () => {
       cancelled = true;
     };
-  }, [shoppingApi, selectedStatus, shoppingReloadTick]);
+  }, [shoppingApi, selectedStatus, shoppingReloadTick, routeRunId]);
+
+  useEffect(() => {
+    const runId = selectedRun?.runId?.trim() || null;
+    writeShoppingRouteState(step, runId);
+    if (runId) {
+      lastRunIdRef.current = runId;
+    }
+
+    const nextParams = new URLSearchParams(searchParams);
+    let changed = false;
+    const stepToken = String(step);
+    if (nextParams.get("step") !== stepToken) {
+      nextParams.set("step", stepToken);
+      changed = true;
+    }
+    if (runId) {
+      if (nextParams.get("runId") !== runId) {
+        nextParams.set("runId", runId);
+        changed = true;
+      }
+    } else if (nextParams.has("runId")) {
+      nextParams.delete("runId");
+      changed = true;
+    }
+    if (changed) {
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [step, selectedRun?.runId, searchParams, setSearchParams]);
 
   useEffect(() => { 
     let cancelled = false; 

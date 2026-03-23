@@ -526,3 +526,10 @@ Wrong:   Showing `observedPrice` in the UI for `NOT_FOUND` and `ERROR` items, ev
 Correct: Render supplier found price only for `OK` items and show `--` for non-match statuses.
 Rule:    UI labels must reflect semantic match state, not raw persisted fallback values.
 Layer:   Frontend
+
+## Lesson 69 — Shopping wizard context must survive cross-page navigation
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Keeping Shopping wizard step/run only in component state, which resets to step 1 when navigating to another route and back.
+Correct: Persist `step` and selected `runId` in URL query + session storage, then rehydrate on Shopping mount.
+Rule:    Multi-step operational pages must persist route context across unmount/remount cycles.
+Layer:   Frontend
