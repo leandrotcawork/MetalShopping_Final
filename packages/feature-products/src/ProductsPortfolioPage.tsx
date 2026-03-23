@@ -379,7 +379,7 @@ export function ProductsPortfolioPage(props: { api: ProductsPortfolioApi; shoppi
     }
     const outputFilePath = exportOutputPath.trim();
     if (!outputFilePath) {
-      setExportStatus({ tone: "error", message: "Informe o caminho de destino do arquivo XLSX." });
+      setExportStatus({ tone: "error", message: "Informe a pasta de destino ou o arquivo XLSX." });
       return;
     }
     const supplierCodes =
@@ -531,7 +531,7 @@ export function ProductsPortfolioPage(props: { api: ProductsPortfolioApi; shoppi
               <div>
                 <h3 className={styles.exportTitle}>Configurar exportação (.xlsx)</h3>
                 <p className={styles.exportSubtitle}>
-                  Defina run, fornecedores e saída do arquivo antes de gerar o relatório.
+                  Defina run, fornecedores e a pasta ou arquivo de saída antes de gerar o relatório.
                 </p>
               </div>
               <button
@@ -568,7 +568,7 @@ export function ProductsPortfolioPage(props: { api: ProductsPortfolioApi; shoppi
                 />
               </label>
               <label className={`${styles.exportField} ${styles.exportFieldFull}`}>
-                <span>Saída do arquivo (.xlsx)</span>
+                <span>Saída (pasta ou .xlsx)</span>
                 <input
                   className={styles.exportInput}
                   type="text"
@@ -612,7 +612,7 @@ export function ProductsPortfolioPage(props: { api: ProductsPortfolioApi; shoppi
               <p className={styles.exportMeta}>
                 {exportResult
                   ? `Exportado em ${exportResult.outputFilePath} (${exportResult.totalProducts} produtos).`
-                  : "O arquivo será gravado no servidor conforme o caminho informado."}
+                  : "Se você informar apenas a pasta, o sistema gera automaticamente o nome do arquivo dentro dela."}
               </p>
               <div className={styles.exportActions}>
                 <Button className={styles.exportSecondaryButton} variant="secondary" onClick={closeExportModal}>

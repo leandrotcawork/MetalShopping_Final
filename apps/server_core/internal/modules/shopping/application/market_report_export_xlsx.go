@@ -28,7 +28,7 @@ func (s *Service) ExportMarketReportXlsx(
 		return ports.MarketReportExportXlsxResult{}, fmt.Errorf("%w: MS_SHOPPING_EXPORT_ROOT not set", ErrExportRootMissing)
 	}
 
-	resolvedPath, err := resolveExportPath(exportRoot, outputFilePath)
+	resolvedPath, err := resolveExportPath(exportRoot, outputFilePath, defaultMarketReportFileName(strings.TrimSpace(runID)))
 	if err != nil {
 		return ports.MarketReportExportXlsxResult{}, fmt.Errorf("%w: %s", ErrExportInvalid, err.Error())
 	}
@@ -105,6 +105,14 @@ func normalizeProductIDs(raw []string) []string {
 		unique = append(unique, id)
 	}
 	return unique
+}
+
+func defaultMarketReportFileName(runID string) string {
+	runID = strings.TrimSpace(runID)
+	if runID == "" {
+		return "shopping_market_report.xlsx"
+	}
+	return fmt.Sprintf("shopping_market_report_%s.xlsx", runID)
 }
 
 func mapSupplierLabels(items []ports.MarketReportSupplier) map[string]string {

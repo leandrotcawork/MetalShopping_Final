@@ -477,3 +477,10 @@ Wrong:   Letting `apps/web` resolve `@metalshopping/sdk-runtime` and `@metalshop
 Correct: Add explicit `vite.config.ts` and `tsconfig.json` aliases to the workspace source entries for both packages.
 Rule:    In this workspace, SDK/runtime packages that change during feature work must be source-aliased in the web app to avoid stale browser runtime behavior.
 Layer:   Frontend
+
+## Lesson 62 — Export output path should accept directory targets
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Rejecting `outputFilePath` when the user provided only the export folder, even though the export root was valid.
+Correct: If the target is a directory (or the root itself), generate a default `.xlsx` filename inside it; if the target is a bare filename without extension, append `.xlsx`.
+Rule:    Export path validation should accept the common folder-first workflow and normalize it into a valid file path under the export root.
+Layer:   Go application

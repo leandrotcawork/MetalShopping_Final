@@ -43,7 +43,7 @@ func (s *Service) ExportRunReportXlsx(
 		return ports.RunExportXlsxResult{}, fmt.Errorf("%w: MS_SHOPPING_EXPORT_ROOT not set", ErrExportRootMissing)
 	}
 
-	resolvedPath, err := resolveExportPath(exportRoot, outputFilePath)
+	resolvedPath, err := resolveExportPath(exportRoot, outputFilePath, defaultRunExportFileName(strings.TrimSpace(runID)))
 	if err != nil {
 		return ports.RunExportXlsxResult{}, fmt.Errorf("%w: %s", ErrExportInvalid, err.Error())
 	}
@@ -98,7 +98,7 @@ func normalizeSupplierCodes(raw []string) []string {
 	return unique
 }
 
-func resolveExportPath(root, requested string) (string, error) {
+func resolveExportPath(root, requested, defaultFileName string) (string, error) {
 	cleanRoot := filepath.Clean(strings.TrimSpace(root))
 	if cleanRoot == "." || cleanRoot == "" {
 		return "", errors.New("export root is invalid")
@@ -108,7 +108,8 @@ func resolveExportPath(root, requested string) (string, error) {
 		return "", fmt.Errorf("resolve export root: %w", err)
 	}
 
-	cleanRequested := filepath.Clean(strings.TrimSpace(requested))
+	trimmedRequested := strings.TrimSpace(requested)
+	cleanRequested := filepath.Clean(trimmedRequested)
 	if cleanRequested == "." || cleanRequested == "" {
 		return "", errors.New("outputFilePath must be a file")
 	}
@@ -120,6 +121,10 @@ func resolveExportPath(root, requested string) (string, error) {
 	absOutput, err = filepath.Abs(absOutput)
 	if err != nil {
 		return "", fmt.Errorf("resolve output path: %w", err)
+	}
+	absOutput, err = normalizeExportTarget(absOutput, absRoot, trimmedRequested, defaultFileName)
+	if err != nil {
+		return "", err
 	}
 
 	rel, err := filepath.Rel(absRoot, absOutput)
@@ -133,6 +138,47 @@ func resolveExportPath(root, requested string) (string, error) {
 		return "", errors.New("outputFilePath must end with .xlsx")
 	}
 	return absOutput, nil
+}
+
+func normalizeExportTarget(absOutput, absRoot, requested, defaultFileName string) (string, error) {
+	extension := strings.ToLower(filepath.Ext(absOutput))
+	if extension == ".xlsx" {
+		return absOutput, nil
+	}
+	if extension != "" {
+		return "", errors.New("outputFilePath must end with .xlsx")
+	}
+
+	looksLikeDirectory := strings.HasSuffix(requested, "\\") || strings.HasSuffix(requested, "/")
+	if samePath(absOutput, absRoot) || looksLikeDirectory || pathExistsAsDirectory(absOutput) {
+		fileName := strings.TrimSpace(defaultFileName)
+		if fileName == "" {
+			fileName = "shopping_export.xlsx"
+		}
+		return filepath.Join(absOutput, fileName), nil
+	}
+
+	return absOutput + ".xlsx", nil
+}
+
+func pathExistsAsDirectory(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	return info.IsDir()
+}
+
+func samePath(left, right string) bool {
+	return strings.EqualFold(filepath.Clean(left), filepath.Clean(right))
+}
+
+func defaultRunExportFileName(runID string) string {
+	runID = strings.TrimSpace(runID)
+	if runID == "" {
+		return "shopping_run_export.xlsx"
+	}
+	return fmt.Sprintf("shopping_run_%s.xlsx", runID)
 }
 
 func exportMaxRowsFromEnv() int64 {
