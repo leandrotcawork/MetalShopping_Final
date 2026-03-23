@@ -871,36 +871,6 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     });
   }
 
-  async function saveManualSignalRow(candidate: ShoppingManualUrlCandidateV1) {
-    const key = manualRowKey(candidate.productId, candidate.supplierCode);
-    const nextUrl = (manualEditUrls[key] ?? candidate.productUrl ?? "").trim();
-    const currentUrl = (candidate.productUrl ?? "").trim();
-    if (nextUrl === currentUrl) {
-      return;
-    }
-    if (nextUrl && !/^https?:\/\//i.test(nextUrl)) {
-      setError("A URL manual deve iniciar com http ou https.");
-      return;
-    }
-
-    setManualSignalSaving(true);
-    setError(null);
-    try {
-      await upsertManualSignal(candidate, nextUrl);
-      setManualEditUrls((current) => {
-        const nextState = { ...current };
-        delete nextState[key];
-        return nextState;
-      });
-      setManualReloadTick((current) => current + 1);
-    } catch (saveError) {
-      const message = saveError instanceof Error ? saveError.message : "Falha ao salvar configuracao manual de URL.";
-      setError(message);
-    } finally {
-      setManualSignalSaving(false);
-    }
-  }
-
   async function saveManualSignals() {
     if (manualPendingRows.length === 0) {
       return;
@@ -1437,23 +1407,8 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                             };
                           })
                         }
-                        onKeyDown={(event) => {
-                          if (event.key !== "Enter") {
-                            return;
-                          }
-                          event.preventDefault();
-                          void saveManualSignalRow(candidate);
-                        }}
                         placeholder="https://fornecedor/pdp/produto"
                       />
-                      <button
-                        type="button"
-                        className={`${styles.btn} ${styles.btnGhost} ${styles.btnCompact}`}
-                        disabled={manualSignalSaving}
-                        onClick={() => void saveManualSignalRow(candidate)}
-                      >
-                        Salvar
-                      </button>
                     </div>
                   </td>
                   <td className={styles.manualColTight}>{candidate.urlStatus}</td>
