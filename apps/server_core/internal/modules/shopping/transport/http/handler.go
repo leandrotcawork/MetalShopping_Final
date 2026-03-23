@@ -256,6 +256,12 @@ type shoppingExportRunXlsxBody struct {
 	OutputFilePath string   `json:"outputFilePath"`
 }
 
+type shoppingExportMarketReportXlsxBody struct {
+	SupplierCodes  []string `json:"supplierCodes"`
+	ProductIDs     []string `json:"productIds"`
+	OutputFilePath string   `json:"outputFilePath"`
+}
+
 type shoppingUpsertSupplierSignalBody struct {
 	ProductID      string  `json:"productId"`
 	SupplierCode   string  `json:"supplierCode"`
@@ -478,6 +484,73 @@ func (h *Handler) handleRunByID(w http.ResponseWriter, r *http.Request) {
 				"returned": len(items.Rows),
 				"total":    items.Total,
 			},
+		})
+		return
+	}
+	if strings.HasSuffix(runIDPath, "/export-market-report-xlsx") {
+		action = "shopping.export_market_report_xlsx"
+		if r.Method != http.MethodPost {
+			statusCode = http.StatusMethodNotAllowed
+			reqResult = "method_not_allowed"
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		runID := strings.TrimSuffix(runIDPath, "/export-market-report-xlsx")
+		runID = strings.TrimSpace(strings.TrimSuffix(runID, "/"))
+		if runID == "" || strings.Contains(runID, "/") {
+			statusCode = http.StatusNotFound
+			reqResult = "not_found"
+			writeShoppingError(w, http.StatusNotFound, "SHOPPING_RUN_NOT_FOUND", "Shopping run not found", traceID)
+			return
+		}
+
+		var requestBody shoppingExportMarketReportXlsxBody
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&requestBody); err != nil {
+			statusCode = http.StatusBadRequest
+			reqResult = "validation_error"
+			writeShoppingError(w, http.StatusBadRequest, "SHOPPING_MARKET_REPORT_EXPORT_INVALID", "Invalid export payload", traceID)
+			return
+		}
+
+		result, err := h.service.ExportMarketReportXlsx(r.Context(), tenantID, runID, ports.MarketReportExportXlsxInput{
+			SupplierCodes:  requestBody.SupplierCodes,
+			ProductIDs:     requestBody.ProductIDs,
+			OutputFilePath: requestBody.OutputFilePath,
+		})
+		if err != nil {
+			switch {
+			case errors.Is(err, postgres.ErrRunNotFound):
+				statusCode = http.StatusNotFound
+				reqResult = "not_found"
+				writeShoppingError(w, http.StatusNotFound, "SHOPPING_RUN_NOT_FOUND", "Shopping run not found", traceID)
+			case errors.Is(err, application.ErrExportInvalid):
+				statusCode = http.StatusBadRequest
+				reqResult = "validation_error"
+				writeShoppingError(w, http.StatusBadRequest, "SHOPPING_MARKET_REPORT_EXPORT_INVALID", err.Error(), traceID)
+			case errors.Is(err, application.ErrExportTooLarge):
+				statusCode = http.StatusBadRequest
+				reqResult = "validation_error"
+				writeShoppingError(w, http.StatusBadRequest, "SHOPPING_MARKET_REPORT_EXPORT_TOO_LARGE", err.Error(), traceID)
+			case errors.Is(err, application.ErrExportRootMissing):
+				statusCode = http.StatusInternalServerError
+				reqResult = "internal_error"
+				writeShoppingError(w, http.StatusInternalServerError, "SHOPPING_MARKET_REPORT_EXPORT_ROOT_MISSING", "Export root is not configured", traceID)
+			default:
+				statusCode = http.StatusInternalServerError
+				reqResult = "internal_error"
+				writeShoppingError(w, http.StatusInternalServerError, "SHOPPING_MARKET_REPORT_EXPORT_FAILED", "Failed to export XLSX report", traceID)
+			}
+			return
+		}
+
+		writeJSON(w, http.StatusOK, map[string]any{
+			"runId":          result.RunID,
+			"outputFilePath": result.OutputFilePath,
+			"exportedAt":     result.ExportedAt.Format(time.RFC3339),
+			"totalProducts":  result.TotalProducts,
+			"supplierCodes":  result.SupplierCodes,
 		})
 		return
 	}

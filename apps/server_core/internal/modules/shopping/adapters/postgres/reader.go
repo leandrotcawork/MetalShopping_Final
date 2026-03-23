@@ -660,6 +660,262 @@ ORDER BY i.observed_at DESC, i.created_at DESC` + limitSQL
 	}, nil
 }
 
+func (r *Reader) ListMarketReportProducts(
+	ctx context.Context,
+	tenantID string,
+	productIDs []string,
+) ([]ports.MarketReportProductRow, error) {
+	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	if len(productIDs) == 0 {
+		return []ports.MarketReportProductRow{}, nil
+	}
+
+	const marketReportProductsCTE = `
+WITH input_ids AS (
+  SELECT
+    product_id,
+    ord
+  FROM unnest($1::text[]) WITH ORDINALITY AS input(product_id, ord)
+),
+taxonomy_chain AS (
+  SELECT
+    taxonomy_node_id,
+    tenant_id,
+    parent_taxonomy_node_id,
+    name,
+    level,
+    taxonomy_node_id AS leaf_id
+  FROM catalog_taxonomy_nodes
+  WHERE tenant_id = current_tenant_id()
+  UNION ALL
+  SELECT
+    parent.taxonomy_node_id,
+    parent.tenant_id,
+    parent.parent_taxonomy_node_id,
+    parent.name,
+    parent.level,
+    chain.leaf_id
+  FROM taxonomy_chain chain
+  JOIN catalog_taxonomy_nodes parent
+    ON parent.tenant_id = current_tenant_id()
+   AND parent.taxonomy_node_id = chain.parent_taxonomy_node_id
+),
+taxonomy_lookup AS (
+  SELECT
+    leaf_id AS taxonomy_node_id,
+    MAX(CASE WHEN level = 0 THEN name END) AS taxonomy_leaf0_name
+  FROM taxonomy_chain
+  GROUP BY leaf_id
+),
+identifiers_lookup AS (
+  SELECT
+    product_id,
+    MAX(CASE WHEN identifier_type = 'pn_interno' THEN identifier_value END) AS pn_interno,
+    MAX(CASE WHEN identifier_type = 'reference' THEN identifier_value END) AS reference,
+    MAX(CASE WHEN identifier_type = 'ean' THEN identifier_value END) AS ean
+  FROM catalog_product_identifiers
+  WHERE tenant_id = current_tenant_id()
+  GROUP BY product_id
+),
+current_prices AS (
+  SELECT DISTINCT ON (product_id)
+    product_id,
+    price_amount,
+    replacement_cost_amount,
+    average_cost_amount,
+    currency_code,
+    updated_at
+  FROM pricing_product_prices
+  WHERE tenant_id = current_tenant_id()
+    AND effective_from <= NOW()
+    AND (effective_to IS NULL OR effective_to > NOW())
+  ORDER BY product_id, effective_from DESC, created_at DESC
+)
+`
+
+	querySQL := marketReportProductsCTE + `
+SELECT
+  input_ids.product_id,
+  p.sku,
+  idf.pn_interno,
+  idf.reference,
+  idf.ean,
+  p.name,
+  p.brand_name,
+  txo.taxonomy_leaf0_name,
+  cp.price_amount,
+  cp.replacement_cost_amount,
+  cp.average_cost_amount,
+  cp.currency_code
+FROM input_ids
+JOIN catalog_products p
+  ON p.tenant_id = current_tenant_id()
+ AND p.product_id = input_ids.product_id
+LEFT JOIN taxonomy_lookup txo
+  ON txo.taxonomy_node_id = p.primary_taxonomy_node_id
+LEFT JOIN identifiers_lookup idf
+  ON idf.product_id = p.product_id
+LEFT JOIN current_prices cp
+  ON cp.product_id = p.product_id
+ORDER BY input_ids.ord
+`
+
+	rows, err := tx.QueryContext(ctx, querySQL, productIDs)
+	if err != nil {
+		return nil, fmt.Errorf("list market report products: %w", err)
+	}
+	defer rows.Close()
+
+	items := make([]ports.MarketReportProductRow, 0, len(productIDs))
+	for rows.Next() {
+		item, scanErr := scanMarketReportProductRow(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate market report products: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit market report products read: %w", err)
+	}
+
+	return items, nil
+}
+
+func (r *Reader) ListMarketReportRunItems(
+	ctx context.Context,
+	tenantID, runID string,
+	productIDs []string,
+	supplierCodes []string,
+) ([]ports.MarketReportRunItem, error) {
+	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	const runExistsQuery = `
+SELECT 1
+FROM shopping_price_runs
+WHERE tenant_id = current_tenant_id()
+  AND run_id = $1
+LIMIT 1
+`
+	var one int
+	if err := tx.QueryRowContext(ctx, runExistsQuery, runID).Scan(&one); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrRunNotFound
+		}
+		return nil, fmt.Errorf("check market report run exists: %w", err)
+	}
+
+	if len(productIDs) == 0 || len(supplierCodes) == 0 {
+		return []ports.MarketReportRunItem{}, nil
+	}
+
+	const query = `
+SELECT
+  i.product_id,
+  i.supplier_code,
+  i.item_status,
+  i.observed_price
+FROM shopping_price_run_items i
+WHERE i.tenant_id = current_tenant_id()
+  AND i.run_id = $1
+  AND i.product_id = ANY($2)
+  AND i.supplier_code = ANY($3)
+ORDER BY i.product_id, i.supplier_code
+`
+
+	rows, err := tx.QueryContext(ctx, query, runID, productIDs, supplierCodes)
+	if err != nil {
+		return nil, fmt.Errorf("list market report run items: %w", err)
+	}
+	defer rows.Close()
+
+	items := make([]ports.MarketReportRunItem, 0, 128)
+	for rows.Next() {
+		var item ports.MarketReportRunItem
+		if err := rows.Scan(
+			&item.ProductID,
+			&item.SupplierCode,
+			&item.ItemStatus,
+			&item.ObservedPrice,
+		); err != nil {
+			return nil, fmt.Errorf("scan market report run item: %w", err)
+		}
+		item.SupplierCode = strings.TrimSpace(item.SupplierCode)
+		item.ItemStatus = strings.TrimSpace(item.ItemStatus)
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate market report run items: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit market report run items read: %w", err)
+	}
+
+	return items, nil
+}
+
+func (r *Reader) ListMarketReportSuppliers(
+	ctx context.Context,
+	tenantID string,
+	supplierCodes []string,
+) ([]ports.MarketReportSupplier, error) {
+	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	if len(supplierCodes) == 0 {
+		return []ports.MarketReportSupplier{}, nil
+	}
+
+	const query = `
+SELECT supplier_code, supplier_label
+FROM suppliers_directory
+WHERE tenant_id = current_tenant_id()
+  AND supplier_code = ANY($1)
+`
+
+	rows, err := tx.QueryContext(ctx, query, supplierCodes)
+	if err != nil {
+		return nil, fmt.Errorf("list market report suppliers: %w", err)
+	}
+	defer rows.Close()
+
+	items := make([]ports.MarketReportSupplier, 0, len(supplierCodes))
+	for rows.Next() {
+		var item ports.MarketReportSupplier
+		if err := rows.Scan(&item.SupplierCode, &item.SupplierLabel); err != nil {
+			return nil, fmt.Errorf("scan market report supplier: %w", err)
+		}
+		item.SupplierCode = strings.TrimSpace(item.SupplierCode)
+		item.SupplierLabel = strings.TrimSpace(item.SupplierLabel)
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate market report suppliers: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit market report suppliers read: %w", err)
+	}
+
+	return items, nil
+}
+
 func (r *Reader) GetProductLatest(ctx context.Context, tenantID, productID string) (ports.ProductLatest, error) {
 	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
@@ -1350,6 +1606,87 @@ func scanRunExportRow(s scanner) (ports.RunExportRow, error) {
 	if item.ProductURL == nil && item.LookupTerm != nil && runtimeConfigJSON.Valid {
 		if computed := deriveSearchURLFromRuntimeConfig(runtimeConfigJSON.String, item.SupplierCode, item.ProductID, *item.LookupTerm); computed != "" {
 			item.ProductURL = &computed
+		}
+	}
+
+	return item, nil
+}
+
+func scanMarketReportProductRow(s scanner) (ports.MarketReportProductRow, error) {
+	var item ports.MarketReportProductRow
+	var pnInterno sql.NullString
+	var reference sql.NullString
+	var ean sql.NullString
+	var brandName sql.NullString
+	var taxonomyLeaf0 sql.NullString
+	var priceAmount sql.NullFloat64
+	var replacementCost sql.NullFloat64
+	var averageCost sql.NullFloat64
+	var currencyCode sql.NullString
+
+	if err := s.Scan(
+		&item.ProductID,
+		&item.SKU,
+		&pnInterno,
+		&reference,
+		&ean,
+		&item.ProductLabel,
+		&brandName,
+		&taxonomyLeaf0,
+		&priceAmount,
+		&replacementCost,
+		&averageCost,
+		&currencyCode,
+	); err != nil {
+		return ports.MarketReportProductRow{}, fmt.Errorf("scan market report product row: %w", err)
+	}
+
+	if pnInterno.Valid {
+		value := strings.TrimSpace(pnInterno.String)
+		if value != "" {
+			item.PNInterno = &value
+		}
+	}
+	if reference.Valid {
+		value := strings.TrimSpace(reference.String)
+		if value != "" {
+			item.Reference = &value
+		}
+	}
+	if ean.Valid {
+		value := strings.TrimSpace(ean.String)
+		if value != "" {
+			item.EAN = &value
+		}
+	}
+	if brandName.Valid {
+		value := strings.TrimSpace(brandName.String)
+		if value != "" {
+			item.BrandName = &value
+		}
+	}
+	if taxonomyLeaf0.Valid {
+		value := strings.TrimSpace(taxonomyLeaf0.String)
+		if value != "" {
+			item.TaxonomyLeaf0Name = &value
+		}
+	}
+	if priceAmount.Valid {
+		value := priceAmount.Float64
+		item.PriceAmount = &value
+	}
+	if replacementCost.Valid {
+		value := replacementCost.Float64
+		item.ReplacementCostAmount = &value
+	}
+	if averageCost.Valid {
+		value := averageCost.Float64
+		item.AverageCostAmount = &value
+	}
+	if currencyCode.Valid {
+		value := strings.TrimSpace(currencyCode.String)
+		if value != "" {
+			item.CurrencyCode = &value
 		}
 	}
 

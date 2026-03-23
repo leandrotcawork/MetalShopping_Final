@@ -130,6 +130,47 @@ type RunExportXlsxResult struct {
 	SupplierCodes  []string
 }
 
+type MarketReportProductRow struct {
+	ProductID             string
+	SKU                   string
+	PNInterno             *string
+	Reference             *string
+	EAN                   *string
+	ProductLabel          string
+	BrandName             *string
+	TaxonomyLeaf0Name     *string
+	PriceAmount           *float64
+	ReplacementCostAmount *float64
+	AverageCostAmount     *float64
+	CurrencyCode          *string
+}
+
+type MarketReportRunItem struct {
+	ProductID     string
+	SupplierCode  string
+	ItemStatus    string
+	ObservedPrice float64
+}
+
+type MarketReportSupplier struct {
+	SupplierCode  string
+	SupplierLabel string
+}
+
+type MarketReportExportXlsxInput struct {
+	SupplierCodes  []string
+	ProductIDs     []string
+	OutputFilePath string
+}
+
+type MarketReportExportXlsxResult struct {
+	RunID          string
+	OutputFilePath string
+	ExportedAt     time.Time
+	TotalProducts  int64
+	SupplierCodes  []string
+}
+
 type RunItemListFilter struct {
 	SupplierCode string
 	ItemStatus   string
@@ -245,6 +286,9 @@ type Reader interface {
 	GetRunSupplierItemStatusSummary(ctx context.Context, tenantID, runID string) (RunSupplierItemStatusSummary, error)
 	ListRunItems(ctx context.Context, tenantID, runID string, filter RunItemListFilter) (RunItemList, error)
 	ListRunItemsForExport(ctx context.Context, tenantID, runID string, filter RunExportListFilter) (RunExportList, error)
+	ListMarketReportProducts(ctx context.Context, tenantID string, productIDs []string) ([]MarketReportProductRow, error)
+	ListMarketReportRunItems(ctx context.Context, tenantID, runID string, productIDs []string, supplierCodes []string) ([]MarketReportRunItem, error)
+	ListMarketReportSuppliers(ctx context.Context, tenantID string, supplierCodes []string) ([]MarketReportSupplier, error)
 	GetProductLatest(ctx context.Context, tenantID, productID string) (ProductLatest, error)
 	GetRunRequest(ctx context.Context, tenantID, runRequestID string) (RunRequest, error)
 	ListSupplierSignals(ctx context.Context, tenantID string, filter SupplierSignalListFilter) (SupplierSignalList, error)

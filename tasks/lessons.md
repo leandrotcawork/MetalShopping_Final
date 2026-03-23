@@ -436,3 +436,9 @@ Wrong:   Rendering the XLSX export panel only when a run was selected, leaving n
 Correct: Always render the export panel and allow selecting the run from the dropdown.
 Rule:    Export UX must be visible even before a run is selected.
 Layer:   Frontend
+## Lesson 56 — Preserve array order with unnest ordinality
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Using `unnest($1::text[])` with `generate_series(...)` and assuming row order alignment.
+Correct: Use `unnest($1::text[]) WITH ORDINALITY` to keep product order stable.
+Rule:    When SQL depends on input order, use `WITH ORDINALITY` to preserve it.
+Layer:   Go adapter
