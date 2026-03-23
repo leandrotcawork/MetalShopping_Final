@@ -675,8 +675,8 @@ func (r *Reader) ListMarketReportProducts(
 		return []ports.MarketReportProductRow{}, nil
 	}
 
-	const marketReportProductsCTE = `
-WITH input_ids AS (
+const marketReportProductsCTE = `
+WITH RECURSIVE input_ids AS (
   SELECT
     product_id,
     ord

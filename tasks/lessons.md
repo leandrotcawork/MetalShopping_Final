@@ -491,3 +491,10 @@ Wrong:   Returning the generic message `Failed to export XLSX report` for every 
 Correct: Preserve `500` for internal failures, but return `err.Error()` in the export handlers so the operator sees the concrete write or filesystem problem.
 Rule:    Operational export endpoints must surface actionable internal error messages instead of generic failure text.
 Layer:   Go handler
+
+## Lesson 64 — Recursive CTE blocks must begin with `WITH RECURSIVE`
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Starting a CTE block with plain `WITH input_ids AS (...)` and defining a later recursive `taxonomy_chain AS (...)`.
+Correct: Start the full block with `WITH RECURSIVE` whenever any CTE in that block self-references recursively.
+Rule:    In Postgres, recursive CTE chains fail with missing-relation errors unless the block begins with `WITH RECURSIVE`.
+Layer:   Go adapter
