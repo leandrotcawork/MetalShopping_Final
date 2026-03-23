@@ -1,3 +1,27 @@
+# Feature: Shopping catalog select all
+Type: frontend  |  Events: no  |  ADR: no
+
+## Phase 1 — Architectural thinking
+Module type:
+- `apps/web/src/pages/ShoppingPage.tsx`: adicionar seleção total no upload por catálogo.
+
+Risks:
+- Seleção total pode exigir múltiplas páginas; precisa paginar com limite máximo do endpoint.
+
+Level scope:
+- Level 1 (now): botão "Selecionar todos" carrega todos os IDs do filtro atual e seleciona.
+
+## Tasks
+- [x] T5: frontend — $metalshopping-frontend
+      - adicionar botão "Selecionar todos" com loading
+      - buscar IDs em batches usando `productsApi.listProductsPortfolio`
+      commit: "fix(web): add catalog select all"
+
+## Acceptance tests
+- [x] npm.cmd run web:typecheck passes
+- [ ] Browser: `/shopping` → Produtos Cadastrados → botão "Selecionar todos" seleciona todos os itens do filtro
+
+---
 # Feature: Shopping manual filters show brand/group
 Type: frontend  |  Events: no  |  ADR: no
 

@@ -204,6 +204,7 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
   const [catalogTotal, setCatalogTotal] = useState(0);
   const [catalogReturned, setCatalogReturned] = useState(0);
   const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogSelectAllLoading, setCatalogSelectAllLoading] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [catalogLeaf0Label, setCatalogLeaf0Label] = useState("Grupo");
   const [catalogBrandOptions, setCatalogBrandOptions] = useState<SelectMenuOption[]>([
@@ -832,6 +833,42 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     setSelectedProductIds((current) => Array.from(new Set([...current, ...currentPageIds])));
   }
 
+  async function selectAllCatalogProducts() {
+    if (catalogSelectAllLoading) {
+      return;
+    }
+    setCatalogSelectAllLoading(true);
+    setError(null);
+    try {
+      const batchLimit = 200;
+      let offset = 0;
+      let total = 0;
+      const collected: string[] = [];
+      do {
+        const response = await productsApi.listProductsPortfolio({
+          search: catalogSearch || undefined,
+          brand_name: catalogBrand.length > 0 ? catalogBrand : undefined,
+          taxonomy_leaf0_name: catalogLeaf0.length > 0 ? catalogLeaf0 : undefined,
+          status: catalogStatus.length > 0 ? catalogStatus : undefined,
+          limit: batchLimit,
+          offset,
+        });
+        total = response.paging.total;
+        collected.push(...response.rows.map((row) => row.product_id));
+        offset += response.paging.returned;
+        if (response.paging.returned === 0) {
+          break;
+        }
+      } while (offset < total);
+      setSelectedProductIds((current) => Array.from(new Set([...current, ...collected])));
+    } catch (catalogError) {
+      const message = catalogError instanceof Error ? catalogError.message : "Falha ao selecionar todos os produtos.";
+      setError(message);
+    } finally {
+      setCatalogSelectAllLoading(false);
+    }
+  }
+
   function resetCatalogPaging() {
     setCatalogOffset(0);
   }
@@ -1101,6 +1138,13 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
 
               <div className={styles.selectRow}>
                 <div className={styles.selectionActions}>
+                  <button
+                    type="button"
+                    onClick={() => void selectAllCatalogProducts()}
+                    disabled={catalogSelectAllLoading || catalogTotal === 0}
+                  >
+                    {catalogSelectAllLoading ? "Selecionando..." : "Selecionar todos"}
+                  </button>
                   <button type="button" onClick={toggleCurrentPage}>
                     {allCurrentPageSelected ? "Desmarcar pagina" : "Selecionar pagina"}
                   </button>
