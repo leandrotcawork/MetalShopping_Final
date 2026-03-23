@@ -470,3 +470,10 @@ Wrong:   Letting feature pages handle `401` as local request errors, which kept 
 Correct: Emit a global browser auth-failure event from the SDK runtime on `401` and let `SessionProvider` transition to `unauthenticated`.
 Rule:    Authentication failures from any protected API call must invalidate the global session state, not only the local view.
 Layer:   Frontend
+
+## Lesson 61 — Web app must alias workspace SDK packages for runtime changes
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Letting `apps/web` resolve `@metalshopping/sdk-runtime` and `@metalshopping/sdk-types` as dependency packages, which can leave Vite serving stale prebundled code after SDK generation changes.
+Correct: Add explicit `vite.config.ts` and `tsconfig.json` aliases to the workspace source entries for both packages.
+Rule:    In this workspace, SDK/runtime packages that change during feature work must be source-aliased in the web app to avoid stale browser runtime behavior.
+Layer:   Frontend

@@ -16,7 +16,9 @@
       "@metalshopping/ui": ["../../packages/ui/src/index.ts"],
       "@metalshopping/feature-auth-session": ["../../packages/feature-auth-session/src/index.ts"],
       "@metalshopping/feature-analytics": ["../../packages/feature-analytics/src/index.ts"],
-      "@metalshopping/feature-products": ["../../packages/feature-products/src/index.ts"]
+      "@metalshopping/feature-products": ["../../packages/feature-products/src/index.ts"],
+      "@metalshopping/sdk-runtime": ["../../packages/platform-sdk/src/index.ts"],
+      "@metalshopping/sdk-types": ["../../packages/generated-types/src/index.ts"]
     }
   },
   "include": [

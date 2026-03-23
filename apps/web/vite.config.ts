@@ -23,6 +23,14 @@ export default defineConfig({
         __dirname,
         "../../packages/feature-products/src",
       ),
+      "@metalshopping/sdk-runtime": path.resolve(
+        __dirname,
+        "../../packages/platform-sdk/src",
+      ),
+      "@metalshopping/sdk-types": path.resolve(
+        __dirname,
+        "../../packages/generated-types/src",
+      ),
     },
   },
   server: {
