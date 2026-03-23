@@ -18,6 +18,11 @@ type ProductsOverviewSnapshot = {
   updatedAt: number;
 } | null;
 
+type TaxonomyScopeSnapshot = {
+  data: Record<string, unknown>;
+  updatedAt: number;
+} | null;
+
 type AppSessionValue = {
   api: {
     home: {
@@ -46,6 +51,8 @@ type AppSessionValue = {
   setAnalyticsHomeSnapshot: (next: AnalyticsHomeSnapshot) => void;
   getProductsOverviewSnapshot: (key: string) => ProductsOverviewSnapshot;
   setProductsOverviewSnapshot: (key: string, dto: Record<string, unknown>) => void;
+  getTaxonomyScopeSnapshot: (key: string) => TaxonomyScopeSnapshot;
+  setTaxonomyScopeSnapshot: (key: string, dto: Record<string, unknown>) => void;
 };
 
 const AppSessionContext = createContext<AppSessionValue | null>(null);
@@ -131,6 +138,9 @@ export function AppSessionProvider(props: PropsWithChildren) {
   const [productsOverviewSnapshots, setProductsOverviewSnapshots] = useState<Record<string, ProductsOverviewSnapshot>>({});
   const productsOverviewSnapshotsRef = useRef(productsOverviewSnapshots);
   productsOverviewSnapshotsRef.current = productsOverviewSnapshots;
+  const [taxonomyScopeSnapshots, setTaxonomyScopeSnapshots] = useState<Record<string, TaxonomyScopeSnapshot>>({});
+  const taxonomyScopeSnapshotsRef = useRef(taxonomyScopeSnapshots);
+  taxonomyScopeSnapshotsRef.current = taxonomyScopeSnapshots;
 
   const getProductsOverviewSnapshot = useCallback((key: string): ProductsOverviewSnapshot => {
     return productsOverviewSnapshotsRef.current[key] || null;
@@ -145,6 +155,23 @@ export function AppSessionProvider(props: PropsWithChildren) {
         [key]: { data: dto, updatedAt: Date.now() },
       };
       productsOverviewSnapshotsRef.current = next;
+      return next;
+    });
+  }, []);
+
+  const getTaxonomyScopeSnapshot = useCallback((key: string): TaxonomyScopeSnapshot => {
+    return taxonomyScopeSnapshotsRef.current[key] || null;
+  }, []);
+
+  const setTaxonomyScopeSnapshot = useCallback((key: string, dto: Record<string, unknown>) => {
+    setTaxonomyScopeSnapshots((current) => {
+      const previous = current[key];
+      if (previous?.data === dto) return current;
+      const next = {
+        ...current,
+        [key]: { data: dto, updatedAt: Date.now() },
+      };
+      taxonomyScopeSnapshotsRef.current = next;
       return next;
     });
   }, []);
@@ -213,8 +240,17 @@ export function AppSessionProvider(props: PropsWithChildren) {
       setAnalyticsHomeSnapshot,
       getProductsOverviewSnapshot,
       setProductsOverviewSnapshot,
+      getTaxonomyScopeSnapshot,
+      setTaxonomyScopeSnapshot,
     }),
-    [analyticsHomeSnapshot, api, getProductsOverviewSnapshot, setProductsOverviewSnapshot],
+    [
+      analyticsHomeSnapshot,
+      api,
+      getProductsOverviewSnapshot,
+      setProductsOverviewSnapshot,
+      getTaxonomyScopeSnapshot,
+      setTaxonomyScopeSnapshot,
+    ],
   );
 
   return <AppSessionContext.Provider value={value}>{props.children}</AppSessionContext.Provider>;

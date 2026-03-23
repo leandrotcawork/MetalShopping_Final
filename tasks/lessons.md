@@ -370,3 +370,10 @@ Wrong:   Trying to `apply_patch` the first import lines of a TSX copied from leg
 Correct: Detect BOM (EF BB BF) and edit via BOM-safe rewrite (`Get-Content -Raw` + `Set-Content -Encoding utf8`) or normalize the file before patching.
 Rule:    When migrating legacy files, handle UTF-8 BOM explicitly so automated patches match the expected lines.
 Layer:   Process
+
+## Lesson 46 — Context must expose legacy snapshot helpers
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Rendering legacy taxonomy page without providing get/set snapshot helpers in AppSession context, causing runtime crash.
+Correct: Add `getTaxonomyScopeSnapshot` and `setTaxonomyScopeSnapshot` to AppSessionProvider and value.
+Rule:    Legacy pages relying on snapshot caching must have their context methods wired before enabling the route.
+Layer:   Frontend
