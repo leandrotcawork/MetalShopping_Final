@@ -405,3 +405,10 @@ Wrong:   Registering treemap controller/elements without `LinearScale`, causing 
 Correct: Register `LinearScale` together with treemap components in TaxonomyHomePage.
 Rule:    When instantiating Chart.js directly, register all required scales/plugins explicitly.
 Layer:   Frontend
+
+## Lesson 51 — Manual URL batch save must track only changed rows
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Leaving the footer save button permanently disabled and persisting manual URLs with a hardcoded `REFERENCE` lookup mode.
+Correct: Detect pending edits from the visible candidates, enable batch save only when rows changed, and reuse each candidate's current `lookupMode` when upserting the manual signal.
+Rule:    Manual URL save flows must be driven by real pending drafts and preserve the candidate lookup semantics.
+Layer:   Frontend

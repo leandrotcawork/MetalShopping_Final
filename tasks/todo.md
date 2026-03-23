@@ -1,3 +1,30 @@
+# Feature: Shopping manual URL save button
+Type: frontend  |  Events: no  |  ADR: no
+
+## Phase 1 â€” Architectural thinking
+Module type:
+- `apps/web/src/pages/ShoppingPage.tsx`: corrigir o fluxo de salvar URLs manuais sem alterar contrato ou backend.
+
+Risks:
+- O footer pode continuar mostrando um CTA inerte se nÃ£o houver rastreamento correto de drafts alterados.
+- Salvar em lote nÃ£o pode sobrescrever `lookupMode` com valor fixo quando o candidato jÃ¡ traz o modo correto.
+
+Level scope:
+- Level 1 (now): habilitar o botÃ£o Salvar, salvar apenas linhas alteradas da pÃ¡gina visÃ­vel e recarregar a lista manual.
+- Level 2 (later): adicionar feedback de sucesso mais rico ou persistir drafts entre pÃ¡ginas, se necessÃ¡rio.
+
+## Tasks
+- [x] T5: frontend â€” $metalshopping-frontend
+      - detectar drafts realmente alterados
+      - habilitar o CTA de salvar em lote
+      - reutilizar `lookupMode` do candidato ao persistir a URL manual
+      commit: "fix(web): enable shopping manual url save"
+
+## Acceptance tests
+- [x] npm.cmd run web:typecheck passes
+- [ ] Browser: `/shopping` â†’ Configurar URLs manuais â†’ editar URL vÃ¡lida â†’ botÃ£o Salvar habilita e persiste
+
+---
 # Feature: Workflow skill compaction + manual /plan gate
 Type: process  |  Events: no  |  ADR: no
 
@@ -228,10 +255,10 @@ Type: frontend  |  Events: no  |  ADR: no
 
 ---
 
-# Feature: Analytics New — Legacy-first full phase plan (source of truth)
+# Feature: Analytics New ï¿½ Legacy-first full phase plan (source of truth)
 Type: frontend-first migration  |  Events: no  |  ADR: no
 
-## Phase 1 — Architectural thinking
+## Phase 1 ï¿½ Architectural thinking
 Module type:
 - `frontend-only` now (visual parity first, no real backend binding).
 - `read-only` later (contract/backend/sdk wiring after visual sign-off).
@@ -256,40 +283,40 @@ Level scope:
 - Level 3 (final): remove temporary adapters/shims and close contract/backend/sdk tranche.
 
 ## Tasks
-- [x] T5-A: frontend — inventory + freeze visual baseline from legacy
+- [x] T5-A: frontend ï¿½ inventory + freeze visual baseline from legacy
       - map all files under legacy `analytics` + `analytics_home` and lock them as migration baseline
       - define "must-match" sections (top nav tabs, hero gradient, command panel, first fold cards, spotlight shell)
       commit: "docs(analytics): freeze legacy visual parity baseline"
 
-- [x] T5-B: frontend — literal copy tranche (home shell)
+- [x] T5-B: frontend ï¿½ literal copy tranche (home shell)
       - copy legacy TSX/CSS structure into runnable package surface (without real backend)
       - preserve class names/layout primitives; avoid redesign
       commit: "feat(web): copy legacy analytics home shell"
 
-- [x] T5-C: frontend — compatibility adapters for compile/runtime
+- [x] T5-C: frontend ï¿½ compatibility adapters for compile/runtime
       - add temporary mock/session adapters required by copied components
       - keep route `/analytics` stable and loadable
       commit: "refactor(web): add analytics legacy compatibility adapters"
 
-- [ ] T5-D: frontend — visual parity pass (pixel/structure)
+- [ ] T5-D: frontend ï¿½ visual parity pass (pixel/structure)
       - align spacing, typography, chip states, cards and first fold composition with legacy
-      - ensure tabs (`Home`, `Produtos`, `Taxonomia`, `Marcas`, `Ações`) mirror legacy behavior
+      - ensure tabs (`Home`, `Produtos`, `Taxonomia`, `Marcas`, `Aï¿½ï¿½es`) mirror legacy behavior
       commit: "fix(web): align analytics legacy visual parity"
 
-- [ ] T5-E: frontend — remaining legacy sections (still mocked)
+- [ ] T5-E: frontend ï¿½ remaining legacy sections (still mocked)
       - wire spotlight/drawer shell and sample blocks used by legacy home flow
       - keep backend integration disabled; mock-only for missing data
       commit: "feat(web): complete analytics legacy visual sections with mocks"
 
-- [ ] T1 (defer): contract — $metalshopping-openapi-contracts
+- [ ] T1 (defer): contract ï¿½ $metalshopping-openapi-contracts
       - only start after T5 visual sign-off
       commit: "feat(analytics): finalize read contracts after visual parity"
 
-- [ ] T2 (defer): Go module — $metalshopping-implement
+- [ ] T2 (defer): Go module ï¿½ $metalshopping-implement
       - only start after T1
       commit: "feat(analytics): implement analytics serving reads"
 
-- [ ] T4 (defer): SDK — $metalshopping-sdk-generation
+- [ ] T4 (defer): SDK ï¿½ $metalshopping-sdk-generation
       - only start after T1/T2
       commit: "chore(sdk): regenerate analytics sdk"
 
@@ -331,21 +358,21 @@ Type: frontend-first migration  |  Events: no  |  ADR: no
 Type: frontend-first migration  |  Events: no  |  ADR: no
 
 ## Tasks
-- [x] T5-A: frontend — inventory + baseline (legacy snapshot)
+- [x] T5-A: frontend ï¿½ inventory + baseline (legacy snapshot)
       - source of truth: `packages/feature-analytics/legacy_snapshot/analytics/TaxonomyHomePage.tsx` + `taxonomy_home.module.css` + `legacy_snapshot/analytics/components/*`
 
-- [x] T5-B: frontend — literal copy + wiring (runnable)
+- [x] T5-B: frontend ï¿½ literal copy + wiring (runnable)
       - copy page + CSS + components into `packages/feature-analytics/src/pages/analytics/*`
       - add missing helper `taxonomy_visuals`
 
-- [x] T5-C: frontend — dependencies (charts)
+- [x] T5-C: frontend ï¿½ dependencies (charts)
       - add `chart.js`, `react-chartjs-2`, `chartjs-chart-treemap`, `recharts`, `@tanstack/react-table`
 
-- [x] T5-D: frontend — shell integration
+- [x] T5-D: frontend ï¿½ shell integration
       - render `<TaxonomyHomePage />` on tab/route `/analytics/taxonomy`
       - remove MVP taxonomy state/effects to avoid redundant loads
 
-- [x] T5-E: frontend — mock payload parity
+- [x] T5-E: frontend ï¿½ mock payload parity
       - expand `AnalyticsTaxonomyScopeOverviewV1Dto` keys used by legacy
       - enrich `buildMockTaxonomyScopeOverview()` with non-empty panels (treemap + charts + tables)
       commit: "feat(web): migrate analytics taxonomy legacy page"

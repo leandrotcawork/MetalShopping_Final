@@ -722,8 +722,25 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     [catalogLeaf0Options],
   );
 
-  const manualRows = useMemo(() => manualCandidates, [manualCandidates]); 
-  const manualShown = Math.min(manualOffset + manualReturned, manualTotal); 
+  const manualRows = useMemo(() => manualCandidates, [manualCandidates]);
+  const manualPendingRows = useMemo(
+    () =>
+      manualRows.flatMap((candidate) => {
+        const rowKey = manualRowKey(candidate.productId, candidate.supplierCode);
+        const draftUrl = manualEditUrls[rowKey];
+        if (draftUrl === undefined) {
+          return [];
+        }
+        const nextUrl = draftUrl.trim();
+        const currentUrl = (candidate.productUrl ?? "").trim();
+        if (nextUrl === currentUrl) {
+          return [];
+        }
+        return [{ candidate, nextUrl }];
+      }),
+    [manualEditUrls, manualRows],
+  );
+  const manualShown = Math.min(manualOffset + manualReturned, manualTotal);
 
   useLayoutEffect(() => {
     const detailNode = detailWrapRef.current;
@@ -843,23 +860,33 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
     return `${productId}::${supplierCode.toUpperCase()}`;
   }
 
-  async function saveManualSignalRow(productId: string, supplierCode: string) {
-    const key = manualRowKey(productId, supplierCode);
-    const nextUrl = (manualEditUrls[key] ?? "").trim();
-    if (nextUrl && !nextUrl.startsWith("http")) {
-      setError("A URL manual deve iniciar com http ou https.");
+  async function saveManualSignals() {
+    if (manualPendingRows.length === 0) {
       return;
     }
     setManualSignalSaving(true);
     setError(null);
     try {
-      await shoppingApi.upsertSupplierSignal({
-        productId,
-        supplierCode,
-        productUrl: nextUrl || null,
-        lookupMode: "REFERENCE",
-        urlStatus: nextUrl ? "ACTIVE" : "STALE",
-        manualOverride: true,
+      for (const pendingRow of manualPendingRows) {
+        if (pendingRow.nextUrl && !/^https?:\/\//i.test(pendingRow.nextUrl)) {
+          setError("A URL manual deve iniciar com http ou https.");
+          return;
+        }
+        await shoppingApi.upsertSupplierSignal({
+          productId: pendingRow.candidate.productId,
+          supplierCode: pendingRow.candidate.supplierCode,
+          productUrl: pendingRow.nextUrl || null,
+          lookupMode: pendingRow.candidate.lookupMode,
+          urlStatus: pendingRow.nextUrl ? "ACTIVE" : "STALE",
+          manualOverride: true,
+        });
+      }
+      setManualEditUrls((current) => {
+        const nextState = { ...current };
+        for (const pendingRow of manualPendingRows) {
+          delete nextState[manualRowKey(pendingRow.candidate.productId, pendingRow.candidate.supplierCode)];
+        }
+        return nextState;
       });
       setManualReloadTick((current) => current + 1);
     } catch (saveError) {
@@ -1360,10 +1387,20 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
                       type="text"
                       value={draftUrl}
                       onChange={(event) =>
-                        setManualEditUrls((current) => ({
-                          ...current,
-                          [rowKey]: event.target.value,
-                        }))
+                        setManualEditUrls((current) => {
+                          const nextValue = event.target.value;
+                          const normalizedNextValue = nextValue.trim();
+                          const normalizedCurrentValue = (candidate.productUrl ?? "").trim();
+                          if (normalizedNextValue === normalizedCurrentValue) {
+                            const nextState = { ...current };
+                            delete nextState[rowKey];
+                            return nextState;
+                          }
+                          return {
+                            ...current,
+                            [rowKey]: nextValue,
+                          };
+                        })
                       }
                       placeholder="https://fornecedor/pdp/produto"
                     />
@@ -1403,10 +1440,10 @@ export function ShoppingPage({ shoppingApi, productsApi }: ShoppingPageProps) {
       <button
         type="button"
         className={`${styles.btn} ${styles.btnPrimary} ${styles.btnCompact} ${styles.manualFooterSave}`}
-        disabled
-        title="Salvar em lote em breve"
+        disabled={manualSignalSaving || manualPendingRows.length === 0}
+        onClick={() => void saveManualSignals()}
       >
-        Salvar
+        {manualSignalSaving ? "Salvando..." : `Salvar${manualPendingRows.length > 0 ? ` (${manualPendingRows.length})` : ""}`}
       </button>
     </div>
   </div>
