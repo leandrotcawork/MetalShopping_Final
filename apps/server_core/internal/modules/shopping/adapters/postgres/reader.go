@@ -480,6 +480,186 @@ LIMIT $4 OFFSET $5
 	}, nil
 }
 
+func (r *Reader) ListRunItemsForExport(
+	ctx context.Context,
+	tenantID string,
+	runID string,
+	filter ports.RunExportListFilter,
+) (ports.RunExportList, error) {
+	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return ports.RunExportList{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	const runExistsQuery = `
+SELECT 1
+FROM shopping_price_runs
+WHERE tenant_id = current_tenant_id()
+  AND run_id = $1
+LIMIT 1
+`
+	var one int
+	if err := tx.QueryRowContext(ctx, runExistsQuery, runID).Scan(&one); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ports.RunExportList{}, ErrRunNotFound
+		}
+		return ports.RunExportList{}, fmt.Errorf("check shopping run exists: %w", err)
+	}
+
+	supplierCodes := make([]string, 0, len(filter.SupplierCodes))
+	seenSuppliers := map[string]struct{}{}
+	for _, code := range filter.SupplierCodes {
+		code = strings.ToUpper(strings.TrimSpace(code))
+		if code == "" {
+			continue
+		}
+		if _, exists := seenSuppliers[code]; exists {
+			continue
+		}
+		seenSuppliers[code] = struct{}{}
+		supplierCodes = append(supplierCodes, code)
+	}
+
+	whereSQL := "WHERE i.tenant_id = current_tenant_id()\n  AND i.run_id = $1"
+	args := []any{runID}
+	argPos := 2
+	if len(supplierCodes) > 0 {
+		whereSQL += fmt.Sprintf("\n  AND i.supplier_code = ANY($%d)", argPos)
+		args = append(args, supplierCodes)
+		argPos++
+	}
+
+	countQuery := `
+SELECT COUNT(*)
+FROM shopping_price_run_items i
+` + whereSQL
+
+	var total int64
+	if err := tx.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
+		return ports.RunExportList{}, fmt.Errorf("count shopping run items for export: %w", err)
+	}
+
+	limit := filter.Limit
+	limitSQL := ""
+	if limit > 0 {
+		limitSQL = fmt.Sprintf("\nLIMIT $%d", argPos)
+		args = append(args, limit)
+		argPos++
+	}
+
+	const exportCTE = `
+WITH RECURSIVE taxonomy_chain AS (
+  SELECT
+    taxonomy_node_id,
+    tenant_id,
+    parent_taxonomy_node_id,
+    name,
+    level,
+    taxonomy_node_id AS leaf_id
+  FROM catalog_taxonomy_nodes
+  WHERE tenant_id = current_tenant_id()
+  UNION ALL
+  SELECT
+    parent.taxonomy_node_id,
+    parent.tenant_id,
+    parent.parent_taxonomy_node_id,
+    parent.name,
+    parent.level,
+    chain.leaf_id
+  FROM taxonomy_chain chain
+  JOIN catalog_taxonomy_nodes parent
+    ON parent.tenant_id = current_tenant_id()
+   AND parent.taxonomy_node_id = chain.parent_taxonomy_node_id
+),
+taxonomy_lookup AS (
+  SELECT
+    leaf_id AS taxonomy_node_id,
+    MAX(CASE WHEN level = 0 THEN name END) AS taxonomy_leaf0_name
+  FROM taxonomy_chain
+  GROUP BY leaf_id
+),
+identifiers_lookup AS (
+  SELECT
+    product_id,
+    MAX(CASE WHEN identifier_type = 'pn_interno' THEN identifier_value END) AS pn_interno,
+    MAX(CASE WHEN identifier_type = 'reference' THEN identifier_value END) AS reference,
+    MAX(CASE WHEN identifier_type = 'ean' THEN identifier_value END) AS ean
+  FROM catalog_product_identifiers
+  WHERE tenant_id = current_tenant_id()
+  GROUP BY product_id
+)
+`
+
+	listQuery := exportCTE + `
+SELECT
+  i.run_item_id,
+  i.run_id,
+  i.product_id,
+  p.sku,
+  idf.pn_interno,
+  idf.reference,
+  idf.ean,
+  p.name,
+  p.brand_name,
+  txo.taxonomy_leaf0_name,
+  i.supplier_code,
+  i.item_status,
+  i.observed_price,
+  i.currency_code,
+  i.observed_at,
+  i.seller_name,
+  i.channel,
+  i.product_url,
+  i.http_status,
+  i.elapsed_s,
+  i.chosen_seller_json->>'lookup_term',
+  i.notes,
+  m.config_json::text
+FROM shopping_price_run_items i
+JOIN catalog_products p
+  ON p.tenant_id = i.tenant_id
+ AND p.product_id = i.product_id
+LEFT JOIN taxonomy_lookup txo
+  ON txo.taxonomy_node_id = p.primary_taxonomy_node_id
+LEFT JOIN identifiers_lookup idf
+  ON idf.product_id = p.product_id
+LEFT JOIN supplier_driver_manifests m
+  ON m.tenant_id = i.tenant_id
+ AND m.supplier_code = i.supplier_code
+ AND m.is_active = TRUE
+ AND m.validation_status = 'valid'
+` + whereSQL + `
+ORDER BY i.observed_at DESC, i.created_at DESC` + limitSQL
+
+	rows, err := tx.QueryContext(ctx, listQuery, args...)
+	if err != nil {
+		return ports.RunExportList{}, fmt.Errorf("list shopping run items for export: %w", err)
+	}
+	defer rows.Close()
+
+	items := make([]ports.RunExportRow, 0, 128)
+	for rows.Next() {
+		item, scanErr := scanRunExportRow(rows)
+		if scanErr != nil {
+			return ports.RunExportList{}, scanErr
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return ports.RunExportList{}, fmt.Errorf("iterate shopping run items for export: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return ports.RunExportList{}, fmt.Errorf("commit shopping run export read: %w", err)
+	}
+
+	return ports.RunExportList{
+		Rows:  items,
+		Total: total,
+	}, nil
+}
+
 func (r *Reader) GetProductLatest(ctx context.Context, tenantID, productID string) (ports.ProductLatest, error) {
 	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
@@ -1061,6 +1241,118 @@ func scanRunItem(s scanner) (ports.RunItem, error) {
 			item.ProductURL = &computed
 		}
 	}
+	return item, nil
+}
+
+func scanRunExportRow(s scanner) (ports.RunExportRow, error) {
+	var item ports.RunExportRow
+	var observedAt time.Time
+	var pnInterno sql.NullString
+	var reference sql.NullString
+	var ean sql.NullString
+	var brandName sql.NullString
+	var taxonomyLeaf0 sql.NullString
+	var productURL sql.NullString
+	var httpStatus sql.NullInt64
+	var elapsedSeconds sql.NullFloat64
+	var lookupTerm sql.NullString
+	var notes sql.NullString
+	var runtimeConfigJSON sql.NullString
+
+	if err := s.Scan(
+		&item.RunItemID,
+		&item.RunID,
+		&item.ProductID,
+		&item.SKU,
+		&pnInterno,
+		&reference,
+		&ean,
+		&item.ProductLabel,
+		&brandName,
+		&taxonomyLeaf0,
+		&item.SupplierCode,
+		&item.ItemStatus,
+		&item.ObservedPrice,
+		&item.Currency,
+		&observedAt,
+		&item.SellerName,
+		&item.Channel,
+		&productURL,
+		&httpStatus,
+		&elapsedSeconds,
+		&lookupTerm,
+		&notes,
+		&runtimeConfigJSON,
+	); err != nil {
+		return ports.RunExportRow{}, fmt.Errorf("scan shopping run export row: %w", err)
+	}
+
+	item.ObservedAt = observedAt.UTC()
+	item.SupplierCode = strings.TrimSpace(item.SupplierCode)
+	item.ItemStatus = strings.TrimSpace(item.ItemStatus)
+
+	if pnInterno.Valid {
+		value := strings.TrimSpace(pnInterno.String)
+		if value != "" {
+			item.PNInterno = &value
+		}
+	}
+	if reference.Valid {
+		value := strings.TrimSpace(reference.String)
+		if value != "" {
+			item.Reference = &value
+		}
+	}
+	if ean.Valid {
+		value := strings.TrimSpace(ean.String)
+		if value != "" {
+			item.EAN = &value
+		}
+	}
+	if brandName.Valid {
+		value := strings.TrimSpace(brandName.String)
+		if value != "" {
+			item.BrandName = &value
+		}
+	}
+	if taxonomyLeaf0.Valid {
+		value := strings.TrimSpace(taxonomyLeaf0.String)
+		if value != "" {
+			item.TaxonomyLeaf0Name = &value
+		}
+	}
+	if productURL.Valid {
+		value := strings.TrimSpace(productURL.String)
+		if value != "" {
+			item.ProductURL = &value
+		}
+	}
+	if httpStatus.Valid {
+		value := httpStatus.Int64
+		item.HTTPStatus = &value
+	}
+	if elapsedSeconds.Valid {
+		value := elapsedSeconds.Float64
+		item.ElapsedSeconds = &value
+	}
+	if lookupTerm.Valid {
+		value := strings.TrimSpace(lookupTerm.String)
+		if value != "" {
+			item.LookupTerm = &value
+		}
+	}
+	if notes.Valid {
+		value := strings.TrimSpace(notes.String)
+		if value != "" {
+			item.Notes = &value
+		}
+	}
+	if item.ProductURL == nil && item.LookupTerm != nil && runtimeConfigJSON.Valid {
+		if computed := deriveSearchURLFromRuntimeConfig(runtimeConfigJSON.String, item.SupplierCode, item.ProductID, *item.LookupTerm); computed != "" {
+			item.ProductURL = &computed
+		}
+	}
+
 	return item, nil
 }
 

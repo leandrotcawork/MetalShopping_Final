@@ -82,6 +82,54 @@ type RunItemList struct {
 	Total  int64
 }
 
+type RunExportRow struct {
+	RunItemID         string
+	RunID             string
+	ProductID         string
+	SKU               string
+	PNInterno         *string
+	Reference         *string
+	EAN               *string
+	ProductLabel      string
+	BrandName         *string
+	TaxonomyLeaf0Name *string
+	SupplierCode      string
+	ItemStatus        string
+	ObservedPrice     float64
+	Currency          string
+	ObservedAt        time.Time
+	SellerName        string
+	Channel           string
+	ProductURL        *string
+	LookupTerm        *string
+	HTTPStatus        *int64
+	ElapsedSeconds    *float64
+	Notes             *string
+}
+
+type RunExportList struct {
+	Rows  []RunExportRow
+	Total int64
+}
+
+type RunExportListFilter struct {
+	SupplierCodes []string
+	Limit         int64
+}
+
+type RunExportXlsxInput struct {
+	SupplierCodes  []string
+	OutputFilePath string
+}
+
+type RunExportXlsxResult struct {
+	RunID          string
+	OutputFilePath string
+	ExportedAt     time.Time
+	TotalRows      int64
+	SupplierCodes  []string
+}
+
 type RunItemListFilter struct {
 	SupplierCode string
 	ItemStatus   string
@@ -196,6 +244,7 @@ type Reader interface {
 	GetRunItemStatusSummary(ctx context.Context, tenantID, runID string) (RunItemStatusSummary, error)
 	GetRunSupplierItemStatusSummary(ctx context.Context, tenantID, runID string) (RunSupplierItemStatusSummary, error)
 	ListRunItems(ctx context.Context, tenantID, runID string, filter RunItemListFilter) (RunItemList, error)
+	ListRunItemsForExport(ctx context.Context, tenantID, runID string, filter RunExportListFilter) (RunExportList, error)
 	GetProductLatest(ctx context.Context, tenantID, productID string) (ProductLatest, error)
 	GetRunRequest(ctx context.Context, tenantID, runRequestID string) (RunRequest, error)
 	ListSupplierSignals(ctx context.Context, tenantID string, filter SupplierSignalListFilter) (SupplierSignalList, error)

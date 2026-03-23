@@ -251,6 +251,11 @@ type shoppingCreateRunRequestBody struct {
 	Notes string `json:"notes"`
 }
 
+type shoppingExportRunXlsxBody struct {
+	SupplierCodes  []string `json:"supplierCodes"`
+	OutputFilePath string   `json:"outputFilePath"`
+}
+
 type shoppingUpsertSupplierSignalBody struct {
 	ProductID      string  `json:"productId"`
 	SupplierCode   string  `json:"supplierCode"`
@@ -265,9 +270,10 @@ func (h *Handler) handleRunByID(w http.ResponseWriter, r *http.Request) {
 	traceID := requestTraceID(r)
 	statusCode := http.StatusOK
 	reqResult := "success"
-	defer logRequest("shopping.get_run", traceID, &statusCode, &reqResult, startedAt)
+	action := "shopping.get_run"
+	defer func() { logRequest(action, traceID, &statusCode, &reqResult, startedAt) }()
 
-	if r.Method != http.MethodGet {
+	if r.Method != http.MethodGet && r.Method != http.MethodPost {
 		statusCode = http.StatusMethodNotAllowed
 		reqResult = "method_not_allowed"
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -284,6 +290,12 @@ func (h *Handler) handleRunByID(w http.ResponseWriter, r *http.Request) {
 	runIDPath := strings.TrimSpace(strings.TrimPrefix(r.URL.Path, "/api/v1/shopping/runs/"))
 	runIDPath = strings.TrimSuffix(runIDPath, "/")
 	if strings.HasSuffix(runIDPath, "/item-status-summary") {
+		if r.Method != http.MethodGet {
+			statusCode = http.StatusMethodNotAllowed
+			reqResult = "method_not_allowed"
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
 		runID := strings.TrimSuffix(runIDPath, "/item-status-summary")
 		runID = strings.TrimSpace(strings.TrimSuffix(runID, "/"))
 		if runID == "" || strings.Contains(runID, "/") {
@@ -326,6 +338,12 @@ func (h *Handler) handleRunByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.HasSuffix(runIDPath, "/supplier-item-status-summary") {
+		if r.Method != http.MethodGet {
+			statusCode = http.StatusMethodNotAllowed
+			reqResult = "method_not_allowed"
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
 		runID := strings.TrimSuffix(runIDPath, "/supplier-item-status-summary")
 		runID = strings.TrimSpace(strings.TrimSuffix(runID, "/"))
 		if runID == "" || strings.Contains(runID, "/") {
@@ -372,6 +390,12 @@ func (h *Handler) handleRunByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.HasSuffix(runIDPath, "/items") {
+		if r.Method != http.MethodGet {
+			statusCode = http.StatusMethodNotAllowed
+			reqResult = "method_not_allowed"
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
 		runID := strings.TrimSuffix(runIDPath, "/items")
 		runID = strings.TrimSpace(strings.TrimSuffix(runID, "/"))
 		if runID == "" || strings.Contains(runID, "/") {
@@ -457,12 +481,85 @@ func (h *Handler) handleRunByID(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	if strings.HasSuffix(runIDPath, "/export-xlsx") {
+		action = "shopping.export_run_xlsx"
+		if r.Method != http.MethodPost {
+			statusCode = http.StatusMethodNotAllowed
+			reqResult = "method_not_allowed"
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		runID := strings.TrimSuffix(runIDPath, "/export-xlsx")
+		runID = strings.TrimSpace(strings.TrimSuffix(runID, "/"))
+		if runID == "" || strings.Contains(runID, "/") {
+			statusCode = http.StatusNotFound
+			reqResult = "not_found"
+			writeShoppingError(w, http.StatusNotFound, "SHOPPING_RUN_NOT_FOUND", "Shopping run not found", traceID)
+			return
+		}
+
+		var requestBody shoppingExportRunXlsxBody
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&requestBody); err != nil {
+			statusCode = http.StatusBadRequest
+			reqResult = "validation_error"
+			writeShoppingError(w, http.StatusBadRequest, "SHOPPING_RUN_EXPORT_INVALID", "Invalid export payload", traceID)
+			return
+		}
+
+		result, err := h.service.ExportRunReportXlsx(r.Context(), tenantID, runID, ports.RunExportXlsxInput{
+			SupplierCodes:  requestBody.SupplierCodes,
+			OutputFilePath: requestBody.OutputFilePath,
+		})
+		if err != nil {
+			switch {
+			case errors.Is(err, postgres.ErrRunNotFound):
+				statusCode = http.StatusNotFound
+				reqResult = "not_found"
+				writeShoppingError(w, http.StatusNotFound, "SHOPPING_RUN_NOT_FOUND", "Shopping run not found", traceID)
+			case errors.Is(err, application.ErrExportInvalid):
+				statusCode = http.StatusBadRequest
+				reqResult = "validation_error"
+				writeShoppingError(w, http.StatusBadRequest, "SHOPPING_RUN_EXPORT_INVALID", err.Error(), traceID)
+			case errors.Is(err, application.ErrExportTooLarge):
+				statusCode = http.StatusBadRequest
+				reqResult = "validation_error"
+				writeShoppingError(w, http.StatusBadRequest, "SHOPPING_RUN_EXPORT_TOO_LARGE", err.Error(), traceID)
+			case errors.Is(err, application.ErrExportRootMissing):
+				statusCode = http.StatusInternalServerError
+				reqResult = "internal_error"
+				writeShoppingError(w, http.StatusInternalServerError, "SHOPPING_RUN_EXPORT_ROOT_MISSING", "Export root is not configured", traceID)
+			default:
+				statusCode = http.StatusInternalServerError
+				reqResult = "internal_error"
+				writeShoppingError(w, http.StatusInternalServerError, "SHOPPING_RUN_EXPORT_FAILED", "Failed to export XLSX report", traceID)
+			}
+			return
+		}
+
+		writeJSON(w, http.StatusOK, map[string]any{
+			"runId":          result.RunID,
+			"outputFilePath": result.OutputFilePath,
+			"exportedAt":     result.ExportedAt.Format(time.RFC3339),
+			"totalRows":      result.TotalRows,
+			"supplierCodes":  result.SupplierCodes,
+		})
+		return
+	}
 
 	runID := runIDPath
 	if runID == "" || strings.Contains(runID, "/") {
 		statusCode = http.StatusNotFound
 		reqResult = "not_found"
 		writeShoppingError(w, http.StatusNotFound, "SHOPPING_RUN_NOT_FOUND", "Shopping run not found", traceID)
+		return
+	}
+
+	if r.Method != http.MethodGet {
+		statusCode = http.StatusMethodNotAllowed
+		reqResult = "method_not_allowed"
+		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
