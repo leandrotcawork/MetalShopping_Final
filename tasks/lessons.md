@@ -377,3 +377,10 @@ Wrong:   Rendering legacy taxonomy page without providing get/set snapshot helpe
 Correct: Add `getTaxonomyScopeSnapshot` and `setTaxonomyScopeSnapshot` to AppSessionProvider and value.
 Rule:    Legacy pages relying on snapshot caching must have their context methods wired before enabling the route.
 Layer:   Frontend
+
+## Lesson 47 — Chart.js treemap must be destroyed on rerender
+Date: 2026-03-22 | Trigger: correction
+Wrong:   Reusing the treemap canvas across renders without forcing destroy, causing "Canvas is already in use" at runtime.
+Correct: Use `redraw` on `react-chartjs-2` treemap instances to destroy and recreate the chart on updates.
+Rule:    Chart.js instances must be destroyed before reusing the same canvas when data/options change.
+Layer:   Frontend

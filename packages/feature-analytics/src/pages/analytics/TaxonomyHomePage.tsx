@@ -2131,7 +2131,13 @@ export function TaxonomyHomePage() {
             <span><i className={styles.allocLegendHigh} /> Alto risco</span>
           </div>
           <div className={styles.allocTreemapWrap}>
-            <Chart key={allocationTreeKey} type="treemap" data={allocationTreeData} options={allocationTreeOptions} />
+            <Chart
+              key={allocationTreeKey}
+              type="treemap"
+              data={allocationTreeData}
+              options={allocationTreeOptions}
+              redraw
+            />
           </div>
         </article>
 
@@ -2636,6 +2642,7 @@ export function TaxonomyHomePage() {
               type="treemap"
               data={allocationSpotlightTreeData}
               options={allocationSpotlightTreeOptions}
+              redraw
             />
           </div>
           <aside ref={allocationPriorityRef} className={styles.allocationSpotlightPriority}>
