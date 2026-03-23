@@ -5,6 +5,9 @@ import (
 	"log"
 	"net/http"
 
+	analyticspg "metalshopping/server_core/internal/modules/analytics_serving/adapters/postgres"
+	analyticsapp "metalshopping/server_core/internal/modules/analytics_serving/application"
+	analyticshttp "metalshopping/server_core/internal/modules/analytics_serving/transport/http"
 	cataloggov "metalshopping/server_core/internal/modules/catalog/adapters/governance"
 	catalogpg "metalshopping/server_core/internal/modules/catalog/adapters/postgres"
 	catalogapp "metalshopping/server_core/internal/modules/catalog/application"
@@ -54,6 +57,7 @@ func composeModules(ctx context.Context, runtime runtimeComposition, governance 
 	inventoryRepo := inventorypg.NewRepository(runtime.db, outboxStore)
 	pricingRepo := pricingpg.NewRepository(runtime.db, outboxStore)
 	homeSummaryReader := homepg.NewSummaryReader(runtime.db)
+	analyticsHomeReader := analyticspg.NewReader(runtime.db)
 	suppliersRepo := supplierspg.NewRepository(runtime.db)
 	suppliersService := suppliersapp.NewService(suppliersRepo, platformsuppliers.NewDefaultRegistry())
 	shoppingReader := shoppingpg.NewReader(runtime.db, suppliersService)
@@ -82,6 +86,8 @@ func composeModules(ctx context.Context, runtime runtimeComposition, governance 
 	pricingHandler := pricinghttp.NewHandler(pricingService, iamAuthorization)
 	homeService := homeapp.NewService(homeSummaryReader)
 	homeHandler := homehttp.NewHandler(homeService)
+	analyticsService := analyticsapp.NewService(analyticsHomeReader)
+	analyticsHandler := analyticshttp.NewHandler(analyticsService)
 	shoppingService := shoppingapp.NewService(shoppingReader, shoppingWriter)
 	shoppingHandler := shoppinghttp.NewHandler(shoppingService)
 	suppliersHandler := suppliershttp.NewHandler(suppliersService)
@@ -95,6 +101,7 @@ func composeModules(ctx context.Context, runtime runtimeComposition, governance 
 			inventoryHandler.RegisterRoutes(mux)
 			pricingHandler.RegisterRoutes(mux)
 			homeHandler.RegisterRoutes(mux)
+			analyticsHandler.RegisterRoutes(mux)
 			shoppingHandler.RegisterRoutes(mux)
 			suppliersHandler.RegisterRoutes(mux)
 		},

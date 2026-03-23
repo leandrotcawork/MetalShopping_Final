@@ -1,4 +1,6 @@
 export * from "../../generated/types_ts/contracts.generated";
+export { DefaultApi as AnalyticsApiClient } from "../../generated/sdk_ts/generated/analytics/apis/DefaultApi";
+export { Configuration as AnalyticsConfiguration } from "../../generated/sdk_ts/generated/analytics/runtime";
 export {
   DefaultApi as AuthSessionApiClient,
 } from "../../generated/sdk_ts/generated/auth_session/apis/DefaultApi";

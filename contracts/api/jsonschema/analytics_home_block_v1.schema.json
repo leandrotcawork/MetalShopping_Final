@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.metalshopping.local/api/analytics_home_block_v1.schema.json",
+  "title": "AnalyticsHomeBlockV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "data",
+    "error"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "OK",
+        "NOT_READY",
+        "ERROR"
+      ]
+    },
+    "data": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": true
+    },
+    "error": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "./analytics_block_error_v1.schema.json"
+        }
+      ]
+    }
+  }
+}

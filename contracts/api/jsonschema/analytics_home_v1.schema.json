@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.metalshopping.local/api/analytics_home_v1.schema.json",
+  "title": "AnalyticsHomeV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "snapshot",
+    "blocks"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requestedId",
+        "resolvedId",
+        "asOf",
+        "servedAt"
+      ],
+      "properties": {
+        "requestedId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resolvedId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "asOf": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "servedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "blocks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kpisOperational",
+        "kpisAnalytics",
+        "kpisProducts",
+        "actionsToday",
+        "alertsPrioritarios",
+        "portfolioDistribution",
+        "timeline"
+      ],
+      "properties": {
+        "kpisOperational": {
+          "$ref": "./analytics_home_block_v1.schema.json"
+        },
+        "kpisAnalytics": {
+          "$ref": "./analytics_home_block_v1.schema.json"
+        },
+        "kpisProducts": {
+          "$ref": "./analytics_home_block_v1.schema.json"
+        },
+        "actionsToday": {
+          "$ref": "./analytics_home_block_v1.schema.json"
+        },
+        "alertsPrioritarios": {
+          "$ref": "./analytics_home_block_v1.schema.json"
+        },
+        "portfolioDistribution": {
+          "$ref": "./analytics_home_block_v1.schema.json"
+        },
+        "timeline": {
+          "$ref": "./analytics_home_block_v1.schema.json"
+        }
+      }
+    }
+  }
+}

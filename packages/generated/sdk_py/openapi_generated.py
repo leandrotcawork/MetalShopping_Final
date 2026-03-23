@@ -6,6 +6,7 @@ OPERATION_IDS = [
     'createShoppingRunRequest',
     'createSupplierDriverManifest',
     'get',
+    'getAnalyticsHome',
     'getAuthSessionState',
     'getCurrentInventoryProductPosition',
     'getCurrentPricingProductPrice',

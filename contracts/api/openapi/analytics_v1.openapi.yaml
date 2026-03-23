@@ -1,0 +1,47 @@
+openapi: 3.1.0
+info:
+  title: "Analytics Serving API"
+  version: "v1"
+  summary: "Analytics Home read contract for authenticated tenants"
+  description: >
+    Read-only analytics serving surface. The first slice exposes Analytics Home blocks
+    with explicit readiness states so the frontend can render progressively.
+  x-metalshopping:
+    contract_name: "analytics_v1"
+    contract_status: "draft"
+    bounded_context: "analytics_serving"
+    owner_team: "product_core"
+servers:
+  - url: https://api.metalshopping.local
+paths:
+  /api/v1/analytics/home:
+    get:
+      operationId: getAnalyticsHome
+      summary: "Get Analytics Home blocks for authenticated tenant"
+      responses:
+        "200":
+          description: "Analytics Home payload returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/analytics_home_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Tenant context required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+components:
+  schemas: {}

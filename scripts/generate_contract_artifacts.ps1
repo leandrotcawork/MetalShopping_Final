@@ -376,6 +376,7 @@ if ($Target -in @("all", "sdk_ts")) {
     $sdkCacheDir = Join-Path $repoRoot ".cache\openapi-generator-sdk-ts"
     $contractMirrorRoot = Prepare-OpenApiGeneratorContractMirror
     $sdkContracts = @(
+        @{ Name = "analytics"; Spec = "contracts\api\openapi\analytics_v1.openapi.yaml" },
         @{ Name = "auth_session"; Spec = "contracts\api\openapi\auth_session_v1.openapi.yaml" },
         @{ Name = "catalog"; Spec = "contracts\api\openapi\catalog_v1.openapi.yaml" },
         @{ Name = "home"; Spec = "contracts\api\openapi\home_v1.openapi.yaml" },

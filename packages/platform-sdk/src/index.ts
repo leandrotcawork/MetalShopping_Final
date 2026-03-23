@@ -1,4 +1,5 @@
 import type {
+  AnalyticsHomeV1,
   AuthSessionLogoutResponseV1,
   AuthSessionStateV1,
   CommonErrorV1,
@@ -23,10 +24,12 @@ import type {
   ShoppingUpsertSupplierSignalRequestV1,
 } from "@metalshopping/sdk-types";
 import {
+  AnalyticsApiClient,
   AuthSessionApiClient,
   HomeApiClient,
   ShoppingApiClient,
 } from "@metalshopping/sdk-types";
+import { AnalyticsConfiguration } from "@metalshopping/sdk-types";
 import { AuthSessionConfiguration } from "@metalshopping/sdk-types";
 import { HomeConfiguration } from "@metalshopping/sdk-types";
 import {
@@ -119,6 +122,9 @@ export type ListShoppingManualUrlCandidatesQueryParams = {
 };
 
 export type ServerCoreSdk = {
+  analytics: {
+    getHome(): Promise<AnalyticsHomeV1>;
+  };
   home: {
     getSummary(): Promise<HomeSummaryV1>;
   };
@@ -313,6 +319,20 @@ function parseHomeSummary(raw: unknown): HomeSummaryV1 {
     inventoryTrackedCount: raw.inventoryTrackedCount,
     lastUpdated,
   };
+}
+
+function parseAnalyticsHome(raw: unknown): AnalyticsHomeV1 {
+  if (!isRecord(raw)) {
+    throw new Error("[sdk-runtime] AnalyticsHomeV1 response must be an object");
+  }
+  if (!isRecord(raw.snapshot)) {
+    throw new Error("[sdk-runtime] AnalyticsHomeV1.snapshot must be an object");
+  }
+  if (!isRecord(raw.blocks)) {
+    throw new Error("[sdk-runtime] AnalyticsHomeV1.blocks must be an object");
+  }
+  assertString(raw.schemaVersion, "AnalyticsHomeV1.schemaVersion");
+  return raw as AnalyticsHomeV1;
 }
 
 function parseShoppingRun(raw: unknown): ShoppingRunV1 {
@@ -964,6 +984,14 @@ export function createBrowserGeneratedHttpClient(config: BrowserGeneratedHttpCli
 
 export function createServerCoreSdk(client: GeneratedHttpClient): ServerCoreSdk {
   const middleware = createBrowserMiddleware(client);
+  const analyticsApi = new AnalyticsApiClient(
+    new AnalyticsConfiguration({
+      basePath: client.baseUrl,
+      middleware,
+      headers: client.defaultHeaders,
+      credentials: "include",
+    }),
+  );
   const authApi = new AuthSessionApiClient(
     new AuthSessionConfiguration({
       basePath: client.baseUrl,
@@ -998,6 +1026,12 @@ export function createServerCoreSdk(client: GeneratedHttpClient): ServerCoreSdk 
   );
 
   return {
+    analytics: {
+      async getHome() {
+        const raw = await runGeneratedCall(() => analyticsApi.getAnalyticsHome());
+        return parseAnalyticsHome(raw);
+      },
+    },
     home: {
       async getSummary() {
         const raw = await runGeneratedCall(() => homeApi.getHomeSummary());
