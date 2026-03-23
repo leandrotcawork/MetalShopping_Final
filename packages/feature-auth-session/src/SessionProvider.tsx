@@ -1,6 +1,7 @@
 import type { PropsWithChildren } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
+import { browserAuthFailureEventName } from "@metalshopping/sdk-runtime";
 import type { AuthSessionStateV1 } from "@metalshopping/sdk-types";
 
 import type { AuthSessionApi, AuthSessionContextValue, AuthSessionStatus } from "./types";
@@ -66,6 +67,19 @@ export function SessionProvider({
   useEffect(() => {
     void bootstrap();
   }, [bootstrap]);
+
+  useEffect(() => {
+    function handleAuthFailure() {
+      setSession(null);
+      setStatus("unauthenticated");
+      setMessage("");
+    }
+
+    window.addEventListener(browserAuthFailureEventName, handleAuthFailure);
+    return () => {
+      window.removeEventListener(browserAuthFailureEventName, handleAuthFailure);
+    };
+  }, []);
 
   const login = useCallback(
     (returnTo?: string) => {

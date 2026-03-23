@@ -48,6 +48,7 @@ export type QueryParamValue = string | number | boolean | null | undefined;
 
 export const defaultWebSessionCSRFCookieName = "ms_web_csrf";
 export const defaultWebSessionCSRFHeaderName = "X-CSRF-Token";
+export const browserAuthFailureEventName = "metalshopping:auth-failure";
 
 export type GeneratedHttpClient = {
   baseUrl: string;
@@ -70,6 +71,13 @@ type HttpClientError = Error & {
   code?: string;
   traceId?: string;
 };
+
+function notifyBrowserAuthFailure() {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.dispatchEvent(new CustomEvent(browserAuthFailureEventName));
+}
 
 export type StartAuthSessionLoginQueryParams = {
   return_to?: string;
@@ -950,6 +958,9 @@ function mapCommonError(response: Response, errorPayload: CommonErrorV1 | null) 
   error.status = response.status;
   error.code = errorPayload?.error?.code;
   error.traceId = errorPayload?.error?.trace_id;
+  if (response.status === 401) {
+    notifyBrowserAuthFailure();
+  }
   return error;
 }
 

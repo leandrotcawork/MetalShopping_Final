@@ -463,3 +463,10 @@ Wrong:   Styling the Products export modal only with generic surface tokens and 
 Correct: Keep the legacy modal structure (`backdrop`, `header`, compact `×`, bordered footer) and give it explicit opaque surface/button styling inside the feature CSS.
 Rule:    For visual-parity modals, preserve the legacy container hierarchy and explicit surface treatment instead of relying only on generic theme tokens.
 Layer:   Frontend
+
+## Lesson 60 — Auth failure must update session state globally
+Date: 2026-03-23 | Trigger: correction
+Wrong:   Letting feature pages handle `401` as local request errors, which kept the protected shell mounted after authentication had already failed.
+Correct: Emit a global browser auth-failure event from the SDK runtime on `401` and let `SessionProvider` transition to `unauthenticated`.
+Rule:    Authentication failures from any protected API call must invalidate the global session state, not only the local view.
+Layer:   Frontend
