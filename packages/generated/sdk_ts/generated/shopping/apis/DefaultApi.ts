@@ -21,6 +21,8 @@ import type {
   ShoppingCreateRunRequestV1,
   ShoppingCreateRunResponseV1,
   ShoppingManualUrlCandidateListV1,
+  ShoppingMarketReportExportXlsxRequestV1,
+  ShoppingMarketReportExportXlsxResponseV1,
   ShoppingProductLatestV1,
   ShoppingRunExportXlsxRequestV1,
   ShoppingRunExportXlsxResponseV1,
@@ -48,6 +50,10 @@ import {
     ShoppingCreateRunResponseV1ToJSON,
     ShoppingManualUrlCandidateListV1FromJSON,
     ShoppingManualUrlCandidateListV1ToJSON,
+    ShoppingMarketReportExportXlsxRequestV1FromJSON,
+    ShoppingMarketReportExportXlsxRequestV1ToJSON,
+    ShoppingMarketReportExportXlsxResponseV1FromJSON,
+    ShoppingMarketReportExportXlsxResponseV1ToJSON,
     ShoppingProductLatestV1FromJSON,
     ShoppingProductLatestV1ToJSON,
     ShoppingRunExportXlsxRequestV1FromJSON,
@@ -78,6 +84,11 @@ import {
 
 export interface CreateShoppingRunRequestRequest {
     shoppingCreateRunRequestV1: ShoppingCreateRunRequestV1;
+}
+
+export interface ExportShoppingMarketReportXlsxRequest {
+    runId: string;
+    shoppingMarketReportExportXlsxRequestV1: ShoppingMarketReportExportXlsxRequestV1;
 }
 
 export interface ExportShoppingRunXlsxRequest {
@@ -190,6 +201,61 @@ export class DefaultApi extends runtime.BaseAPI {
      */
     async createShoppingRunRequest(requestParameters: CreateShoppingRunRequestRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ShoppingCreateRunResponseV1> {
         const response = await this.createShoppingRunRequestRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for exportShoppingMarketReportXlsx without sending the request
+     */
+    async exportShoppingMarketReportXlsxRequestOpts(requestParameters: ExportShoppingMarketReportXlsxRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['runId'] == null) {
+            throw new runtime.RequiredError(
+                'runId',
+                'Required parameter "runId" was null or undefined when calling exportShoppingMarketReportXlsx().'
+            );
+        }
+
+        if (requestParameters['shoppingMarketReportExportXlsxRequestV1'] == null) {
+            throw new runtime.RequiredError(
+                'shoppingMarketReportExportXlsxRequestV1',
+                'Required parameter "shoppingMarketReportExportXlsxRequestV1" was null or undefined when calling exportShoppingMarketReportXlsx().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/shopping/runs/{run_id}/export-market-report-xlsx`;
+        urlPath = urlPath.replace(`{${"run_id"}}`, encodeURIComponent(String(requestParameters['runId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ShoppingMarketReportExportXlsxRequestV1ToJSON(requestParameters['shoppingMarketReportExportXlsxRequestV1']),
+        };
+    }
+
+    /**
+     * Export shopping market report to XLSX
+     */
+    async exportShoppingMarketReportXlsxRaw(requestParameters: ExportShoppingMarketReportXlsxRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ShoppingMarketReportExportXlsxResponseV1>> {
+        const requestOptions = await this.exportShoppingMarketReportXlsxRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ShoppingMarketReportExportXlsxResponseV1FromJSON(jsonValue));
+    }
+
+    /**
+     * Export shopping market report to XLSX
+     */
+    async exportShoppingMarketReportXlsx(requestParameters: ExportShoppingMarketReportXlsxRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ShoppingMarketReportExportXlsxResponseV1> {
+        const response = await this.exportShoppingMarketReportXlsxRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

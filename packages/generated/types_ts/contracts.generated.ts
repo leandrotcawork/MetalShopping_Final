@@ -39,6 +39,8 @@ export const schemaIds = {
   "shopping_create_run_response_v1.schema": "https://schemas.metalshopping.local/api/shopping_create_run_response_v1.schema.json",
   "shopping_manual_url_candidate_list_v1.schema": "https://schemas.metalshopping.local/api/shopping_manual_url_candidate_list_v1.schema.json",
   "shopping_manual_url_candidate_v1.schema": "https://schemas.metalshopping.local/api/shopping_manual_url_candidate_v1.schema.json",
+  "shopping_market_report_export_xlsx_request_v1.schema": "https://schemas.metalshopping.local/api/shopping_market_report_export_xlsx_request_v1.schema.json",
+  "shopping_market_report_export_xlsx_response_v1.schema": "https://schemas.metalshopping.local/api/shopping_market_report_export_xlsx_response_v1.schema.json",
   "shopping_product_latest_v1.schema": "https://schemas.metalshopping.local/api/shopping_product_latest_v1.schema.json",
   "shopping_run_export_xlsx_request_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_export_xlsx_request_v1.schema.json",
   "shopping_run_export_xlsx_response_v1.schema": "https://schemas.metalshopping.local/api/shopping_run_export_xlsx_response_v1.schema.json",
@@ -479,6 +481,20 @@ export type ShoppingManualUrlCandidateV1 = {
   nextDiscoveryAt?: string | null;
   notFoundCount: number;
   updatedAt: string;
+};
+
+export type ShoppingMarketReportExportXlsxRequestV1 = {
+  supplierCodes: Array<string>;
+  productIds: Array<string>;
+  outputFilePath: string;
+};
+
+export type ShoppingMarketReportExportXlsxResponseV1 = {
+  runId: string;
+  outputFilePath: string;
+  exportedAt: string;
+  totalProducts: number;
+  supplierCodes: Array<string>;
 };
 
 export type ShoppingProductLatestV1 = {

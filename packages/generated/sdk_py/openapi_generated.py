@@ -5,6 +5,7 @@ OPERATION_IDS = [
     'createCatalogProduct',
     'createShoppingRunRequest',
     'createSupplierDriverManifest',
+    'exportShoppingMarketReportXlsx',
     'exportShoppingRunXlsx',
     'get',
     'getAnalyticsHome',

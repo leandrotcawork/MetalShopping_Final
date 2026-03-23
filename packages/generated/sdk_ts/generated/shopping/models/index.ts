@@ -11,6 +11,8 @@ export * from './ShoppingCreateRunRequestV1Advanced';
 export * from './ShoppingCreateRunResponseV1';
 export * from './ShoppingManualUrlCandidateListV1';
 export * from './ShoppingManualUrlCandidateV1';
+export * from './ShoppingMarketReportExportXlsxRequestV1';
+export * from './ShoppingMarketReportExportXlsxResponseV1';
 export * from './ShoppingProductLatestV1';
 export * from './ShoppingRunExportXlsxRequestV1';
 export * from './ShoppingRunExportXlsxResponseV1';
