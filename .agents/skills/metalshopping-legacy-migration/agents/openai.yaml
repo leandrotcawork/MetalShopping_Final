@@ -1,0 +1,6 @@
+interface:
+  display_name: "MS Legacy Migration"
+  short_description: "Port legacy UI into the new app with visual parity first, adapters second, integration last."
+  default_prompt: "Use $metalshopping-legacy-migration to port this legacy module into the new app with visual parity first."
+policy:
+  allow_implicit_invocation: true

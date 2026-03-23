@@ -50,6 +50,7 @@ Every decision passes this filter:
 | Event contract | `$metalshopping-event-contracts` |
 | Governance contract | `$metalshopping-governance-contracts` |
 | SDK generation | `$metalshopping-sdk-generation` |
+| Legacy-first visual migration | `$metalshopping-legacy-migration` |
 | ADR lifecycle | `$metalshopping-adr` |
 
 ## Lesson format (write to tasks/lessons.md after every correction)

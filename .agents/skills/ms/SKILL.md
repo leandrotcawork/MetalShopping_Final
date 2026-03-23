@@ -42,6 +42,7 @@ Use only the stages that apply:
 - `T1 contract` → `$metalshopping-openapi-contracts`
 - `T2/T3 implementation` → `$metalshopping-implement`
 - `T4 SDK` → `$metalshopping-sdk-generation` after contract changes
+- legacy-first frontend migration / visual parity baseline → `$metalshopping-legacy-migration`
 - `T5 frontend` → `$metalshopping-frontend`
 - `T6 ADR` → `$metalshopping-adr`
 - significant feature/review gate → `$metalshopping-review`
