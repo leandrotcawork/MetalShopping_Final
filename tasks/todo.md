@@ -22,6 +22,10 @@ Type: frontend-only now | read-only integration later | Events: no | ADR: no
 ## Track B — Produtos
 - [x] Legacy index/workspace structure copied
 - [x] Navigation deadlock on tab return fixed
+- [x] Spotlight table restored to legacy interactions (filters/sort/pagination)
+- [x] Tooltip opacity adjusted for readability parity
+- [x] Spotlight metrics mock aligned with legacy semantic keys
+- [x] Spotlight table density/contrast refined toward legacy
 - [ ] Visual parity audit against legacy (remaining diffs list)
 - [ ] Manual acceptance: `Home -> Produtos -> Home -> Produtos` without interaction lock
 - [ ] Manual acceptance: `/analytics/products` first fold matches legacy

@@ -1,7 +1,20 @@
 import { useMemo, useState } from "react";
 import type { WorkspaceHistorySalesPointV1 } from "@metalshopping/feature-analytics";
+import {
+  BarElement,
+  CategoryScale,
+  Chart as ChartJS,
+  Legend,
+  LinearScale,
+  Tooltip,
+  type ChartData,
+  type ChartOptions,
+} from "chart.js";
+import { Bar } from "react-chartjs-2";
 
 import styles from "../history.module.css";
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
 type SalesRange = "1m" | "3m" | "6m" | "12m";
 
@@ -23,21 +36,53 @@ export function SalesMonthlyChart({ points }: SalesMonthlyChartProps) {
   const [range, setRange] = useState<SalesRange>("6m");
   const filtered = useMemo(() => sliceByRange(points, range), [points, range]);
 
-  const labels = filtered.map((point) => point.month || point.date || "-");
-  const values = filtered.map((point) => (typeof point.units === "number" ? point.units : 0));
-  const max = Math.max(1, ...values);
+  const labels = filtered.map((point) => String(point.month || point.date || "-"));
+  const values: Array<number | null> = filtered.map((point) =>
+    typeof point.units === "number" && Number.isFinite(point.units) ? point.units : null,
+  );
 
-  const total = values.reduce((acc, cur) => acc + cur, 0);
-  const avg = values.length ? total / values.length : 0;
-  const peakIndex = values.reduce((best, cur, idx, list) => (cur > list[best] ? idx : best), 0);
-  const peakUnits = values[peakIndex] ?? 0;
-  const peakMonth = labels[peakIndex] ?? "-";
+  const data: ChartData<"bar"> = {
+    labels,
+    datasets: [
+      {
+        label: "Vendas",
+        data: values,
+        backgroundColor: "rgba(139, 21, 56, 0.9)",
+        borderColor: "#8b1538",
+        borderWidth: 1.4,
+        borderRadius: 6,
+      },
+    ],
+  };
+
+  const options: ChartOptions<"bar"> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: "rgba(148, 163, 184, 0.16)" }, ticks: { color: "#64748b" } },
+      y: { grid: { color: "rgba(148, 163, 184, 0.16)" }, ticks: { color: "#64748b" } },
+    },
+  };
+
+  const valuesForStats = values.filter((value): value is number => value != null && Number.isFinite(value));
+  const total = valuesForStats.reduce((acc, cur) => acc + cur, 0);
+  const avg = valuesForStats.length ? total / valuesForStats.length : 0;
+  let peakIndex = -1;
+  let peakUnits = 0;
+  values.forEach((value, index) => {
+    if (value != null && Number.isFinite(value) && (peakIndex < 0 || value > peakUnits)) {
+      peakIndex = index;
+      peakUnits = value;
+    }
+  });
+  const peakMonth = peakIndex >= 0 ? labels[peakIndex] : "-";
 
   return (
     <article className={styles.chartCard}>
       <header className={styles.chartHeader}>
         <div className={styles.chartTitleWrap}>
-          <span className={styles.chartIcon} aria-hidden>MS</span>
+          <span className={styles.chartIcon} aria-hidden>📊</span>
           <h3 className={styles.chartTitle}>Vendas Mensais</h3>
         </div>
         <div className={styles.timeRange}>
@@ -70,26 +115,7 @@ export function SalesMonthlyChart({ points }: SalesMonthlyChartProps) {
       </div>
 
       <div className={styles.chartWrap}>
-        <svg viewBox="0 0 100 40" preserveAspectRatio="none" width="100%" height="100%">
-          {values.map((value, idx) => {
-            const barWidth = 100 / Math.max(1, values.length);
-            const height = (value / max) * 36;
-            const x = idx * barWidth + 1;
-            const y = 38 - height;
-            return (
-              <rect
-                key={`bar-${idx}`}
-                x={x}
-                y={y}
-                width={Math.max(1, barWidth - 2)}
-                height={height}
-                rx={2}
-                fill="#8b1538"
-                opacity={0.9}
-              />
-            );
-          })}
-        </svg>
+        <Bar data={data} options={options} />
       </div>
       <div className={styles.chartFooterSlot} aria-hidden />
     </article>

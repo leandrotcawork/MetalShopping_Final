@@ -1,5 +1,4 @@
-// @ts-nocheck
-import type { AnalyticsProductWorkspaceV1Dto } from "@metalshopping/feature-analytics";
+﻿import type { AnalyticsProductWorkspaceV1Dto } from "@metalshopping/feature-analytics";
 import type { WorkspaceInsightsRecommendationItemV2, WorkspaceInsightsV2 } from "../../../../app/apiClient";
 import { ApiClientError } from "../../../../app/apiClient";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
@@ -48,10 +47,10 @@ type FilterKey = "all" | Insight["category"];
 
 const FILTERS: Array<{ key: FilterKey; label: string }> = [
   { key: "all", label: "Todos" },
-  { key: "preco", label: "Pre�o" },
+  { key: "preco", label: "Preço" },
   { key: "campanha", label: "Campanha" },
   { key: "estoque", label: "Estoque" },
-  { key: "portfolio", label: "Portf�lio" },
+  { key: "portfolio", label: "Portfólio" },
   { key: "risco", label: "Risco" },
 ];
 
@@ -240,12 +239,12 @@ function getPricingImpactMetrics(impact: Record<string, unknown>) {
     { label: "Preco atual", value: impactLabelValue(impact, "price_current", fmtCurrency) },
     { label: "Media mercado", value: impactLabelValue(impact, "price_market_mean", fmtCurrency) },
     { label: "Preco alvo", value: impactLabelValue(impact, "price_target", fmtCurrency) },
-    { label: "? preco", value: impactLabelValue(impact, "delta_price", fmtCurrency) },
-    { label: "? preco %", value: impactLabelValue(impact, "delta_price_pct", fmtPct) },
+    { label: "Δ preco", value: impactLabelValue(impact, "delta_price", fmtCurrency) },
+    { label: "Δ preco %", value: impactLabelValue(impact, "delta_price_pct", fmtPct) },
     { label: "Contrib atual", value: impactLabelValue(impact, "contrib_unit_current", fmtCurrency) },
     { label: "Contrib alvo", value: impactLabelValue(impact, "contrib_unit_target", fmtCurrency) },
-    { label: "? contrib", value: impactLabelValue(impact, "delta_contrib_unit", fmtCurrency) },
-    { label: "? contrib %", value: impactLabelValue(impact, "delta_contrib_unit_pct", fmtPct) },
+    { label: "Δ contrib", value: impactLabelValue(impact, "delta_contrib_unit", fmtCurrency) },
+    { label: "Δ contrib %", value: impactLabelValue(impact, "delta_contrib_unit_pct", fmtPct) },
   ];
 }
 
@@ -357,7 +356,7 @@ function formatEvidenceBenchmark(row: SpotlightStructuredEvidence): string {
   const fmt = String(benchmark.fmt || row.fmt || "").trim();
   const value = formatStructuredValue({ ...row, value: benchmark.value, fmt });
   const opRaw = String(benchmark.op || ">=").trim() || ">=";
-  const op = opRaw === ">=" ? "=" : opRaw === "<=" ? "=" : opRaw;
+  const op = opRaw === ">=" ? "≥" : opRaw === "<=" ? "≤" : opRaw;
   const label = String(benchmark.label || "").trim();
   const actual = formatStructuredValue(row);
   if (label) return `${actual} ${op} ${value} (${label})`;
@@ -486,8 +485,8 @@ function mapRecommendationToInsight(
     summary: toFriendlyRecommendationSummary(item),
     domain,
     category: categoryFromDomain(domain),
-    severity: severityFromPriority(item.priority_score),
-    confidence: normalizeConfidence(item.confidence_pct),
+    severity: severityFromPriority(asNumber(item.priority_score)),
+    confidence: normalizeConfidence(asNumber(item.confidence_pct)),
     evidence,
     tags: chips.tags,
     alerts: chips.alerts,
@@ -696,7 +695,7 @@ function buildInsightsFromPayload(
     heroPrimaryText,
     heroSecondaryText,
     diagnostics: {
-      title: executiveSummary.length ? "Diagnostico executivo" : "Diagn�stico",
+      title: executiveSummary.length ? "Diagnostico executivo" : "Diagnóstico",
       items: diagnostics,
     },
     recommendations: {
@@ -739,7 +738,7 @@ function buildEmptyInsightsView(model: AnalyticsProductWorkspaceV1Dto["model"]) 
     heroPrimaryText: "-",
     heroSecondaryText: "-",
     diagnostics: {
-      title: "Diagn�stico",
+      title: "Diagnóstico",
       items: [] as Insight[],
     },
     recommendations: {
@@ -847,8 +846,8 @@ export function InsightsTab() {
   const spotlightHints = asTextList(spotlightRaw?.hints);
   const spotlightNotes = asTextList(spotlightImpact.notes);
   const spotlightNarrative = asTextList(spotlightImpact.why_narrative);
-  const spotlightSummary = spotlightInsight?.summary || spotlightRaw?.summary || "-";
-  const spotlightTitle = spotlightInsight?.title || spotlightRaw?.title || "Recomendacao";
+  const spotlightSummary = String(spotlightInsight?.summary ?? spotlightRaw?.summary ?? "-");
+  const spotlightTitle = String(spotlightInsight?.title ?? spotlightRaw?.title ?? "Recomendacao");
   const spotlightConfidence = normalizeConfidence(asNumber(spotlightRaw?.confidence_pct));
   const spotlightDomain = spotlightInsight?.domain || "DADOS";
   const spotlightPriority = spotlightInsight?.severity || "INFO";
@@ -1052,7 +1051,7 @@ export function InsightsTab() {
         { label: "Preco atual", value: impactLabelValue(spotlightImpact, "price_current", fmtCurrency) },
         { label: "Media mercado", value: impactLabelValue(spotlightImpact, "price_market_mean", fmtCurrency) },
         { label: "Preco alvo", value: impactLabelValue(spotlightImpact, "price_target", fmtCurrency) },
-        { label: "? preco", value: impactLabelValue(spotlightImpact, "delta_price_pct", fmtPct) },
+        { label: "Δ preco", value: impactLabelValue(spotlightImpact, "delta_price_pct", fmtPct) },
       ].filter((row) => row.value !== "-");
     }
     if (spotlightDomain === "ESTOQUE") {
@@ -1116,7 +1115,7 @@ export function InsightsTab() {
 
   const spotlightEvidenceTitle = useMemo(() => {
     if (spotlightHasStructured) return String(spotlightEvidenceSection.title || "Evidencias do caso");
-    if (spotlightDomain === "COMPETITIVIDADE") return "Diagn�stico de pre�o";
+    if (spotlightDomain === "COMPETITIVIDADE") return "Diagnóstico de preço";
     if (spotlightDomain === "MERCADO") return "Evidencias do caso";
     if (spotlightDomain === "ESTOQUE") return "Diagnostico operacional";
     if (spotlightDomain === "RISCO") return "Evidencias do risco";
@@ -1142,8 +1141,8 @@ export function InsightsTab() {
 
   const spotlightIsLiberacaoCapital =
     spotlightDomain === "MERCADO" && spotlightActionCode.toUpperCase().includes("LIBERACAO_CAPITAL");
-  const spotlightPhasePriceLabel = spotlightDomain === "COMPETITIVIDADE" ? "Pre�o" : "Preco";
-  const spotlightPhaseDeltaLabel = spotlightDomain === "COMPETITIVIDADE" ? "? pre�o" : "Delta preco";
+  const spotlightPhasePriceLabel = spotlightDomain === "COMPETITIVIDADE" ? "Preço" : "Preco";
+  const spotlightPhaseDeltaLabel = spotlightDomain === "COMPETITIVIDADE" ? "Δ preço" : "Delta preco";
   const spotlightPhaseDiscountLabel = spotlightDomain === "COMPETITIVIDADE" ? "Ajuste" : "Desconto";
 
   const spotlightShowHow =
@@ -1623,7 +1622,7 @@ export function InsightsTab() {
             <section className={styles.spotlightSection}>
               <div className={styles.spotlightSectionHeader}>
                 <span className={`${styles.spotlightSectionIcon} ${styles.spotlightSectionIconWhy}`} aria-hidden>
-                  ??
+                  💡
                 </span>
                 <h4 className={styles.spotlightSectionTitle}>{spotlightWhyTitle}</h4>
               </div>
@@ -1681,7 +1680,7 @@ export function InsightsTab() {
             <section className={styles.spotlightSection}>
               <div className={styles.spotlightSectionHeader}>
                 <span className={`${styles.spotlightSectionIcon} ${styles.spotlightSectionIconWhat}`} aria-hidden>
-                  ??
+                  🧾
                 </span>
                 <h4 className={styles.spotlightSectionTitle}>{spotlightEvidenceTitle}</h4>
               </div>
@@ -1730,7 +1729,7 @@ export function InsightsTab() {
             <section className={styles.spotlightSection}>
               <div className={styles.spotlightSectionHeader}>
                 <span className={`${styles.spotlightSectionIcon} ${styles.spotlightSectionIconHow}`} aria-hidden>
-                  ??
+                  🧭
                 </span>
                 <h4 className={styles.spotlightSectionTitle}>{spotlightHowTitle}</h4>
               </div>
@@ -1820,7 +1819,7 @@ export function InsightsTab() {
             <section className={styles.spotlightSection}>
               <div className={styles.spotlightSectionHeader}>
                 <span className={`${styles.spotlightSectionIcon} ${styles.spotlightSectionIconWhat}`} aria-hidden>
-                  ?
+                  ✅
                 </span>
                 <h4 className={styles.spotlightSectionTitle}>{spotlightPlanTitle}</h4>
               </div>
@@ -1887,7 +1886,7 @@ export function InsightsTab() {
           <section className={styles.spotlightSection}>
               <div className={styles.spotlightSectionHeader}>
                 <span className={`${styles.spotlightSectionIcon} ${styles.spotlightSectionIconHow}`} aria-hidden>
-                  ???
+                  🛡️
                 </span>
                 <h4 className={styles.spotlightSectionTitle}>Regras e limites</h4>
               </div>

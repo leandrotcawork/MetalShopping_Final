@@ -44,6 +44,7 @@ export function ProductsOverview({ model }: ProductsOverviewProps) {
         margin_sales_pct: "Margem nas vendas",
         margin_unit_pct: "Margem individual",
         sales_6m_units: "Vendas",
+        stock_qty: "Estoque",
         days_no_sales: "Dias sem venda",
         contribution_brl: "Contribuicao",
         gap_vs_market_pct: "Gap vs mercado",
@@ -64,6 +65,14 @@ export function ProductsOverview({ model }: ProductsOverviewProps) {
             return { text: `${row.marginUnitPct.toFixed(1).replace(".", ",")}%`, numeric: row.marginUnitPct };
           case "sales_6m_units":
             return { text: `${Math.round(row.sales6mUnits).toLocaleString("pt-BR")}un`, numeric: row.sales6mUnits };
+          case "stock_qty":
+            return {
+              text: `${row.stockQty.toLocaleString("pt-BR", {
+                minimumFractionDigits: Number.isInteger(row.stockQty) ? 0 : 1,
+                maximumFractionDigits: Number.isInteger(row.stockQty) ? 0 : 2,
+              })}un`,
+              numeric: row.stockQty,
+            };
           case "days_no_sales":
             return { text: `${Math.round(row.daysNoSales)}d`, numeric: row.daysNoSales };
           case "contribution_brl":

@@ -6,8 +6,10 @@ export type CurrentSnapshot = {
   brand: string;
   taxonomyLeafName: string;
   priceCurrent: number | null;
+  priceRealEffective: number | null;
   costAvg: number | null;
   costVariable: number | null;
+  variableSpendUnit: number | null;
   variableCostUnitAuto: number | null;
   variableCostSource: "AUTO_6M" | "AUTO_12M" | "AUTO" | "NONE_GROSS_FALLBACK";
   variableCostCoverageMonths: number;

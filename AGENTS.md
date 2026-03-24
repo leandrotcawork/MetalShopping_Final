@@ -30,10 +30,11 @@ Every decision passes this filter:
 - Never call server_core HTTP endpoints
 
 **Frontend**
-- Data only via `@metalshopping/platform-sdk` hooks — no `fetch()`
-- Design tokens only — no hardcoded hex, px font-size, or spacing
+- Data only via `sdk.*` methods from `@metalshopping/sdk-runtime` — no `fetch()`
+- Design tokens only — no hardcoded hex values (see `$metalshopping-design-system`)
 - Check `packages/ui/src/index.ts` before creating any component
 - Loading + error + empty state on every data-fetching component
+- Fetch pattern: `useEffect + cancelled flag` — no hooks that don't exist in the SDK
 
 **Process**
 - No task marked [x] without: build passes + real data verified + commit made
@@ -50,8 +51,8 @@ Every decision passes this filter:
 | Event contract | `$metalshopping-event-contracts` |
 | Governance contract | `$metalshopping-governance-contracts` |
 | SDK generation | `$metalshopping-sdk-generation` |
-| Legacy-first visual migration | `$metalshopping-legacy-migration` |
 | ADR lifecycle | `$metalshopping-adr` |
+| Frontend — any visual or component task | `$metalshopping-design-system` |
 
 ## Lesson format (write to tasks/lessons.md after every correction)
 ```

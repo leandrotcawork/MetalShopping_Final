@@ -119,7 +119,7 @@ export function buildMockAnalyticsProductsOverviewDto() {
     {} as Record<string, number>,
   );
 
-  const spotlightRows = mockProducts.slice(0, 6).map((row) => ({
+  const spotlightRows = mockProducts.slice(0, 8).map((row) => ({
     pn: row.pn,
     product: row.description,
     brand: row.brand,
@@ -201,15 +201,15 @@ export function buildMockAnalyticsProductsOverviewDto() {
       critical: { count: byStatus.crit || 0 },
       spotlight: {
         display: {
-          stars: ["Info"],
-          potential: ["OK"],
-          attention: ["Atencao"],
-          critical: ["Critico"],
+          stars: ["giro_6m", "margin_sales_pct", "margin_unit_pct", "sales_6m_units", "contribution_brl"],
+          potential: ["giro_6m", "margin_sales_pct", "margin_unit_pct", "days_no_sales", "contribution_brl"],
+          attention: ["giro_6m", "margin_sales_pct", "gap_vs_market_pct", "sales_6m_units", "contribution_brl"],
+          critical: ["capital_brl", "days_no_sales", "dos", "stock_qty", "contribution_brl"],
         },
         stars: spotlightRows.slice(0, 2),
-        potential: spotlightRows.slice(2, 3),
-        attention: spotlightRows.slice(3, 4),
-        critical: spotlightRows.slice(4, 6),
+        potential: spotlightRows.slice(2, 4),
+        attention: spotlightRows.slice(4, 6),
+        critical: spotlightRows.slice(6, 8),
       },
     },
     abc: {

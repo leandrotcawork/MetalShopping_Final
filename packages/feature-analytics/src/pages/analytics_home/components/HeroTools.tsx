@@ -35,7 +35,7 @@ export function HeroTools({ onOpenSpotlight, onFilterChange, miniStats }: HeroTo
   }
 
   const visibleMiniStats = miniStats.filter(
-    (item) => !["mini-potential", "mini-margin"].includes(String(item.key || ""))
+    (item) => !["mini-potential", "mini-margin", "mini-abc", "mini-capital"].includes(String(item.key || ""))
   );
 
   return (

@@ -133,7 +133,9 @@ export function ProductWorkspaceLayout() {
         <span className={`${styles.blob} ${styles.blobA}`} />
         <span className={`${styles.blob} ${styles.blobB}`} />
       </div>
-      <UnifiedWorkspaceHeader model={model} fromPath={fromPath} fromScrollY={fromScrollYSafe} />
+      <section className={styles.workspaceShell}>
+        <UnifiedWorkspaceHeader model={model} fromPath={fromPath} fromScrollY={fromScrollYSafe} />
+      </section>
       <div className={styles.container}>
         {showHero ? <ProductHero model={model} /> : null}
         <Outlet context={{ model } satisfies ProductWorkspaceOutletContext} />

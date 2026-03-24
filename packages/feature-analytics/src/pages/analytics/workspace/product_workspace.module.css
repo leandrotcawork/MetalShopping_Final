@@ -1,8 +1,30 @@
-﻿.page {
+.page {
+  --surface: #ffffff;
+  --surface-border: rgba(148, 163, 184, 0.26);
+  --ink: #111827;
+  --muted: #64748b;
+  --wine: #8f1538;
+  --success: #16a34a;
   position: relative;
   min-height: 100vh;
 }
 
+.workspaceShell {
+  position: sticky;
+  top: 0;
+  z-index: 25;
+  background: color-mix(in srgb, var(--surface) 84%, transparent);
+  backdrop-filter: blur(16px) saturate(170%);
+  border-bottom: 1px solid color-mix(in srgb, var(--muted) 22%, transparent);
+}
+
+[data-theme="dark"] .page {
+  --surface: #0f172a;
+  --surface-border: rgba(148, 163, 184, 0.3);
+  --ink: #e2e8f0;
+  --muted: #94a3b8;
+  --success: #34d399;
+}
 .ambient {
   position: fixed;
   inset: 0;
@@ -52,17 +74,13 @@
 }
 
 .headerUnified {
-  position: sticky;
-  top: 0;
-  z-index: 25;
-  padding: 14px 24px;
-  background: color-mix(in srgb, var(--surface) 84%, transparent);
-  backdrop-filter: blur(16px) saturate(170%);
-  border-bottom: 1px solid color-mix(in srgb, var(--muted) 22%, transparent);
+  position: relative;
+  z-index: 1;
 }
 
 :global(body.spotlight-open) .header,
-:global(body.spotlight-open) .headerUnified {
+:global(body.spotlight-open) .headerUnified,
+:global(body.spotlight-open) .workspaceShell {
   opacity: 0;
   pointer-events: none;
 }
@@ -72,6 +90,7 @@
   margin: 0 auto;
   display: grid;
   gap: 10px;
+  padding: 14px 24px;
 }
 
 .headerRow {
@@ -1060,7 +1079,7 @@
 
   position: relative;
 
-  /* âœ… importante: a seta fica fora -> nÃ£o pode cortar */
+  /* ✅ importante: a seta fica fora -> não pode cortar */
   overflow: visible;
   margin-bottom: 8px;
 }
@@ -1071,7 +1090,7 @@
   border-radius: 9px;
   position: relative;
 
-  /* âœ… aqui sim pode cortar: mantÃ©m o arredondado perfeito */
+  /* ✅ aqui sim pode cortar: mantém o arredondado perfeito */
   overflow: hidden;
 
   /* fundo fraco (zones) */
@@ -1098,7 +1117,7 @@
       var(--c3-strong) var(--t2),
       var(--c3-strong) 100%);
 
-  /* âœ… usa a mesma tÃ©cnica que vocÃª tinha: â€œrecortaâ€ pelo fill */
+  /* ✅ usa a mesma técnica que você tinha: “recorta” pelo fill */
   clip-path: inset(0 calc(100% - var(--fill)) 0 0);
 }
 
@@ -1114,7 +1133,7 @@
 
   box-shadow: 0 0 0 2px rgba(248, 250, 252, 0.9), 0 6px 12px rgba(15, 23, 42, 0.22);
 
-  /* IMPORTANTE: o TSX jÃ¡ define left: `${markerPct}%` */
+  /* IMPORTANTE: o TSX já define left: `${markerPct}%` */
   transform: translateX(-50%);
 }
 
@@ -1282,7 +1301,7 @@
     padding: 20px 14px 28px;
   }
 
-  .headerUnified {
+  .headerInner {
     padding: 12px 12px;
   }
 

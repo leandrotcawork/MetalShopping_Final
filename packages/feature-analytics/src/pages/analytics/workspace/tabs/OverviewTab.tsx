@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useOutletContext } from "react-router-dom";
 
 import { ColorScaleBar } from "../components/ColorScaleBar";
@@ -67,7 +66,7 @@ export function OverviewTab() {
         </div>
 
         <div className={`${styles.barsRow} ${styles.stockBarsRow}`}>
-          {model.stockSales.bars.map((bar) => (
+          {model.stockSales.bars.map((bar: any) => (
             <article key={bar.label} className={styles.progressWrap}>
               <div className={styles.progressHeader}>
                 <span className={styles.progressLabel}>
@@ -151,7 +150,7 @@ export function OverviewTab() {
 
       <WorkspaceCard icon="⚔️" title="Competitividade" tone="competition">
         <div className={styles.metricsRow}>
-          {model.competitiveness.metrics.map((metric) => (
+          {model.competitiveness.metrics.map((metric: any) => (
             <article key={metric.label} className={styles.progressWrap}>
               <div className={styles.progressHeader}>
                 <span className={styles.progressLabel}>{metric.label}</span>
@@ -164,7 +163,7 @@ export function OverviewTab() {
           ))}
         </div>
         <div className={styles.metricsRow}>
-          {model.competitiveness.lower.map((metric) => (
+          {model.competitiveness.lower.map((metric: any) => (
             <article key={metric.label} className={styles.progressWrap}>
               <div className={styles.progressHeader}>
                 <span className={styles.progressLabel}>{metric.label}</span>
@@ -180,7 +179,7 @@ export function OverviewTab() {
 
       <WorkspaceCard icon="⚠️" title="Risco" tone="risk">
         <div className={styles.metricsRow}>
-          {model.risk.metrics.map((metric) => (
+          {model.risk.metrics.map((metric: any) => (
             <article key={metric.label} className={styles.progressWrap}>
               <div className={styles.progressHeader}>
                 <span className={styles.progressLabel}>{metric.label}</span>

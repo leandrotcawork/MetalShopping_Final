@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useOutletContext } from "react-router-dom";
 
 import type { ProductWorkspaceOutletContext } from "../ProductWorkspaceLayout";
@@ -64,7 +63,7 @@ export function HistoryTab() {
   return (
     <section className={styles.historyRoot}>
       <section className={styles.historyIndicators}>
-        {history.indicators.map((item) => {
+        {history.indicators.map((item: any) => {
           const tone = getIndicatorTone(item.label, item.value);
           return (
             <article key={item.label} className={styles.indicatorCard}>

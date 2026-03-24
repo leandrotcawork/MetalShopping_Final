@@ -1,0 +1,6 @@
+interface:
+  display_name: "MS Design System"
+  short_description: "Implement MetalShopping React UI. Enforces real tokens from global.css, packages/ui reuse, useEffect+cancelled fetch pattern, table/filter/pagination/selection patterns anchored to the actual codebase."
+  default_prompt: "Use $metalshopping-design-system to implement the frontend surface."
+policy:
+  allow_implicit_invocation: true

@@ -1,8 +1,7 @@
 // @ts-nocheck
 import { useMemo, useState } from "react";
 
-import { SelectMenu, type SelectMenuOption } from "../../../components/ui/SelectMenu";
-import { createSpotlightSelectClassNames } from "../../../components/ui/spotlightSelect";
+import { FilterDropdown, type SelectMenuOption } from "@metalshopping/ui";
 import styles from "../analytics_home.module.css";
 
 type CapitalEfficiencyRow = {
@@ -27,9 +26,26 @@ type CapitalEfficiencySpotlightProps = {
   error?: string;
 };
 
-const FILTER_SELECT_CLASSNAMES = createSpotlightSelectClassNames({
-  wrap: styles.capitalSpotlightSelectWrap,
-});
+const RISK_OPTIONS: SelectMenuOption[] = [
+  { label: "Todos", value: "all" },
+  { label: "Alto", value: "high" },
+  { label: "Medio", value: "medium" },
+  { label: "Baixo", value: "low" },
+];
+
+const SORT_OPTIONS: SelectMenuOption[] = [
+  { label: "Prioridade", value: "priority" },
+  { label: "Pior GMROI", value: "gmroi" },
+  { label: "Maior Capital", value: "capital" },
+];
+
+const SPOTLIGHT_FILTER_CLASSNAMES = {
+  trigger: styles.spotlightDsTrigger,
+  menu: styles.spotlightDsMenu,
+  option: styles.spotlightDsOption,
+  optionActive: styles.spotlightDsOptionActive,
+  searchInput: styles.spotlightDsSearchInput,
+};
 
 function asCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", {
@@ -133,27 +149,25 @@ export function CapitalEfficiencySpotlight({
         </label>
         <label className={styles.capitalSpotlightField}>
           <span>Marca</span>
-          <SelectMenu
+          <FilterDropdown
             id="capital-efficiency-brand-filter"
-            mode="multi"
+            selectionMode="duo"
             value=""
             values={brandFilter}
             options={[{ label: "Todas Marcas", value: "all" }, ...brandOptions.map((item) => ({ label: item, value: item }))] as SelectMenuOption[]}
             onSelect={(value) => onBrandFilterChange(toggleMultiValue(brandFilter, value))}
-            classNames={FILTER_SELECT_CLASSNAMES}
+            classNamesOverrides={{ wrap: styles.capitalSpotlightSelectWrap, ...SPOTLIGHT_FILTER_CLASSNAMES }}
           />
         </label>
         <label className={styles.capitalSpotlightField}>
           <span>Risco</span>
-          <select
+          <FilterDropdown
+            id="capital-efficiency-risk-filter"
             value={riskFilter}
-            onChange={(event) => setRiskFilter(event.target.value as "all" | "high" | "medium" | "low")}
-          >
-            <option value="all">Todos</option>
-            <option value="high">Alto</option>
-            <option value="medium">Medio</option>
-            <option value="low">Baixo</option>
-          </select>
+            options={RISK_OPTIONS}
+            onSelect={(value) => setRiskFilter(value as "all" | "high" | "medium" | "low")}
+            classNamesOverrides={SPOTLIGHT_FILTER_CLASSNAMES}
+          />
         </label>
         <label className={styles.capitalSpotlightField}>
           <span>Capital (R$)</span>
@@ -191,11 +205,13 @@ export function CapitalEfficiencySpotlight({
         </label>
         <label className={styles.capitalSpotlightField}>
           <span>Ordenar</span>
-          <select value={sortBy} onChange={(event) => setSortBy(event.target.value as "priority" | "gmroi" | "capital")}>
-            <option value="priority">Prioridade</option>
-            <option value="gmroi">Pior GMROI</option>
-            <option value="capital">Maior Capital</option>
-          </select>
+          <FilterDropdown
+            id="capital-efficiency-sort-filter"
+            value={sortBy}
+            options={SORT_OPTIONS}
+            onSelect={(value) => setSortBy(value as "priority" | "gmroi" | "capital")}
+            classNamesOverrides={SPOTLIGHT_FILTER_CLASSNAMES}
+          />
         </label>
       </div>
 

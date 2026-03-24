@@ -62,6 +62,10 @@ function toCurrentSnapshot(model: ProductWorkspaceOutletContext["model"]): Curre
   const marketAvg = parseLocaleNumber(pickMetricValue(hero, "mercado medio"));
   const marketMin = parseLocaleNumber(pickMetricValue(hero, "mercado min"));
   const marketMax = parseLocaleNumber(pickMetricValue(hero, "mercado max"));
+  const priceRealEffective =
+    parseLocaleNumber(pickMetricValue(hero, "preco real efetivo")) ??
+    parseLocaleNumber(pickMetricValue(hero, "preco real")) ??
+    priceCurrent;
   const costAvg = parseLocaleNumber(pickMetricValue(hero, "custo medio"));
   const costVariable = parseLocaleNumber(pickMetricValue(hero, "custo variavel"));
   const marginPctCurrent = parseLocaleNumber(model.profitability.metrics[0]?.value || "");
@@ -70,6 +74,10 @@ function toCurrentSnapshot(model: ProductWorkspaceOutletContext["model"]): Curre
   const gapPctCurrent = parseLocaleNumber(pickMetricValueText(model.competitiveness.metrics, "gap vs mercado"));
   const simulator = model.simulator;
   const variableCostUnitAuto = simulator?.variable_cost_unit_auto ?? null;
+  const variableSpendUnit =
+    parseLocaleNumber(pickMetricValue(hero, "gasto var")) ??
+    parseLocaleNumber(pickMetricValue(hero, "gasto variavel")) ??
+    variableCostUnitAuto;
   const variableCostSource = simulator?.variable_cost_source ?? "NONE_GROSS_FALLBACK";
   const variableCostCoverageMonths = simulator?.variable_cost_coverage_months ?? 0;
   const marginCalcMode = simulator?.margin_calc_mode ?? "GROSS_FALLBACK_NO_GV";
@@ -81,8 +89,10 @@ function toCurrentSnapshot(model: ProductWorkspaceOutletContext["model"]): Curre
     brand: model.brand,
     taxonomyLeafName: model.taxonomyLeafName,
     priceCurrent,
+    priceRealEffective,
     costAvg,
     costVariable,
+    variableSpendUnit,
     variableCostUnitAuto,
     variableCostSource,
     variableCostCoverageMonths,
@@ -376,8 +386,8 @@ export function SimulatorTab() {
             <span className={styles.heroMetricValue}>{formatCurrency(current.costVariable)}</span>
           </div>
           <div>
-            <span className={styles.heroMetricLabel}>Gasto var. auto (janela oficial/un)</span>
-            <span className={styles.heroMetricValue}>{formatCurrency(current.variableCostUnitAuto)}</span>
+            <span className={styles.heroMetricLabel}>Gasto var.</span>
+            <span className={styles.heroMetricValue}>{formatCurrency(current.variableSpendUnit)}</span>
           </div>
           <div>
             <span className={styles.heroMetricLabel}>Modo margem</span>
@@ -693,7 +703,15 @@ export function SimulatorTab() {
                 <strong>{formatCurrency(deltaContrib)}</strong>
               </article>
               <article className={styles.deltaCard}>
-                <span>Delta gap mercado (pp)</span>
+                <span>Preco real efetivo</span>
+                <strong>{formatCurrency(current.priceRealEffective)}</strong>
+              </article>
+              <article className={styles.deltaCard}>
+                <span>Gasto var.</span>
+                <strong>{formatCurrency(current.variableSpendUnit)}</strong>
+              </article>
+              <article className={styles.deltaCard}>
+                <span>Gap real vs atual (pp)</span>
                 <strong>{formatPct(deltaGapPp, 2)}</strong>
               </article>
             </div>

@@ -1,6 +1,6 @@
 import type { SkuStatus } from "../../contracts_products";
 import styles from "../../analytics_products.module.css";
-import { FilterDropdown, type SelectMenuOption } from "../../../../components/ui/FilterDropdown";
+import { FilterDropdown, type SelectMenuOption } from "@metalshopping/ui";
 
 type Filters = {
   brand: string[];

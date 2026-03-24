@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { AnalyticsProductWorkspaceV1Dto } from "@metalshopping/feature-analytics";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -62,7 +61,7 @@ export function UnifiedWorkspaceHeader({ model, fromPath, fromScrollY }: Unified
   const location = useLocation();
   const { api, shellState } = useAppSession();
   const isOnline = shellState !== "sidecar_offline";
-  const classBadges = model.badges.filter((badge) => badge.tone === "class");
+  const classBadges = model.badges.filter((badge: any) => badge.tone === "class");
   const [isSkuPickerOpen, setIsSkuPickerOpen] = useState(false);
   const [skuQuery, setSkuQuery] = useState("");
   const [skuLoading, setSkuLoading] = useState(false);
@@ -137,7 +136,7 @@ export function UnifiedWorkspaceHeader({ model, fromPath, fromScrollY }: Unified
         if (!active) return;
         const rows = Array.isArray(env.data?.rows) ? env.data.rows : [];
         setSkuRows(
-          rows.map((row) => ({
+          rows.map((row: any) => ({
             pn: String(row.pn || ""),
             description: String(row.description || ""),
             brand: String(row.brand || ""),
@@ -195,7 +194,7 @@ export function UnifiedWorkspaceHeader({ model, fromPath, fromScrollY }: Unified
             <div className={styles.skuSub}>{model.subtitle}</div>
           </div>
           <div className={styles.skuBadges}>
-            {classBadges.map((badge) => (
+            {classBadges.map((badge: any) => (
               <span
                 key={`${badge.tone}-${badge.label}`}
                 className={`${styles.badge} ${styles[`badge_${badge.tone}`]} ${

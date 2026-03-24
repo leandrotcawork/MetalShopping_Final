@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useMemo } from "react";
 
-import { FilterDropdown, type SelectMenuOption } from "../../../components/ui/FilterDropdown";
+import { FilterDropdown, type SelectMenuOption } from "@metalshopping/ui";
 import styles from "../analytics_home.module.css";
 
 type AbcMixRow = {
@@ -52,6 +52,14 @@ function toneClassFromBand(band: "A" | "B" | "C"): string {
   return styles.abcSpotlightToneC;
 }
 
+const SPOTLIGHT_FILTER_CLASSNAMES = {
+  trigger: styles.spotlightDsTrigger,
+  menu: styles.spotlightDsMenu,
+  option: styles.spotlightDsOption,
+  optionActive: styles.spotlightDsOptionActive,
+  searchInput: styles.spotlightDsSearchInput,
+};
+
 export function AbcMixSpotlight({
   rows,
   aMaxCumPct,
@@ -95,7 +103,7 @@ export function AbcMixSpotlight({
             values={brandFilter}
             options={marcaOptions}
             onSelect={(value) => onBrandFilterChange(toggleMultiValue(brandFilter, value))}
-            classNamesOverrides={{ wrap: styles.capitalSpotlightSelectWrap }}
+            classNamesOverrides={{ wrap: styles.capitalSpotlightSelectWrap, ...SPOTLIGHT_FILTER_CLASSNAMES }}
           />
         </label>
       </div>

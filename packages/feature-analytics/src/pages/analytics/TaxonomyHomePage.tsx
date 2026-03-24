@@ -4,7 +4,7 @@ import {
   makeAnalyticsTaxonomyScopeOverviewV1Dto,
   type AnalyticsTaxonomyScopeOverviewV1Dto,
 } from "../../legacy_dto";
-import { FilterDropdown } from "../../components/ui/FilterDropdown";
+import { FilterDropdown } from "@metalshopping/ui";
 import { SelectMenu, type SelectMenuOption } from "../../components/ui/SelectMenu";
 import { createSpotlightSelectClassNames } from "../../components/ui/spotlightSelect";
 import {
