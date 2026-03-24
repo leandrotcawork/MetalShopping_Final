@@ -147,7 +147,7 @@ This document is self-contained. Codex does not need access to this conversation
 
 1. Claude reads output against the constraints in the handoff document
 2. If all constraints are satisfied: commit via `commit-commands`; commit message includes `reviewed-by: claude` trailer
-3. If a constraint is violated: Claude fixes it directly, does not send back to Codex
+3. If a constraint is violated: Claude fixes it directly, does not send back to Codex; the fix runs through the lesson quality filter — Codex has access to `tasks/lessons.md` and recurring violations should be captured there
 4. Delete `tasks/codex-handoff.md` after successful commit
 
 #### On Codex output return — high-stakes tasks
