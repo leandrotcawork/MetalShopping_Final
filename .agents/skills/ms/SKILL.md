@@ -1,83 +1,143 @@
 ---
 name: ms
-description: MetalShopping master orchestrator. Use for implementation tasks. Validates architecture first, uses update_plan for complex work, keeps todo/lessons high-signal, and orchestrates specialist skills in the correct order.
+description: MetalShopping master orchestrator. Routes every task through 4 explicit decisions (plan mode / model / Claude vs Codex / parallel dispatch) before any T-stage begins. Dispatches subagents for all research. Never calls analytics sub-agents directly — routes to $analytics-orchestrator.
 ---
 
-# MetalShopping — Master Orchestrator
+# $ms — MetalShopping Master Orchestrator
 
-Read first: `tasks/lessons.md`, `tasks/todo.md`, `AGENTS.md`.
+## Session start (mandatory — fires automatically via SessionStart hook)
+1. Read `tasks/lessons.md` — apply every rule before touching code
+2. Read `tasks/todo.md` — identify STATE (clean / in-progress / blocked)
+3. Read MEMORY.md — recover prior-session context
+4. Output STATE/NEXT/WATCH briefing. Wait for user direction.
 
-## 1) Complexity gate
+## On every task — make 4 decisions before any T-stage begins
 
-Treat as **complex** when any is true:
-- touches 2+ layers (`contract`, `Go`, `worker`, `SDK`, `frontend`, `DB`, `ADR`)
-- adds a page/flow or 3+ requirements
-- changes migration, runtime config, manifest, queue, worker behavior
-- user asks explicit planning/roadmap
+Log all four decisions to tasks/todo.md under the task entry.
 
-For complex tasks:
-1. call `update_plan` before coding
-2. keep one step `in_progress` at a time
-3. refresh `tasks/todo.md` block before execution
+### Decision 1: Plan mode?
+- YES: new module, >2 files changed, architectural decision, anything touching auth/tenant/outbox
+- NO: single-file fix, trivial correction, boilerplate with complete existing pattern
+- If YES: write plan to tasks/todo.md → present to user → wait for approve/revise/reject → only start T1 on approval
+- If user revises: rewrite plan and present again
+- If user rejects: close task, no implementation
 
-For simple tasks:
-- do a short architecture check and execute directly
+### Decision 2: Which model?
+- Opus: T1 for new domain, T6 ADR, critical task at review gate, Sonnet failed on this task instance
+- Sonnet: everything else (default)
+- Critical task = files being written contain or interact with auth, tenant isolation, or outbox patterns (risk-based, not stage-based)
+- "Sonnet failed" = within current task instance only — not persistent to future tasks
 
-## 2) Architecture check before code
+### Decision 3: Claude or Codex?
+- Codex: plan complete (all paths named, constraints listed, no TBD) + task qualifies for T3a/T5-boilerplate/T5.5 + files are not critical
+- Claude: everything else — all orchestration, planning, review, architectural decisions, all critical files
+- When handing to Codex: write tasks/codex-handoff.md first (task + files + constraints + pattern + definition of done)
+- Codex loads tasks/codex-handoff.md + tasks/lessons.md before writing
 
-State only what matters:
-- module type: `read-only` | `write+events` | `CRUD+governance` | `scraping` | `frontend-only` | `docs/process`
-- exact files/folders to change
-- risks/invariants (tenant safety, runtime drift, UX regressions)
-- what is now vs later when staged delivery exists
+### Decision 4: Parallel dispatch?
+- YES if 2+ independent subtasks exist — dispatch subagents simultaneously
+- ALWAYS: codebase exploration dispatches a subagent; main context receives only the summary
 
-## 3) Skill orchestration order
+## Context isolation — hard rule
 
-Use only applicable stages:
-- `T1 contract` → `$metalshopping-openapi-contracts`
-- `T2/T3 implementation` → `$metalshopping-implement`
-- `T4 SDK` → `$metalshopping-sdk-generation` (after contract change)
-- legacy visual-first migration → `$metalshopping-legacy-migration`
-- `T5 frontend` → `$metalshopping-frontend`
-- `T6 ADR` → `$metalshopping-adr`
-- significant feature/review gate → `$metalshopping-review`
+No research runs in the main context. Before any stage needing codebase understanding, dispatch a subagent to read files and return a structured summary. Main context acts only on the summary.
 
-If a stage is skipped, state why.
+Session-start reads (lessons/todo/MEMORY.md) are exempt — these are ritual reads with bounded scope.
 
-## 4) Runtime-state gate (before blaming code)
+## T-stage chain
 
-When task touches worker/config/migration/manifest/DB:
-- confirm migration/seed applied
-- confirm active manifest/config version in DB
-- confirm required API/worker restart occurred
-- confirm run/test data is fresh
-- confirm tenant context and `current_tenant_id()` expectations
+Run only the stages that apply. Determine applicable stages before starting.
 
-## 5) Execution and validation rules
+| Stage | What | Tool | Model |
+|-------|------|------|-------|
+| T1 | Contract (OpenAPI/event/governance) | Claude | Opus (new domain), Sonnet (extending) |
+| T2 | Backend domain + application layers | Claude | Sonnet |
+| T3a | Adapters + transport handlers | Codex | Codex internal |
+| T3b | Outbox wiring + readmodel | Claude | Sonnet — NEVER Codex |
+| T3.5 | DB migration (.sql) | Claude | Sonnet |
+| T4 | SDK generation (script + validate) | Claude | Sonnet |
+| T5 | Boilerplate (Codex) + architecture (Claude) | Split | Sonnet (Claude side); Codex internal |
+| T5.5 | Tests | Codex | Codex internal |
+| T6 | ADR — only when arch decision made | Claude | Opus |
+| T7 | Docs update — dispatch $metalshopping-docs as subagent | Subagent | Sonnet |
+| Review | $metalshopping-review — always blocking before commit | Claude | Opus (critical), Sonnet (standard) |
 
-- one feature block at a time
-- mark task done only after required validation passes
-- run smallest relevant check first, then broader checks
-- for web/frontend closeout, always run `npm.cmd run web:build` unless user says otherwise
-- do not edit `packages/generated/` manually
-- commit after each completed task
+T3a and T5.5: Codex. T3b: always Claude, never Codex. T7 and Review: run in parallel (T7 non-blocking, Review blocking).
 
-## 6) `todo` and `lessons` hygiene
+### Stage selection by task type
+- Frontend fix: T5 + T5.5 + Review
+- New backend module: T1→T2→T3a→T3b→T3.5→T4→T5→T5.5→T6→T7→Review
+- Contract extension: T1→T4→T5.5→Review
+- Contract extension touching auth/tenant/outbox: full chain, critical task
+- Bug fix: affected stage(s) + T5.5 + Review
 
-`tasks/todo.md`:
-- keep only active backlog and current acceptance checks
-- avoid historical verbosity; rely on git history for old details
-- scope edits to target block only (no global replace)
+## Lesson evaluation — 3 trigger points
+1. Codex constraint fix: Claude fixes → run lesson quality filter → write if passes
+2. User correction at any point: run filter immediately
+3. Post-task sweep: before commit, evaluate full task for uncaught lessons
 
-`tasks/lessons.md`:
-- record only structural/global lessons
-- never record one-off cosmetic page tweaks as lessons
-- each lesson must be reusable across modules or process
+**Lesson quality filter:** Write to tasks/lessons.md ONLY if ALL three are true:
+- Mistake would cause bug/review failure/structural problem if repeated
+- Concerns code logic/architecture/backend requirements/module patterns — NOT UI appearance
+- Describes a recurring pattern, not a one-off fix
 
-## 7) Closeout checklist
+## Memory evaluation (post-task)
+After lesson evaluation: did this task establish a durable project-level fact, architectural decision, or user preference change? If yes: write/update memory file + update MEMORY.md index.
 
-Before declaring done:
-- validations executed and reported
-- browser/runtime behavior verified for user-facing changes
-- `tasks/todo.md` updated
-- clean git state or explicit commit delivered
+## Codex output review
+- Standard: Claude reviews against handoff constraints → commit with `reviewed-by: claude` trailer
+- High-stakes (auth/tenant/outbox): Claude reviews + user approves → both trailers in commit
+- Violation found: Claude fixes directly → lesson filter runs on the fix
+- Delete tasks/codex-handoff.md after successful commit
+
+## Agent activity log
+Every agent and subagent writes one entry to `logs/agent-activity-YYYY-MM.jsonl` on completion.
+
+Schema:
+```json
+{
+  "timestamp": "<ISO8601>",
+  "agent": "<skill name>",
+  "parent": "<invoking agent or $ms>",
+  "stage": "<T1|T2|T3a|T3b|T3.5|T4|T5|T5.5|T6|T7|review|research>",
+  "task": "<task name from tasks/todo.md>",
+  "files_changed": ["<path>"],
+  "commit": "<hash or null>",
+  "decision": "<why this approach was taken>",
+  "status": "<success|fix-applied|false-positive|escalated|failed>",
+  "issues": "<description or null>"
+}
+```
+
+Research subagents omit `files_changed` and `commit`, replace with `output_summary`.
+
+## claudewatch interrupts
+When claudewatch fires a violation signal during a T-stage: pause, evaluate the signal.
+- Confirmed violation: fix it → run lesson quality filter
+- False positive: log the dismissal and continue
+Stage does not resume until Claude explicitly clears the interrupt.
+
+## $workflow-guardian triggers
+Run $workflow-guardian when:
+- ADR committed → run before next task starts
+- 3+ lessons in same domain → surface in next session WATCH briefing
+- Every 10 tasks → periodic health check
+- /workflow-check → on-demand
+
+## Analytics routing
+All tasks touching packages/feature-analytics/, analytics_serving Go module, analytics_worker, or any of the 11 analytics read surfaces → route to $analytics-orchestrator. Never call analytics sub-agents directly from $ms.
+
+## Post-task sequence (runs via PostTaskComplete hook)
+1. Mark [x] in tasks/todo.md
+2. Lesson quality filter evaluation
+3. Memory evaluation → update MEMORY.md if applicable
+4. Commit via commit-commands: `<type>(<scope>): <what>`
+5. claude-md-management updates CLAUDE.md
+6. claude-mem compresses session context
+
+## Absolute rules (violation = stop and fix immediately)
+**Go:** pgdb.BeginTenantTx on every adapter query; current_tenant_id() in every WHERE; PrincipalFromContext→401; TenantFromContext→403; outbox.AppendInTx in same tx as INSERT; every module in composition_modules.go
+
+**Frontend:** sdk.* only (no fetch()); design tokens only; check packages/ui/src/index.ts first; loading+error+empty states; useEffect+cancelled flag
+
+**Process:** build passes + real data verified + commit made = task done; auto-generated SDK directories (packages/generated and packages/generated-types) are never edited manually
