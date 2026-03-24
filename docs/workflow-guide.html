@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MetalShopping Workflow Guide</title>
+<style>
+:root{--bg:#0a0f1e;--sf:#111827;--sf2:#1e293b;--sf3:#243049;--blue:#3b82f6;--cyan:#06b6d4;--purple:#7c3aed;--amber:#d97706;--green:#059669;--slate:#475569;--teal:#0d9488;--yellow:#f59e0b;--text:#f1f5f9;--muted:#94a3b8;--bd:rgba(255,255,255,.08)}
+*{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-size:14px;line-height:1.5}
+.topbar{position:sticky;top:0;z-index:100;background:rgba(10,15,30,.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:52px;gap:16px}
+.topbar-left{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.tb-title{font-size:15px;font-weight:700}.tb-title .ac{color:var(--blue)}
+.tb-ver{font-size:11px;color:var(--muted);background:var(--sf2);padding:2px 8px;border-radius:4px;border:1px solid var(--bd)}
+.tb-nav{display:flex;gap:4px}
+.nb{background:none;border:none;color:var(--muted);padding:6px 14px;cursor:pointer;border-radius:6px;font-size:13px;font-weight:500;transition:all .15s;text-decoration:none;display:inline-block}
+.nb:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.diag-sec{padding:20px 24px 4px;overflow-x:auto}
+.sec-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px}
+.flow{display:flex;flex-direction:column;gap:10px;min-width:1050px;padding-bottom:20px}
+.frow{display:flex;align-items:center;min-height:44px}
+.rl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;width:80px;flex-shrink:0;line-height:1.3}
+.rnodes{display:flex;align-items:center;flex-wrap:wrap;row-gap:8px}
+.node{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:8px;border:2px solid;cursor:pointer;white-space:nowrap;font-size:12px;font-weight:600;transition:all .2s;background:var(--sf);user-select:none}
+.node:hover{filter:brightness(1.2);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.node.act{box-shadow:0 0 0 3px currentColor}
+@keyframes np{0%{box-shadow:0 0 0 0 currentColor}50%{box-shadow:0 0 0 8px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.node.pulse{animation:np .4s ease}
+.np{color:var(--purple);border-color:var(--purple)}.na{color:var(--amber);border-color:var(--amber)}.nb2{color:var(--blue);border-color:var(--blue)}.ng{color:var(--green);border-color:var(--green)}.ns{color:var(--slate);border-color:var(--slate)}.nt{color:var(--teal);border-color:var(--teal)}.ny{color:var(--yellow);border-color:var(--yellow)}
+.bdg{font-size:9px;font-weight:800;padding:2px 5px;border-radius:3px;letter-spacing:.04em;text-transform:uppercase}
+.bc{background:#1d4ed8;color:#bfdbfe}.bn{background:#7f1d1d;color:#fca5a5}.bs{background:#365314;color:#bef264}.bk{background:rgba(71,85,105,.4);color:#94a3b8}.bnb{background:rgba(5,150,105,.2);color:#34d399}
+.arrd{width:28px;height:2px;background:repeating-linear-gradient(90deg,var(--cyan) 0,var(--cyan) 5px,transparent 5px,transparent 10px);background-size:20px 100%;animation:df 1.2s linear infinite;position:relative;flex-shrink:0}
+.arrd::after{content:'';position:absolute;right:-5px;top:-4px;border:5px solid transparent;border-left:6px solid var(--cyan)}
+@keyframes df{from{background-position:0 0}to{background-position:20px 0}}
+.bwrap{margin-left:80px;display:flex;flex-direction:column;gap:5px;margin-top:2px}
+.brow{display:flex;align-items:center;gap:0}
+.blbl{font-size:10px;font-weight:800;padding:3px 7px;border-radius:4px;margin-right:8px;min-width:66px;text-align:center;flex-shrink:0}
+.bly{background:rgba(5,150,105,.2);color:#34d399}.bln{background:rgba(71,85,105,.3);color:#94a3b8}
+.parwrap{margin-left:80px;display:flex;align-items:center;gap:10px;border:1px solid rgba(59,130,246,.25);border-radius:10px;padding:10px 16px;background:rgba(59,130,246,.03);position:relative}
+.parlbl{position:absolute;top:-9px;left:12px;font-size:10px;font-weight:700;color:var(--blue);background:var(--bg);padding:0 6px;text-transform:uppercase;letter-spacing:.06em}
+.pardiv{width:1px;height:36px;background:var(--bd);flex-shrink:0}
+.floatrow{margin-left:80px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:6px}
+.fnode{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:20px;border:1px dashed;cursor:pointer;font-size:11px;font-weight:600;transition:all .2s;background:var(--sf);user-select:none}
+.fnode:hover{filter:brightness(1.3);transform:translateY(-1px)}
+.fnlbl{font-size:9px;color:var(--muted);font-weight:400;margin-left:2px}
+.povl{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;backdrop-filter:blur(3px)}
+.povl.open{display:block}
+.panel{position:fixed;top:0;right:-440px;width:440px;height:100vh;background:var(--sf);border-left:1px solid var(--bd);z-index:201;transition:right .3s cubic-bezier(.16,1,.3,1);display:flex;flex-direction:column;overflow:hidden}
+.panel.open{right:0}
+.phdr{display:flex;align-items:flex-start;justify-content:space-between;padding:20px 20px 16px;border-bottom:1px solid var(--bd);flex-shrink:0;gap:12px}
+.phdrl{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
+.ptitle{font-size:16px;font-weight:700;color:var(--text);line-height:1.3}
+.ptyb{display:inline-block;font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.04em}
+.pclose{background:none;border:1px solid var(--bd);color:var(--muted);width:30px;height:30px;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;transition:all .15s;line-height:1}
+.pclose:hover{color:var(--text);border-color:rgba(255,255,255,.3)}
+.pbody{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px}
+.ps{display:flex;flex-direction:column;gap:5px}
+.psl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.psb{color:var(--text);font-size:13px;line-height:1.6}
+.psb p{margin-bottom:6px}.psb p:last-child{margin-bottom:0}
+.psb ul{padding-left:16px;display:flex;flex-direction:column;gap:3px}
+.psb li{color:var(--muted)}.psb li b{color:var(--text)}
+.pex{background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);border-radius:8px;padding:12px;font-size:12px;color:var(--muted);font-style:italic;line-height:1.5}
+.pex b{color:var(--blue);font-style:normal}
+.pcmds{display:flex;flex-direction:column;gap:6px}
+.pcmd{display:flex;align-items:center;gap:8px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:8px 10px}
+.pcmd code{flex:1;font-family:'JetBrains Mono','Fira Code',monospace;font-size:11px;color:var(--cyan)}
+.cpbtn{background:none;border:none;color:var(--muted);cursor:pointer;padding:2px 6px;font-size:11px;border-radius:4px;transition:all .15s;flex-shrink:0}
+.cpbtn:hover{color:var(--text);background:rgba(255,255,255,.1)}.cpbtn.ok{color:var(--green)}
+.plnks{display:flex;flex-wrap:wrap;gap:6px}
+.plnk{background:none;border:1px solid var(--bd);color:var(--blue);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px;transition:all .15s}
+.plnk:hover{border-color:var(--blue);background:rgba(59,130,246,.1)}
+.dtree{display:flex;flex-direction:column;gap:8px}
+.di{background:var(--sf2);border-radius:8px;padding:10px 12px;border-left:3px solid var(--blue)}
+.di h4{font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px}
+.db{display:flex;gap:6px;margin-top:3px;font-size:11px;align-items:flex-start}
+.dy{color:#34d399;font-weight:800;min-width:40px;flex-shrink:0}.dno{color:#94a3b8;font-weight:800;min-width:40px;flex-shrink:0}
+.db span{color:var(--muted);line-height:1.4}
+.dim{font-size:11px;color:var(--muted);margin-top:5px;font-style:italic}
+.tabwrap{border-top:1px solid var(--bd)}
+.tsec{padding:40px 24px;border-bottom:1px solid var(--bd)}
+.tsec h2{font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px}
+.tsec .sub{font-size:13px;color:var(--muted);margin-bottom:28px}
+.slbl{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;margin-top:24px}
+.slbl:first-of-type{margin-top:0}
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+.skcard,.plcard{background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:16px;transition:border-color .2s}
+.skcard:hover{border-color:rgba(59,130,246,.4)}.plcard:hover{border-color:rgba(6,182,212,.4)}
+.chdr{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.cname{font-family:'JetBrains Mono','Fira Code',monospace;font-size:13px;font-weight:700}
+.skcard .cname{color:var(--blue)}.plcard .cname{color:var(--cyan)}
+.ctb{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;text-transform:uppercase;margin-left:auto}
+.ctm{background:rgba(124,58,237,.2);color:#a78bfa}.ctd{background:rgba(59,130,246,.2);color:#93c5fd}.cta{background:rgba(13,148,136,.2);color:#5eead4}.ctw{background:rgba(71,85,105,.2);color:#94a3b8}.cts{background:rgba(107,114,128,.15);color:#9ca3af}
+.cpurp{font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5}
+.cmeta{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.cmr{display:flex;gap:6px;font-size:11px}
+.cmk{color:var(--muted);font-weight:600;min-width:58px;flex-shrink:0}.cmv{color:var(--text)}
+.sfbtn{background:none;border:1px solid var(--bd);color:var(--blue);padding:4px 10px;border-radius:5px;cursor:pointer;font-size:10px;font-weight:700;transition:all .15s;text-transform:uppercase;letter-spacing:.05em}
+.sfbtn:hover{border-color:var(--blue);background:rgba(59,130,246,.08)}
+.plint{font-size:11px;color:var(--text);padding:6px 10px;background:var(--sf2);border-radius:5px;border-left:2px solid var(--cyan);line-height:1.5}
+.exlist{display:flex;flex-direction:column;gap:18px}
+.excard{background:var(--sf);border:1px solid var(--bd);border-radius:10px;overflow:hidden}
+.exhdr{padding:12px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--bd);background:rgba(255,255,255,.02)}
+.exnum{width:24px;height:24px;background:var(--blue);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.extit{font-size:14px;font-weight:700;color:var(--text)}
+.exbody{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.expath{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.exstep{font-size:11px;padding:3px 8px;border-radius:4px;font-weight:600;background:var(--sf2);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.exarr{color:var(--muted);font-size:12px}
+.exdet{font-size:12px;color:var(--muted);line-height:1.6}
+.excode{background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:10px 12px;font-family:'JetBrains Mono','Fira Code',monospace;font-size:11px;color:var(--cyan);white-space:pre;overflow-x:auto;line-height:1.6}
+.cgrps{display:flex;flex-direction:column;gap:28px}
+.cgrp{display:flex;flex-direction:column;gap:10px}
+.cgtit{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding-bottom:8px;border-bottom:1px solid var(--bd)}
+.cent{display:flex;flex-direction:column;gap:4px}
+.cdesc{font-size:11px;color:var(--muted)}
+.cblk{display:flex;align-items:center;gap:8px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:8px 12px}
+.cblk code{flex:1;font-family:'JetBrains Mono','Fira Code',monospace;font-size:12px;color:var(--cyan)}
+.qrgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px}
+.qrc{background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:16px}
+.qrtit{font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.qrtit .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.qrtbl{width:100%;border-collapse:collapse;font-size:11px}
+.qrtbl th{text-align:left;color:var(--muted);font-weight:600;padding:5px 8px;border-bottom:1px solid var(--bd)}
+.qrtbl td{padding:5px 8px;color:var(--text);vertical-align:top}
+.qrtbl tr:not(:last-child) td{border-bottom:1px solid rgba(255,255,255,.04)}
+.yc{color:#34d399}.nc{color:#94a3b8}.hc{color:var(--blue);font-weight:600}
+.chkl{display:flex;flex-direction:column;gap:8px}
+.ci{display:flex;align-items:flex-start;gap:10px;font-size:12px;color:var(--muted)}
+.ci .chk{width:14px;height:14px;border:1.5px solid var(--green);border-radius:3px;flex-shrink:0;margin-top:2px}
+.nlist{display:flex;flex-direction:column;gap:6px}
+.ni{display:flex;align-items:flex-start;gap:10px;font-size:12px;color:var(--muted)}
+.ni .n{color:var(--blue);font-weight:700;font-size:11px;min-width:18px;flex-shrink:0}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--sf3);border-radius:3px}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="tb-title"><span class="ac">MetalShopping</span> Workflow Guide</div>
+    <div class="tb-ver">v2026-03-24</div>
+  </div>
+  <nav class="tb-nav">
+    <a class="nb" href="#skills">Skills &amp; Plugins</a>
+    <a class="nb" href="#examples">Examples</a>
+    <a class="nb" href="#commands">Commands</a>
+    <a class="nb" href="#quickref">Quick Reference</a>
+  </nav>
+</header>
+
+<div class="povl" id="ovl" onclick="closePanel()"></div>
+<div class="panel" id="panel">
+  <div class="phdr">
+    <div class="phdrl">
+      <div class="ptitle" id="ptitle"></div>
+      <span class="ptyb" id="ptyb"></span>
+    </div>
+    <button class="pclose" onclick="closePanel()" title="Close (Esc)">&#x2715;</button>
+  </div>
+  <div class="pbody" id="pbody"></div>
+</div>
+
+<!-- ==================== PANEL TEMPLATES ==================== -->
+
+<template id="tpl-session-start" data-title="Session Start" data-type="Session Ritual" data-tbg="rgba(124,58,237,.2)" data-tc="#a78bfa" data-links="session-read">
+  <div class="ps"><div class="psl">What it is</div><div class="psb"><p>Mandatory ritual fired by the SessionStart hook at the start of every Claude Code session. Establishes full context before any code is touched.</p></div></div>
+  <div class="ps"><div class="psl">When it fires</div><div class="psb"><ul><li>New conversation opened in Claude Code</li><li>Session resumed after context compaction</li></ul></div></div>
+  <div class="ps"><div class="psl">What happens</div><div class="psb"><ul><li>SessionStart hook fires automatically</li><li>Claude reads tasks/lessons.md, tasks/todo.md, MEMORY.md in order</li><li>Produces STATE / NEXT / WATCH briefing</li><li>Waits for user direction — no code changes before this completes</li></ul></div></div>
+  <div class="pex"><b>Example:</b> You open Claude Code in the morning. Before you say anything, Claude reads the three files and outputs: "STATE: Track B in-progress (Spotlight parity). NEXT: Run diff vs legacy. WATCH: Lesson 27."</div>
+</template>
+
+<template id="tpl-session-read" data-title="Read lessons + todo + MEMORY.md" data-type="Session Ritual" data-tbg="rgba(124,58,237,.2)" data-tc="#a78bfa" data-links="session-start session-output">
+  <div class="ps"><div class="psl">What it is</div><div class="psb"><p>Three mandatory reads at every session start. Each serves a distinct purpose and must be read before any planning or code work begins.</p></div></div>
+  <div class="ps"><div class="psl">What happens</div><div class="psb"><ul><li><b>tasks/lessons.md</b> — internalize every rule before touching code</li><li><b>tasks/todo.md</b> — determine STATE: clean / in-progress / blocked</li><li><b>MEMORY.md</b> — recover cross-session facts (architecture decisions, user preferences)</li></ul></div></div>
+  <div class="pex"><b>Example:</b> Lesson 3 (Outbox atomicity) re-internalized. todo.md shows T5 in-progress on Track B. MEMORY.md confirms the T1→T7 chain preference.</div>
+</template>
+
+<template id="tpl-session-output" data-title="STATE / NEXT / WATCH Output" data-type="Session Ritual" data-tbg="rgba(124,58,237,.2)" data-tc="#a78bfa" data-links="session-read session-wait">
+  <div class="ps"><div class="psl">What it is</div><div class="psb"><p>Three-part structured briefing produced after reading the session files. Always in this exact format.</p></div></div>
+  <div class="ps"><div class="psl">Structure</div><div class="psb"><ul><li><b>STATE:</b> clean / in-progress (task name) / blocked (blocker)</li><li><b>NEXT:</b> the single most important action right now</li><li><b>WATCH:</b> 1–2 lessons from lessons.md relevant to current work</li></ul></div></div>
+  <div class="pex"><b>Example output:</b><br>STATE: in-progress — Track B Spotlight parity (visual audit pending)<br>NEXT: Run diff against legacy_snapshot for remaining CSS deltas<br>WATCH: Lesson 27 (diff vs legacy), Lesson 5 (SDK-first data access)</div>
+</template>
+
+<template id="tpl-session-wait" data-title="Wait for direction" data-type="Session Ritual" data-tbg="rgba(124,58,237,.2)" data-tc="#a78bfa" data-links="session-output ms-task">
+  <div class="ps"><div class="psl">What it is</div><div class="psb"><p>After the briefing, $ms stops completely. No files changed, no plans written, no implementation until the user gives direction. Auto-proceeding on assumed next steps is a known failure mode.</p></div></div>
+</template>
+
+<template id="tpl-ms-task" data-title="$ms receives task" data-type="Task Intake" data-tbg="rgba(217,119,6,.2)" data-tc="#fcd34d" data-links="4decisions analytics-bypass">
+  <div class="ps"><div class="psl">What it is</div><div class="psb"><p>$ms is the master orchestrator. Every task enters here. It checks for analytics scope first, then makes 4 decisions before any T-stage begins.</p></div></div>
+  <div class="ps"><div class="psl">What happens</div><div class="psb"><ul><li>User describes the task</li><li>$ms checks for analytics scope (feature-analytics, analytics_serving, analytics_worker, 11 analytics surfaces)</li><li>If analytics → route to $analytics-orchestrator (never call sub-agents directly from $ms)</li><li>Otherwise → proceed to 4 Decisions, log to tasks/todo.md</li></ul></div></div>
+  <div class="pex"><b>Example:</b> "Add procurement endpoint." → Not analytics → 4 Decisions → Plan YES (new module) → Opus for T1 → Codex on T3a/T5.5 → full T-stage chain.</div>
+</template>
+
+<template id="tpl-4decisions" data-title="4 Decisions" data-type="Decision Gate" data-tbg="rgba(217,119,6,.2)" data-tc="#fcd34d" data-links="plan-write t1 analytics-bypass">
+  <div class="ps"><div class="psl">What it is</div><div class="psb"><p>Four explicit decisions before any T-stage. All logged to tasks/todo.md. These decisions determine the full execution shape of the task.</p></div></div>
+  <div class="dtree">
+    <div class="di"><h4>1 — Plan mode?</h4>
+      <div class="db"><span class="dy">YES</span><span>New module, &gt;2 files, arch decision, touches auth/tenant/outbox → write plan → wait for approval</span></div>
+      <div class="db"><span class="dno">NO</span><span>Single-file fix, trivial correction, boilerplate with complete pattern → straight to T-stages</span></div>
+      <div class="dim">New Go module → YES. Single CSS fix → NO.</div>
+    </div>
+    <div class="di"><h4>2 — Which model?</h4>
+      <div class="db"><span class="dy">Opus</span><span>T1 new domain, T6 ADR, critical task (auth/tenant/outbox files), Sonnet failed on this instance</span></div>
+      <div class="db"><span class="dno">Sonnet</span><span>Everything else (default)</span></div>
+      <div class="dim">T1 new domain → Opus. Bug fix → Sonnet.</div>
+    </div>
+    <div class="di"><h4>3 — Claude or Codex?</h4>
+      <div class="db"><span class="dy">Codex</span><span>Plan complete (no TBD) + qualifies for T3a/T5-boilerplate/T5.5 + files not critical</span></div>
+      <div class="db"><span class="dno">Claude</span><span>All orchestration, planning, review, arch decisions, all critical files</span></div>
+      <div class="dim">T3a adapters, plan complete → Codex. T3b outbox → always Claude.</div>
+    </div>
+    <div class="di"><h4>4 — Parallel dispatch?</h4>
+      <div class="db"><span class="dy">YES</span><span>2+ independent subtasks → dispatch simultaneously. T7+Review always parallel. Research always subagent.</span></div>
+      <div class="db"><span class="dno">NO</span><span>Sequential dependency chain</span></div>
+    </div>
+  </div>
+  <div class="pex"><b>Example log:</b> Plan: YES (new module). Model: Opus (T1). Codex: YES for T3a + T5.5. Parallel: YES — T7+Review at end.</div>
+</template>
+
+<template id="tpl-analytics-bypass" data-title="$analytics-orchestrator routing" data-type="Agent Routing" data-tbg="rgba(13,148,136,.2)" data-tc="#5eead4" data-links="ms-task">
+  <div class="ps"><div class="psl">What it is</div><div class="psb"><p>Analytics tasks bypass the main T-stage chain and route directly to $analytics-orchestrator. $ms never calls analytics sub-agents directly.</p></div></div>
+  <div class="ps"><div class="psl">When it fires</div><div class="psb"><ul><li>Task touches packages/feature-analytics</li><li>Task touches analytics_serving Go module</li><li>Task touches analytics_worker</li><li>Task touches any of the 11 analytics read surfaces</li></ul></div></div>
+  <div class="pex"><b>Example:</b> "Add margin band filter to Produtos table" → route to $analytics-orchestrator → routes to $analytics-surfaces sub-agent.</div>
+</template>
+
+<template id="tpl-plan-write" data-title="Write plan to todo.md" data-type="Plan Mode" data-tbg="rgba(5,150,105,.2)" data-tc="#34d399" data-links="plan-review t1">
+  <div class="ps"><div class="psl">What it is</div><div class="psb"><p>When plan mode is YES, $ms writes a complete plan to tasks/todo.md before starting any T-stage. Fully specified — all paths named, constraints listed, no TBD.</p></div></div>
+  <div class="ps"><div class="psl">Plan mode triggers (YES)</div><div class="psb"><ul><li>New Go module being created</li><li>More than 2 files will change</li><li>Architectural decision involved</li><li>Touches auth, tenant isolation, or outbox patterns</li></ul></div></div>
+  <div class="pex"><b>YES:</b> "New procurement module" → full T1→T7 chain planned.<br><b>NO:</b> "Fix padding on hero card" → straight to T5.</div>
+</template>
+
+<template id="tpl-plan-review" data-title="User: approve / revise / reject" data-type="Plan Mode" data-tbg="rgba(5,150,105,.2)" data-tc="#34d399" data-links="plan-write t1">
+  <div class="ps"><div class="psl">What it is</div><div class="psb"><p>After writing the plan, $ms presents it and waits. Implementation never starts without explicit approval.</p></div></div>
+  <div class="ps"><div class="psl">Three outcomes</div><div class="psb"><ul><li><b>Approve:</b> $ms starts T1 (first applicable T-stage)</li><li><b>Revise:</b> $ms rewrites the affected steps and presents again</li><li><b>Reject:</b> task is closed, no implementation begins</li></ul></div></div>
+</template>
+
+<template id="tpl-t1" data-title="T1 — Contract" data-type="T-stage" data-tbg="rgba(59,130,246,.2)" data-tc="#93c5fd" data-links="t2 t4">
+  <div class="ps"><div class="psl">What it is</div><div class="psb"><p>Source-of-truth stage. Authors or extends OpenAPI specs, JSON Schema payloads, event schemas, and governance schemas. Generated SDK is never touched manually.</p></div></div>
+  <div class="ps"><div class="psl">What happens</div><div class="psb"><ul><li>Author/update contracts/api/openapi/ (OpenAPI 3.0)</li><li>Update contracts/api/jsonschema/ if payload schemas change</li><li>Update contracts/events/ if event schemas change</li><li>Validate all contracts before proceeding</li></ul></div></div>
+  <div class="pcmds">
+    <div class="pcmd"><code>./scripts/validate_contracts.ps1 -Scope all</code><button class="cpbtn" onclick="cp(this,'./scripts/validate_contracts.ps1 -Scope all')">Copy</button></div>
+  </div>
+  <div class="pex"><b>Example:</b> New "procurement" domain → contracts/api/openapi/procurement.yaml → define all endpoints → validate → proceed to T2.</div>
+</template>
+
+<template id="tpl-t2" data-title="T2 — Backend Domain" data-type="T-stage" data-tbg="rgba(59,130,246,.2)" data-tc="#93c5fd" data-links="t1 t3a t3b">
+  <div class="ps"><div class="psl">What it is</div><div class="psb"><p>Backend business logic. Implements domain entities, use-cases, and port interfaces. Strict layer: domain → application → ports. Adapters are T3a.</p></div></div>
+  <div class="ps"><div class="psl">What happens</div><div class="psb"><ul><li>Create internal/modules/&lt;name&gt;/domain/ — entities, value objects</li><li>Create internal/modules/&lt;name&gt;/application/ — command handlers</li><li>Create internal/modules/&lt;name&gt;/ports/ — in + out port interfaces</li><li>Register module in composition_modules.go</li></ul></div></div>
+  <div class="pcmds">
+    <div class="pcmd"><code>go test ./apps/server_core/internal/modules/&lt;module&gt;/...</code><button class="cpbtn" onclick="cp(this,'go test ./apps/server_core/internal/modules/<module>/...')">Copy</button></div>
+  </div>
+</template>
+
+<template id="tpl-t3a" data-title="T3a — Adapters + Transport" data-type="T-stage" data-tbg="rgba(59,130,246,.2)" data-tc="#93c5fd" data-links="t2 t3b">
+  <div class="ps"><div class="psl">What it is</div><div class="psb"><p>Postgres adapters and HTTP transport handlers. Qualifies for Codex when plan is complete and files are non-critical.</p></div></div>
+  <div class="ps"><div class="psl">Codex handoff process</div><div class="psb"><ul><li>Write tasks/codex-handoff.md: task, files, constraints, pattern reference, definition of done</li><li>Codex loads codex-handoff.md + tasks/lessons.md before writing</li><li>Claude reviews output against handoff constraints</li><li>Violations: Claude fixes → lesson filter runs</li><li>Commit with <code>reviewed-by: claude</code> trailer → delete handoff file</li></ul></div></div>
+  <div class="pex"><b>Handoff must specify:</b> Use pgdb.BeginTenantTx on every query. Use current_tenant_id() in every WHERE. Call PrincipalFromContext first in every handler.</div>
+</template>
+
+<template id="tpl-t3b" data-title="T3b — Outbox + Readmodel" data-type="T-stage" data-tbg="rgba(59,130,246,.2)" data-tc="#93c5fd" data-links="t3a t35">
+  <div class="ps"><div class="psl">What it is</div><div class="psb"><p>Wires outbox event publishing and builds read models. <b>ALWAYS Claude, NEVER Codex</b> — outbox atomicity is a critical invariant that cannot be delegated.</p></div></div>
+  <div class="ps"><div class="psl">Absolute rules</div><div class="psb"><ul><li>outbox.AppendInTx inside the same transaction as INSERT — never after Commit</li><li>Define event in the events/ layer</li><li>Build readmodel/ for denormalized query views</li></ul></div></div>
+  <div class="pex"><b>Why never Codex:</b> Lesson 3 — outbox must be atomic with writes. If AppendInTx is called after Commit, events can be lost silently.</div>
+</template>
+
+<template id="tpl-t35" data-title="T3.5 — DB Migration" data-type="T-stage" data-tbg="rgba(59,130,246,.2)" data-tc="#93c5fd" data-links="t3b t4">
+  <div class="ps"><div class="psl">What it is</div><div class="psb"><p>Authors the Postgres SQL migration file(s). Migrations must be tenant-safe and idempotent — safe to re-run.</p></div></div>
+  <div class="ps"><div class="psl">Requirements</div><div class="psb"><ul><li>Every new table: tenant_id NOT NULL REFERENCES tenants(id)</li><li>Use IF NOT EXISTS / ON CONFLICT for idempotency</li><li>Verify migration runs cleanly against local DB</li></ul></div></div>
+</template>
+
+<template id="tpl-t4" data-title="T4 — SDK Generation" data-type="T-stage" data-tbg="rgba(59,130,246,.2)" data-tc="#93c5fd" data-links="t1 t5">
+  <div class="ps"><div class="psl">What it is</div><div class="psb"><p>Runs the PowerShell script that regenerates the SDK output directories from contracts. <b>This is a script execution stage, not AI generation.</b> No AI writes the generated code — the script does.</p></div></div>
+  <div class="ps"><div class="psl">Critical rule</div><div class="psb"><p>The auto-generated SDK directories are <b>NEVER edited manually</b>. The CI rejects PRs that manually touch these directories (unless labeled "codegen"). Source of truth is always the contracts.</p></div></div>
+  <div class="pcmds">
+    <div class="pcmd"><code>./scripts/generate_contract_artifacts.ps1 -Target all</code><button class="cpbtn" onclick="cp(this,'./scripts/generate_contract_artifacts.ps1 -Target all')">Copy</button></div>
+    <div class="pcmd"><code>./scripts/validate_contracts.ps1 -Scope all</code><button class="cpbtn" onclick="cp(this,'./scripts/validate_contracts.ps1 -Scope all')">Copy</button></div>
+  </div>
+</template>
+
+<template id="tpl-t5" data-title="T5 — Frontend" data-type="T-stage" data-tbg="rgba(59,130,246,.2)" data-tc="#93c5fd" data-links="t4 t55">
+  <div class="ps"><div class="psl">What it is</div><div class="psb"><p>Frontend implementation. Split between Claude (architecture, SDK wiring) and Codex (boilerplate). All data via the generated SDK — never raw fetch().</p></div></div>
+  <div class="ps"><div class="psl">Absolute frontend rules</div><div class="psb"><ul><li>Data only via @metalshopping/sdk-runtime hooks — no raw fetch()</li><li>Design tokens only — no hardcoded hex values</li><li>Check packages/ui/src/index.ts before creating any component</li><li>Every data-fetching component: loading + error + empty states</li><li>Async pattern: useEffect + cancelled flag</li></ul></div></div>
+  <div class="pcmds">
+    <div class="pcmd"><code>npm run web:typecheck</code><button class="cpbtn" onclick="cp(this,'npm run web:typecheck')">Copy</button></div>
+    <div class="pcmd"><code>npm run web:build</code><button class="cpbtn" onclick="cp(this,'npm run web:build')">Copy</button></div>
+  </div>
+</template>
+
+<template id="tpl-t55" data-title="T5.5 — Tests" data-type="T-stage" data-tbg="rgba(59,130,246,.2)" data-tc="#93c5fd" data-links="t5 t6 review">
+  <div class="ps"><div class="psl">What it is</div><div class="psb"><p>Frontend test suite (Vitest). Qualifies for Codex when test patterns are established and plan is complete.</p></div></div>
+  <div class="ps"><div class="psl">What happens</div><div class="psb"><ul><li>Write tasks/codex-handoff.md with test file paths and patterns to follow</li><li>Codex writes tests following existing patterns</li><li>Claude reviews: coverage, assertions, mock shape accuracy (Lesson 16: semantic keys, not human labels)</li></ul></div></div>
+  <div class="pcmds">
+    <div class="pcmd"><code>npm run web:test</code><button class="cpbtn" onclick="cp(this,'npm run web:test')">Copy</button></div>
+    <div class="pcmd"><code>npm --workspace @metalshopping/web run test:ci</code><button class="cpbtn" onclick="cp(this,'npm --workspace @metalshopping/web run test:ci')">Copy</button></div>
+  </div>
+</template>
+
+<template id="tpl-claudewatch" data-title="claudewatch" data-type="Interrupt Monitor" data-tbg="rgba(245,158,11,.2)" data-tc="#fcd34d" data-links="t3a t5 posttask">
+  <div class="ps"><div class="psl">What it is</div><div class="psb"><p>Real-time monitoring plugin connected to all T-stage writes via PostToolUse hook. When a violation signal fires, execution pauses immediately.</p></div></div>
+  <div class="ps"><div class="psl">Interrupt response</div><div class="psb"><ul><li><b>Confirmed violation:</b> fix it → run lesson quality filter → continue</li><li><b>False positive:</b> log the dismissal reason and continue</li><li>Stage does NOT resume until Claude explicitly clears the interrupt</li></ul></div></div>
+  <div class="ps"><div class="psl">Key MCP tools</div><div class="psb"><ul><li>get_project_health — session start baseline</li><li>get_session_dashboard — live metrics (drift, cost, errors)</li><li>get_drift_signal — detect stuck exploration loops</li><li>get_blockers — known issues with solutions</li><li>extract_current_session_memory — checkpoint before risky ops</li></ul></div></div>
+  <div class="pcmds">
+    <div class="pcmd"><code>claudewatch scan</code><button class="cpbtn" onclick="cp(this,'claudewatch scan')">Copy</button></div>
+    <div class="pcmd"><code>claudewatch gaps</code><button class="cpbtn" onclick="cp(this,'claudewatch gaps')">Copy</button></div>
+  </div>
+</template>
+
+<template id="tpl-t6" data-title="T6 — ADR" data-type="T-stage" data-tbg="rgba(71,85,105,.2)" data-tc="#94a3b8" data-links="t55 t7 review">
+  <div class="ps"><div class="psl">What it is</div><div class="psb"><p>Architecture Decision Record. Written only when a significant arch decision was made. Uses Opus. Runs parallel with T7 and Review. Committing an ADR triggers a $workflow-guardian run before the next task.</p></div></div>
+  <div class="ps"><div class="psl">Write when</div><div class="psb"><ul><li>New architectural pattern introduced</li><li>Significant trade-off decision made</li><li>Auth, tenant, or outbox pattern changed</li><li><b>Not for:</b> bug fixes, CSS changes, boilerplate, extending existing patterns</li></ul></div></div>
+  <div class="pex"><b>Example:</b> Deciding to use pgdb.BeginTenantTx for all adapter queries → ADR-001-tenant-transaction-scope.md</div>
+</template>
+
+<template id="tpl-t7" data-title="T7 — Docs Update" data-type="T-stage" data-tbg="rgba(5,150,105,.2)" data-tc="#34d399" data-links="t6 review posttask">
+  <div class="ps"><div class="psl">What it is</div><div class="psb"><p>Non-blocking documentation update. Dispatched as a subagent ($metalshopping-docs) parallel to Review. Does not block the commit gate if it fails.</p></div></div>
+  <div class="ps"><div class="psl">What happens</div><div class="psb"><ul><li>$ms dispatches $metalshopping-docs as a non-blocking subagent</li><li>Reads the task delta and updates only affected doc sections — no wholesale rewrites</li></ul></div></div>
+  <div class="pex"><b>Example:</b> New procurement module → updates ARCHITECTURE.md module table and PROGRESS.md. Only those two sections.</div>
+</template>
+
+<template id="tpl-review" data-title="Review Gate" data-type="Gate" data-tbg="rgba(217,119,6,.15)" data-tc="#fcd34d" data-links="t6 t7 posttask">
+  <div class="ps"><div class="psl">What it is</div><div class="psb"><p>Blocking code review before every commit. No task completes without passing. Critical tasks (auth/tenant/outbox) require user approval in addition to Claude review.</p></div></div>
+  <div class="ps"><div class="psl">Review types</div><div class="psb"><ul><li><b>Standard:</b> Claude reviews → commit with <code>reviewed-by: claude</code></li><li><b>High-stakes:</b> Claude + user approve → both trailers in commit</li><li><b>Violation:</b> Claude fixes directly → lesson filter runs on the fix</li></ul></div></div>
+</template>
+
+<template id="tpl-posttask" data-title="Post-task sequence" data-type="Post-task" data-tbg="rgba(71,85,105,.2)" data-tc="#94a3b8" data-links="claudemem guardian">
+  <div class="ps"><div class="psl">What it is</div><div class="psb"><p>Six-step mandatory sequence after every task via the PostTaskComplete hook.</p></div></div>
+  <div class="ps"><div class="psl">The 6 steps</div><div class="psb"><ul><li><b>1.</b> Mark [x] in tasks/todo.md</li><li><b>2.</b> Lesson quality filter evaluation</li><li><b>3.</b> Memory evaluation → update MEMORY.md if applicable</li><li><b>4.</b> Commit via commit-commands: &lt;type&gt;(&lt;scope&gt;): &lt;what&gt;</li><li><b>5.</b> claude-md-management updates CLAUDE.md</li><li><b>6.</b> claude-mem compresses session context</li></ul></div></div>
+  <div class="ps"><div class="psl">Lesson quality filter</div><div class="psb"><p>Write to lessons.md ONLY if ALL three: (1) mistake causes a bug if repeated, (2) concerns code logic/architecture — NOT UI appearance, (3) recurring pattern, not a one-off fix.</p></div></div>
+  <div class="pcmds"><div class="pcmd"><code>/commit</code><button class="cpbtn" onclick="cp(this,'/commit')">Copy</button></div></div>
+</template>
+
+<template id="tpl-claudemem" data-title="claude-mem compression" data-type="Post-task" data-tbg="rgba(71,85,105,.2)" data-tc="#94a3b8" data-links="posttask">
+  <div class="ps"><div class="psl">What it is</div><div class="psb"><p>The claude-mem plugin compresses session context at the end of every task, preserving critical facts across the context window boundary.</p></div></div>
+  <div class="ps"><div class="psl">When it runs</div><div class="psb"><ul><li>Step 6 of post-task sequence (automatic)</li><li>Before approaching context limits in long sessions</li><li>Before any destructive git operations</li></ul></div></div>
+  <div class="pex"><b>Recovery example:</b> Context was compacted mid-session. At next session start: "T5 in-progress on Track B, visual parity audit pending. Last commit: b7af658."</div>
+</template>
+
+<template id="tpl-guardian" data-title="$workflow-guardian" data-type="Agent" data-tbg="rgba(71,85,105,.2)" data-tc="#94a3b8" data-links="posttask t6">
+  <div class="ps"><div class="psl">What it is</div><div class="psb"><p>Inspect-and-report workflow health agent. <b>Never auto-updates anything</b> — reports only. Checks T-stage compliance, lesson accumulation, and ADR alignment.</p></div></div>
+  <div class="ps"><div class="psl">4 trigger conditions</div><div class="psb"><ul><li>ADR committed → run before next task starts</li><li>3+ lessons in same domain → surface in next WATCH briefing</li><li>Every 10 tasks → periodic health check</li><li>/workflow-check → on-demand</li></ul></div></div>
+  <div class="pcmds"><div class="pcmd"><code>/workflow-check</code><button class="cpbtn" onclick="cp(this,'/workflow-check')">Copy</button></div></div>
+  <div class="pex"><b>Report example:</b> "5 lessons in Frontend/tokens domain — consider a shared token baseline. 2 ADRs committed since last check — both followed correct process."</div>
+</template>
+
+<!-- ==================== FLOW DIAGRAM ==================== -->
+<section class="diag-sec">
+  <div class="sec-lbl">Workflow Flow Diagram &mdash; click any node to explore</div>
+  <div class="flow">
+
+    <div class="frow">
+      <div class="rl">Session<br>Ritual</div>
+      <div class="rnodes">
+        <div class="node np" id="n-session-start" onclick="op('session-start')">&#9654; Session Start</div>
+        <div class="arrd"></div>
+        <div class="node np" id="n-session-read" onclick="op('session-read')">Read lessons + todo + MEMORY.md</div>
+        <div class="arrd"></div>
+        <div class="node np" id="n-session-output" onclick="op('session-output')">STATE / NEXT / WATCH</div>
+        <div class="arrd"></div>
+        <div class="node np" id="n-session-wait" onclick="op('session-wait')">Wait for direction</div>
+      </div>
+    </div>
+
+    <div class="frow">
+      <div class="rl">Task<br>Intake</div>
+      <div class="rnodes">
+        <div class="node na" id="n-ms-task" onclick="op('ms-task')">$ms receives task</div>
+        <div class="arrd"></div>
+        <div class="node na" id="n-4decisions" onclick="op('4decisions')">4 Decisions <span class="bdg" style="background:rgba(217,119,6,.2);color:#fcd34d">Plan &middot; Model &middot; Codex &middot; Parallel</span></div>
+        <div style="margin-left:16px">
+          <div class="fnode" id="n-analytics-bypass" style="color:var(--teal);border-color:var(--teal)" onclick="op('analytics-bypass')">
+            &#x21B3; $analytics-orchestrator<span class="fnlbl">analytics tasks only</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bwrap">
+      <div class="brow">
+        <div class="blbl bly">Plan YES</div>
+        <div class="node ng" id="n-plan-write" onclick="op('plan-write')">Write plan to todo.md</div>
+        <div class="arrd"></div>
+        <div class="node na" id="n-plan-review" onclick="op('plan-review')">User: approve / revise / reject</div>
+        <div class="arrd"></div>
+        <div class="node nb2" style="opacity:.55;font-size:11px" onclick="op('t1')">&#x21B3; T1 on approval</div>
+      </div>
+      <div class="brow">
+        <div class="blbl bln">Plan NO</div>
+        <div style="color:var(--muted);font-size:12px;padding:8px 0">&#x21B3; straight to T-stages</div>
+      </div>
+    </div>
+
+    <div class="frow">
+      <div class="rl">T-stages</div>
+      <div class="rnodes">
+        <div class="node nb2" id="n-t1" onclick="op('t1')">T1 Contract</div>
+        <div class="arrd"></div>
+        <div class="node nb2" id="n-t2" onclick="op('t2')">T2 Backend</div>
+        <div class="arrd"></div>
+        <div class="node nb2" id="n-t3a" onclick="op('t3a')">T3a Adapters <span class="bdg bc">Codex</span></div>
+        <div class="arrd"></div>
+        <div class="node nb2" id="n-t3b" onclick="op('t3b')">T3b Outbox+Readmodel <span class="bdg bn">Never Codex</span></div>
+        <div class="arrd"></div>
+        <div class="node nb2" id="n-t35" onclick="op('t35')">T3.5 Migration</div>
+        <div class="arrd"></div>
+        <div class="node nb2" id="n-t4" onclick="op('t4')">T4 SDK Gen <span class="bdg bs">Script</span></div>
+        <div class="arrd"></div>
+        <div class="node nb2" id="n-t5" onclick="op('t5')">T5 Frontend <span class="bdg" style="background:rgba(59,130,246,.2);color:#93c5fd">Split</span></div>
+        <div class="arrd"></div>
+        <div class="node nb2" id="n-t55" onclick="op('t55')">T5.5 Tests <span class="bdg bc">Codex</span></div>
+      </div>
+    </div>
+
+    <div class="floatrow">
+      <div class="fnode ny" id="n-claudewatch" style="border-color:var(--yellow)" onclick="op('claudewatch')">
+        &#9888; claudewatch<span class="fnlbl">interrupt monitor &mdash; all T-stages</span>
+      </div>
+    </div>
+
+    <div class="frow">
+      <div class="rl">Parallel<br>Gate</div>
+      <div class="parwrap">
+        <div class="parlbl">Runs in parallel</div>
+        <div class="node ns" id="n-t6" onclick="op('t6')">T6 ADR <span class="bdg bk">when applicable</span></div>
+        <div class="pardiv"></div>
+        <div class="node ng" id="n-t7" onclick="op('t7')">T7 Docs <span class="bdg bnb">non-blocking</span></div>
+        <div class="pardiv"></div>
+        <div class="node na" id="n-review" onclick="op('review')">Review Gate <span class="bdg bk">blocking</span></div>
+      </div>
+    </div>
+
+    <div class="frow">
+      <div class="rl">Post-task</div>
+      <div class="rnodes">
+        <div class="node ns" id="n-posttask" onclick="op('posttask')">Post-task sequence</div>
+        <div class="arrd"></div>
+        <div class="node ns" id="n-claudemem" onclick="op('claudemem')">claude-mem compression</div>
+      </div>
+    </div>
+
+    <div class="floatrow">
+      <div class="fnode ns" id="n-guardian" style="border-color:var(--slate)" onclick="op('guardian')">
+        $workflow-guardian<span class="fnlbl">ADR committed &middot; 3+ lessons &middot; 10 tasks &middot; /workflow-check</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ==================== TABS ==================== -->
+<div class="tabwrap">
+
+  <section class="tsec" id="skills">
+    <h2>Skills &amp; Plugins</h2>
+    <p class="sub">Custom skills (agent routing) and installed plugins</p>
+
+    <div class="slbl">Custom Skills</div>
+    <div class="cgrid">
+      <div class="skcard">
+        <div class="chdr"><span class="cname">$ms</span><span class="ctb ctm">Master Orchestrator</span></div>
+        <div class="cpurp">Entry point for every task. 4 decisions before any T-stage. Never calls analytics agents directly.</div>
+        <div class="cmeta">
+          <div class="cmr"><span class="cmk">Invoke</span><span class="cmv">Every task by default</span></div>
+          <div class="cmr"><span class="cmk">Inputs</span><span class="cmv">Task description from user</span></div>
+          <div class="cmr"><span class="cmk">Outputs</span><span class="cmv">Decision log in todo.md + executed T-stage chain</span></div>
+        </div>
+        <button class="sfbtn" onclick="sif('ms-task')">See in flow &#x2197;</button>
+      </div>
+      <div class="skcard">
+        <div class="chdr"><span class="cname">$metalshopping-docs</span><span class="ctb ctd">T7 Docs Agent</span></div>
+        <div class="cpurp">Delta-only documentation update. Updates only affected sections. Non-blocking subagent dispatched at T7 in parallel with Review.</div>
+        <div class="cmeta">
+          <div class="cmr"><span class="cmk">Invoke</span><span class="cmv">Dispatched by $ms at T7 (non-blocking)</span></div>
+          <div class="cmr"><span class="cmk">Outputs</span><span class="cmv">Updated doc sections only</span></div>
+        </div>
+        <button class="sfbtn" onclick="sif('t7')">See in flow &#x2197;</button>
+      </div>
+      <div class="skcard">
+        <div class="chdr"><span class="cname">$analytics-orchestrator</span><span class="ctb cta">Analytics Entry</span></div>
+        <div class="cpurp">Analytics domain entry point. Routes all analytics tasks to the correct sub-agent.</div>
+        <div class="cmeta">
+          <div class="cmr"><span class="cmk">Invoke</span><span class="cmv">Routed from $ms for any analytics scope</span></div>
+          <div class="cmr"><span class="cmk">Outputs</span><span class="cmv">Routes to sub-agents, returns summary to $ms</span></div>
+        </div>
+        <button class="sfbtn" onclick="sif('analytics-bypass')">See in flow &#x2197;</button>
+      </div>
+      <div class="skcard">
+        <div class="chdr"><span class="cname">$analytics-intelligence</span><span class="ctb cts">STUB</span></div>
+        <div class="cpurp">STUB: 8-layer intelligence model. Scoring, ranking, and insight generation.</div>
+        <div class="cmeta"><div class="cmr"><span class="cmk">Invoke</span><span class="cmv">Dispatched by $analytics-orchestrator</span></div></div>
+      </div>
+      <div class="skcard">
+        <div class="chdr"><span class="cname">$analytics-surfaces</span><span class="ctb cts">STUB</span></div>
+        <div class="cpurp">STUB: 11 analytics read surfaces — frontend views and their backend query patterns.</div>
+        <div class="cmeta"><div class="cmr"><span class="cmk">Invoke</span><span class="cmv">Dispatched by $analytics-orchestrator</span></div></div>
+      </div>
+      <div class="skcard">
+        <div class="chdr"><span class="cname">$analytics-campaigns</span><span class="ctb cts">STUB</span></div>
+        <div class="cpurp">STUB: Campaigns and alerts analytics layer.</div>
+        <div class="cmeta"><div class="cmr"><span class="cmk">Invoke</span><span class="cmv">Dispatched by $analytics-orchestrator</span></div></div>
+      </div>
+      <div class="skcard">
+        <div class="chdr"><span class="cname">$analytics-ai</span><span class="ctb cts">STUB</span></div>
+        <div class="cpurp">STUB: AI copilot layer — recommendations, anomaly explanations, natural-language queries.</div>
+        <div class="cmeta"><div class="cmr"><span class="cmk">Invoke</span><span class="cmv">Dispatched by $analytics-orchestrator</span></div></div>
+      </div>
+      <div class="skcard">
+        <div class="chdr"><span class="cname">$workflow-guardian</span><span class="ctb ctw">Inspect &amp; Report</span></div>
+        <div class="cpurp">Inspect-and-report workflow health. Checks T-stage compliance, lesson accumulation, ADR alignment. Never auto-updates — reports only.</div>
+        <div class="cmeta">
+          <div class="cmr"><span class="cmk">Invoke</span><span class="cmv">ADR committed / 3+ lessons in domain / every 10 tasks / /workflow-check</span></div>
+          <div class="cmr"><span class="cmk">Outputs</span><span class="cmv">Health report (no file changes)</span></div>
+        </div>
+        <button class="sfbtn" onclick="sif('guardian')">See in flow &#x2197;</button>
+      </div>
+    </div>
+
+    <div class="slbl">Installed Plugins</div>
+    <div class="cgrid">
+      <div class="plcard">
+        <div class="chdr"><span class="cname">commit-commands</span></div>
+        <div class="cpurp">/commit slash command. Structured commits in &lt;type&gt;(&lt;scope&gt;): &lt;what&gt; format.</div>
+        <div class="plint">Step 4 of post-task sequence. Also callable anytime via /commit.</div>
+      </div>
+      <div class="plcard">
+        <div class="chdr"><span class="cname">claude-mem</span></div>
+        <div class="cpurp">Cross-session context compression. Produces session artifacts recoverable at next session start.</div>
+        <div class="plint">Step 6 of post-task sequence. Session start reads the artifact when context was compacted.</div>
+      </div>
+      <div class="plcard">
+        <div class="chdr"><span class="cname">claudewatch</span></div>
+        <div class="cpurp">Real-time monitoring: drift detection, cost velocity, MCP tools (get_drift_signal, get_session_dashboard, get_project_health, get_blockers, extract_current_session_memory).</div>
+        <div class="plint">Always active. Session start calls get_project_health. PostToolUse hook evaluates writes.</div>
+      </div>
+      <div class="plcard">
+        <div class="chdr"><span class="cname">code-review / pr-review-toolkit</span></div>
+        <div class="cpurp">/code-review slash command. 5 specialized review agents: code-reviewer, code-simplifier, comment-analyzer, pr-test-analyzer, silent-failure-hunter.</div>
+        <div class="plint">Run /review-pr before merging significant branches.</div>
+      </div>
+      <div class="plcard">
+        <div class="chdr"><span class="cname">security-guidance</span></div>
+        <div class="cpurp">Injects security rules into every write. Guards against OWASP top 10, command injection, SQL injection, XSS.</div>
+        <div class="plint">Always active via PreToolUse hook on file writes.</div>
+      </div>
+      <div class="plcard">
+        <div class="chdr"><span class="cname">claude-md-management</span></div>
+        <div class="cpurp">Updates CLAUDE.md post-task with learnings from the session. Keeps project instructions accurate.</div>
+        <div class="plint">Step 5 of post-task sequence via /revise-claude-md.</div>
+      </div>
+      <div class="plcard">
+        <div class="chdr"><span class="cname">superpowers</span></div>
+        <div class="cpurp">Planning, subagent execution, brainstorming, debugging, and verification. Skills: writing-plans, executing-plans, subagent-driven-development, brainstorming, systematic-debugging.</div>
+        <div class="plint">Plan mode → writing-plans. Complex research → dispatching-parallel-agents. Debugging → systematic-debugging.</div>
+      </div>
+      <div class="plcard">
+        <div class="chdr"><span class="cname">skill-creator</span></div>
+        <div class="cpurp">Creates and improves skills. Authors new SKILL.md files, runs evals, optimizes skill descriptions for triggering accuracy.</div>
+        <div class="plint">Run when adding or refining agent skills in .agents/skills/.</div>
+      </div>
+      <div class="plcard">
+        <div class="chdr"><span class="cname">frontend-design</span></div>
+        <div class="cpurp">Production-grade frontend UI generation. Avoids generic AI aesthetics. New pages and visually complex components.</div>
+        <div class="plint">Used at T5 for architectural or visually complex frontend work.</div>
+      </div>
+      <div class="plcard">
+        <div class="chdr"><span class="cname">feature-dev</span></div>
+        <div class="cpurp">Guided feature development with architecture focus. Explores codebase patterns before proposing implementation.</div>
+        <div class="plint">Used at T2/T5 when exploring unfamiliar codebase areas before writing code.</div>
+      </div>
+      <div class="plcard">
+        <div class="chdr"><span class="cname">context7</span></div>
+        <div class="cpurp">Up-to-date library documentation via resolve-library-id + query-docs. Live docs for any npm package or Go module.</div>
+        <div class="plint">Used during any T-stage when library documentation is needed.</div>
+      </div>
+      <div class="plcard">
+        <div class="chdr"><span class="cname">figma</span></div>
+        <div class="cpurp">Figma design → production code with 1:1 visual fidelity. Also: code-connect-components, create-design-system-rules.</div>
+        <div class="plint">Used at T5 when Figma designs are the source of truth for frontend implementation.</div>
+      </div>
+      <div class="plcard">
+        <div class="chdr"><span class="cname">pr-review-toolkit</span></div>
+        <div class="cpurp">Comprehensive PR review: code-reviewer, code-simplifier, comment-analyzer, pr-test-analyzer, silent-failure-hunter, type-design-analyzer.</div>
+        <div class="plint">Run /review-pr before merging any significant branch to main.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="tsec" id="examples">
+    <h2>Examples</h2>
+    <p class="sub">Six concrete scenarios — full decision log, file names, commands</p>
+    <div class="exlist">
+
+      <div class="excard">
+        <div class="exhdr"><div class="exnum">1</div><div class="extit">New backend module from scratch</div></div>
+        <div class="exbody">
+          <div class="expath">
+            <span class="exstep">$ms</span><span class="exarr">&#x2192;</span><span class="exstep">Plan YES</span><span class="exarr">&#x2192;</span><span class="exstep">T1 Opus</span><span class="exarr">&#x2192;</span><span class="exstep">T2 Sonnet</span><span class="exarr">&#x2192;</span><span class="exstep">T3a Codex</span><span class="exarr">&#x2192;</span><span class="exstep">T3b Claude</span><span class="exarr">&#x2192;</span><span class="exstep">T3.5</span><span class="exarr">&#x2192;</span><span class="exstep">T4 Script</span><span class="exarr">&#x2192;</span><span class="exstep">T5 Split</span><span class="exarr">&#x2192;</span><span class="exstep">T5.5 Codex</span><span class="exarr">&#x2192;</span><span class="exstep">T6+T7+Review</span><span class="exarr">&#x2192;</span><span class="exstep">Commit</span>
+          </div>
+          <div class="exdet">"Add procurement order tracking module." Plan YES (new module + tenant isolation). Opus for T1 (new domain), Sonnet for rest. Codex on T3a + T5.5. T6 ADR written (new domain pattern).</div>
+          <pre class="excode"># Decision log (tasks/todo.md):
+Plan: YES — new module, >2 files, touches tenant isolation
+Model: Opus (T1 new domain) → Sonnet (remainder)
+Codex: YES for T3a adapters + T5.5 tests
+Parallel: YES — T6 ADR + T7 + Review at end
+
+# T4 — run script (not AI):
+./scripts/generate_contract_artifacts.ps1 -Target all</pre>
+        </div>
+      </div>
+
+      <div class="excard">
+        <div class="exhdr"><div class="exnum">2</div><div class="extit">Frontend bug fix</div></div>
+        <div class="exbody">
+          <div class="expath">
+            <span class="exstep">$ms</span><span class="exarr">&#x2192;</span><span class="exstep">Plan NO</span><span class="exarr">&#x2192;</span><span class="exstep">T5 Claude</span><span class="exarr">&#x2192;</span><span class="exstep">T5.5 Codex</span><span class="exarr">&#x2192;</span><span class="exstep">Review Gate</span><span class="exarr">&#x2192;</span><span class="exstep">Commit</span>
+          </div>
+          <div class="exdet">"Spotlight table headers lose hover state after sort." Plan NO (single CSS fix, Lesson 20 pattern). Sonnet. T5 Claude only. T5.5 Codex adds regression test.</div>
+          <pre class="excode"># Decision log:
+Plan: NO — single CSS fix, existing pattern (Lesson 20)
+Model: Sonnet
+Codex: YES for T5.5 test only
+Parallel: NO — sequential (T5 → T5.5 → Review)</pre>
+        </div>
+      </div>
+
+      <div class="excard">
+        <div class="exhdr"><div class="exnum">3</div><div class="extit">Analytics task routing</div></div>
+        <div class="exbody">
+          <div class="expath">
+            <span class="exstep">$ms</span><span class="exarr">&#x2192;</span><span class="exstep">Analytics scope detected</span><span class="exarr">&#x2192;</span><span class="exstep">$analytics-orchestrator</span><span class="exarr">&#x2192;</span><span class="exstep">$analytics-surfaces</span><span class="exarr">&#x2192;</span><span class="exstep">Review</span><span class="exarr">&#x2192;</span><span class="exstep">Commit</span>
+          </div>
+          <div class="exdet">"Add margin band filter to Produtos analytics table." $ms checks: touches packages/feature-analytics → route to $analytics-orchestrator → identifies surface work → $analytics-surfaces.</div>
+          <pre class="excode"># $ms routing check:
+Task touches: packages/feature-analytics/src/products/
+→ Analytics routing: YES
+→ Route to: $analytics-orchestrator
+→ NEVER call $analytics-surfaces directly from $ms</pre>
+        </div>
+      </div>
+
+      <div class="excard">
+        <div class="exhdr"><div class="exnum">4</div><div class="extit">Codex handoff (T3a adapters)</div></div>
+        <div class="exbody">
+          <div class="expath">
+            <span class="exstep">T3a → Codex decision</span><span class="exarr">&#x2192;</span><span class="exstep">Write codex-handoff.md</span><span class="exarr">&#x2192;</span><span class="exstep">Codex implements</span><span class="exarr">&#x2192;</span><span class="exstep">Claude reviews</span><span class="exarr">&#x2192;</span><span class="exstep">Fix if needed</span><span class="exarr">&#x2192;</span><span class="exstep">Commit + delete handoff</span>
+          </div>
+          <div class="exdet">After T2 defines ports, T3a qualifies for Codex (plan complete, non-critical files). Claude writes the handoff spec. Codex loads it with lessons.md.</div>
+          <pre class="excode"># tasks/codex-handoff.md:
+Task: Implement procurement order PostgreSQL adapter
+Files:
+  Create: apps/server_core/internal/modules/procurement/adapters/order.go
+  Create: apps/server_core/internal/modules/procurement/transport/order.go
+
+Constraints:
+  - Use pgdb.BeginTenantTx on every query (Lesson 1)
+  - Use current_tenant_id() in every WHERE clause
+  - Call PrincipalFromContext first in every handler
+  - Outbox: use outbox.AppendInTx in same tx as INSERT (Lesson 3)
+
+Pattern: apps/server_core/internal/modules/pricing/adapters/
+
+Definition of done:
+  go test ./apps/server_core/internal/modules/procurement/... passes</pre>
+        </div>
+      </div>
+
+      <div class="excard">
+        <div class="exhdr"><div class="exnum">5</div><div class="extit">Session start output example</div></div>
+        <div class="exbody">
+          <div class="expath">
+            <span class="exstep">Hook fires</span><span class="exarr">&#x2192;</span><span class="exstep">Read 3 files</span><span class="exarr">&#x2192;</span><span class="exstep">Output STATE/NEXT/WATCH</span><span class="exarr">&#x2192;</span><span class="exstep">Wait</span>
+          </div>
+          <div class="exdet">Real output when Track B is in-progress and two relevant lessons are active.</div>
+          <pre class="excode">STATE: in-progress
+  Track B — Spotlight parity (visual audit pending)
+  Last commit: fix(analytics): restore spotlight sort interactions
+
+NEXT:
+  Run diff against legacy_snapshot for remaining CSS deltas
+  File: packages/feature-products/src/spotlight/SpotlightTable.module.css
+
+WATCH:
+  Lesson 27 — Second-pass parity must diff against legacy snapshot
+  Lesson 5  — Frontend data flow must use platform SDK contracts</pre>
+        </div>
+      </div>
+
+      <div class="excard">
+        <div class="exhdr"><div class="exnum">6</div><div class="extit">Lesson quality filter — three examples</div></div>
+        <div class="exbody">
+          <div class="expath">
+            <span class="exstep">Task completes</span><span class="exarr">&#x2192;</span><span class="exstep">Filter runs (3 gates)</span><span class="exarr">&#x2192;</span><span class="exstep">Write or skip</span>
+          </div>
+          <div class="exdet">All three gates must be YES. Two failing gates means skip — no partial lessons.</div>
+          <pre class="excode">EXAMPLE A — PASSES (write to lessons.md):
+"Go adapter query without BeginTenantTx causes cross-tenant data reads"
+✓ Would cause a bug if repeated (data leak)
+✓ Code logic / architectural (Go adapter layer)
+✓ Recurring pattern (every adapter must follow this)
+→ WRITE
+
+EXAMPLE B — FAILS (skip):
+"Spotlight header background was missing border-radius"
+✗ Not a bug — cosmetic UI adjustment
+→ SKIP
+
+EXAMPLE C — FAILS (skip):
+"Removed unused import in one migration file"
+✗ One-off cleanup, not a recurring pattern
+→ SKIP</pre>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="tsec" id="commands">
+    <h2>Commands</h2>
+    <p class="sub">Full cheat sheet — click any snippet to copy</p>
+    <div class="cgrps">
+      <div class="cgrp">
+        <div class="cgtit">Web (npm workspaces, from repo root)</div>
+        <div class="cent"><div class="cdesc">TypeScript type check</div><div class="cblk"><code>npm run web:typecheck</code><button class="cpbtn" onclick="cp(this,'npm run web:typecheck')">Copy</button></div></div>
+        <div class="cent"><div class="cdesc">Build web app</div><div class="cblk"><code>npm run web:build</code><button class="cpbtn" onclick="cp(this,'npm run web:build')">Copy</button></div></div>
+        <div class="cent"><div class="cdesc">Build (WSL2 workaround — esbuild EPERM on Windows)</div><div class="cblk"><code>npm --workspace @metalshopping/web run web:build:wsl</code><button class="cpbtn" onclick="cp(this,'npm --workspace @metalshopping/web run web:build:wsl')">Copy</button></div></div>
+        <div class="cent"><div class="cdesc">Run all frontend tests (Vitest)</div><div class="cblk"><code>npm run web:test</code><button class="cpbtn" onclick="cp(this,'npm run web:test')">Copy</button></div></div>
+        <div class="cent"><div class="cdesc">Run tests for a specific file</div><div class="cblk"><code>npm --workspace @metalshopping/web exec -- vitest run src/path/to/file.test.ts -c vitest.config.mjs</code><button class="cpbtn" onclick="cp(this,'npm --workspace @metalshopping/web exec -- vitest run src/path/to/file.test.ts -c vitest.config.mjs')">Copy</button></div></div>
+        <div class="cent"><div class="cdesc">Verbose test run (CI style)</div><div class="cblk"><code>npm --workspace @metalshopping/web run test:ci</code><button class="cpbtn" onclick="cp(this,'npm --workspace @metalshopping/web run test:ci')">Copy</button></div></div>
+        <div class="cent"><div class="cdesc">Dev server (localhost:5173)</div><div class="cblk"><code>npm --workspace @metalshopping/web run dev</code><button class="cpbtn" onclick="cp(this,'npm --workspace @metalshopping/web run dev')">Copy</button></div></div>
+      </div>
+      <div class="cgrp">
+        <div class="cgtit">Go (from repo root)</div>
+        <div class="cent"><div class="cdesc">Run all backend tests</div><div class="cblk"><code>go test ./apps/server_core/...</code><button class="cpbtn" onclick="cp(this,'go test ./apps/server_core/...')">Copy</button></div></div>
+        <div class="cent"><div class="cdesc">Run tests for a single module</div><div class="cblk"><code>go test ./apps/server_core/internal/modules/&lt;module&gt;/...</code><button class="cpbtn" onclick="cp(this,'go test ./apps/server_core/internal/modules/<module>/...')">Copy</button></div></div>
+      </div>
+      <div class="cgrp">
+        <div class="cgtit">Contracts &amp; SDK</div>
+        <div class="cent"><div class="cdesc">Generate SDK/types from contracts (requires Docker)</div><div class="cblk"><code>./scripts/generate_contract_artifacts.ps1 -Target all</code><button class="cpbtn" onclick="cp(this,'./scripts/generate_contract_artifacts.ps1 -Target all')">Copy</button></div></div>
+        <div class="cent"><div class="cdesc">Validate all contracts</div><div class="cblk"><code>./scripts/validate_contracts.ps1 -Scope all</code><button class="cpbtn" onclick="cp(this,'./scripts/validate_contracts.ps1 -Scope all')">Copy</button></div></div>
+      </div>
+      <div class="cgrp">
+        <div class="cgtit">Workflow</div>
+        <div class="cent"><div class="cdesc">Generate agent activity HTML dashboard</div><div class="cblk"><code>npm run agent-log</code><button class="cpbtn" onclick="cp(this,'npm run agent-log')">Copy</button></div></div>
+        <div class="cent"><div class="cdesc">Trigger $workflow-guardian on-demand</div><div class="cblk"><code>/workflow-check</code><button class="cpbtn" onclick="cp(this,'/workflow-check')">Copy</button></div></div>
+        <div class="cent"><div class="cdesc">Structured commit via commit-commands</div><div class="cblk"><code>/commit</code><button class="cpbtn" onclick="cp(this,'/commit')">Copy</button></div></div>
+        <div class="cent"><div class="cdesc">Project health scan</div><div class="cblk"><code>claudewatch scan</code><button class="cpbtn" onclick="cp(this,'claudewatch scan')">Copy</button></div></div>
+        <div class="cent"><div class="cdesc">Diagnose friction sources</div><div class="cblk"><code>claudewatch gaps</code><button class="cpbtn" onclick="cp(this,'claudewatch gaps')">Copy</button></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="tsec" id="quickref">
+    <h2>Quick Reference</h2>
+    <p class="sub">Decision tables, checklists, and sequences at a glance</p>
+    <div class="qrgrid">
+      <div class="qrc">
+        <div class="qrtit"><div class="dot" style="background:#f59e0b"></div>Plan Mode Triggers</div>
+        <table class="qrtbl">
+          <thead><tr><th>Condition</th><th>Plan?</th></tr></thead>
+          <tbody>
+            <tr><td>New Go module</td><td class="yc">YES</td></tr>
+            <tr><td>More than 2 files changed</td><td class="yc">YES</td></tr>
+            <tr><td>Architectural decision</td><td class="yc">YES</td></tr>
+            <tr><td>Touches auth/tenant/outbox</td><td class="yc">YES</td></tr>
+            <tr><td>Single-file fix</td><td class="nc">NO</td></tr>
+            <tr><td>Trivial correction / cosmetic</td><td class="nc">NO</td></tr>
+            <tr><td>Boilerplate with complete pattern</td><td class="nc">NO</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="qrc">
+        <div class="qrtit"><div class="dot" style="background:#3b82f6"></div>Model Selection</div>
+        <table class="qrtbl">
+          <thead><tr><th>Condition</th><th>Model</th></tr></thead>
+          <tbody>
+            <tr><td>T1 for new domain</td><td class="hc">Opus</td></tr>
+            <tr><td>T6 ADR</td><td class="hc">Opus</td></tr>
+            <tr><td>Critical (auth/tenant/outbox)</td><td class="hc">Opus</td></tr>
+            <tr><td>Sonnet failed on this instance</td><td class="hc">Opus</td></tr>
+            <tr><td>Everything else (default)</td><td>Sonnet</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="qrc">
+        <div class="qrtit"><div class="dot" style="background:#059669"></div>Claude vs Codex</div>
+        <table class="qrtbl">
+          <thead><tr><th>Condition</th><th>Tool</th></tr></thead>
+          <tbody>
+            <tr><td>T3a adapters (plan complete)</td><td class="yc">Codex</td></tr>
+            <tr><td>T5 boilerplate (plan complete)</td><td class="yc">Codex</td></tr>
+            <tr><td>T5.5 tests (established patterns)</td><td class="yc">Codex</td></tr>
+            <tr><td>T3b outbox / readmodel</td><td class="nc">Claude ONLY</td></tr>
+            <tr><td>Critical files (auth/tenant)</td><td class="nc">Claude ONLY</td></tr>
+            <tr><td>Orchestration, planning, review</td><td class="nc">Claude ONLY</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="qrc">
+        <div class="qrtit"><div class="dot" style="background:#06b6d4"></div>T-stage Ownership</div>
+        <table class="qrtbl">
+          <thead><tr><th>Stage</th><th>Tool</th><th>Model</th></tr></thead>
+          <tbody>
+            <tr><td>T1 Contract</td><td>Claude</td><td class="hc">Opus (new)</td></tr>
+            <tr><td>T2 Backend</td><td>Claude</td><td>Sonnet</td></tr>
+            <tr><td>T3a Adapters</td><td class="yc">Codex</td><td></td></tr>
+            <tr><td>T3b Outbox</td><td class="nc">Claude only</td><td>Sonnet</td></tr>
+            <tr><td>T3.5 Migration</td><td>Claude</td><td>Sonnet</td></tr>
+            <tr><td>T4 SDK Gen</td><td>Script (PS1)</td><td></td></tr>
+            <tr><td>T5 Frontend</td><td>Split</td><td>Sonnet</td></tr>
+            <tr><td>T5.5 Tests</td><td class="yc">Codex</td><td></td></tr>
+            <tr><td>T6 ADR</td><td>Claude</td><td class="hc">Opus</td></tr>
+            <tr><td>T7 Docs</td><td>Subagent</td><td>Sonnet</td></tr>
+            <tr><td>Review</td><td>Claude</td><td class="hc">Opus (critical)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="qrc">
+        <div class="qrtit"><div class="dot" style="background:#059669"></div>Lesson Quality Filter</div>
+        <div class="chkl">
+          <div class="ci"><div class="chk"></div><span>Mistake would cause a bug, review failure, or structural problem if repeated</span></div>
+          <div class="ci"><div class="chk"></div><span>Concerns code logic, architecture, or module patterns — NOT UI appearance</span></div>
+          <div class="ci"><div class="chk"></div><span>Describes a recurring pattern, not a one-off fix</span></div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:10px">All three must be YES to write to tasks/lessons.md</div>
+      </div>
+      <div class="qrc">
+        <div class="qrtit"><div class="dot" style="background:#475569"></div>Post-task Sequence</div>
+        <div class="nlist">
+          <div class="ni"><span class="n">1.</span><span>Mark [x] in tasks/todo.md</span></div>
+          <div class="ni"><span class="n">2.</span><span>Lesson quality filter evaluation</span></div>
+          <div class="ni"><span class="n">3.</span><span>Memory evaluation → update MEMORY.md if applicable</span></div>
+          <div class="ni"><span class="n">4.</span><span>Commit via commit-commands: &lt;type&gt;(&lt;scope&gt;): &lt;what&gt;</span></div>
+          <div class="ni"><span class="n">5.</span><span>claude-md-management updates CLAUDE.md</span></div>
+          <div class="ni"><span class="n">6.</span><span>claude-mem compresses session context</span></div>
+        </div>
+      </div>
+      <div class="qrc">
+        <div class="qrtit"><div class="dot" style="background:#475569"></div>$workflow-guardian Triggers</div>
+        <div class="nlist">
+          <div class="ni"><span class="n">1.</span><span>ADR committed → run before next task starts</span></div>
+          <div class="ni"><span class="n">2.</span><span>3+ lessons in same domain → surface in WATCH briefing</span></div>
+          <div class="ni"><span class="n">3.</span><span>Every 10 tasks → periodic health check</span></div>
+          <div class="ni"><span class="n">4.</span><span>/workflow-check → on-demand trigger</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+const P={};
+document.querySelectorAll('template[id^="tpl-"]').forEach(t=>{P[t.id.replace('tpl-','')]=t});
+
+function op(id){
+  const t=P[id];if(!t)return;
+  document.querySelectorAll('.node.act,.fnode.act').forEach(n=>n.classList.remove('act'));
+  const el=document.getElementById('n-'+id);if(el)el.classList.add('act');
+  document.getElementById('ptitle').textContent=t.dataset.title;
+  const tb=document.getElementById('ptyb');
+  tb.textContent=t.dataset.type;tb.style.background=t.dataset.tbg;tb.style.color=t.dataset.tc;
+  const pb=document.getElementById('pbody');
+  while(pb.firstChild)pb.removeChild(pb.firstChild);
+  pb.appendChild(t.content.cloneNode(true));
+  const links=(t.dataset.links||'').split(' ').filter(Boolean);
+  if(links.length){
+    const s=document.createElement('div');s.className='ps';
+    const l=document.createElement('div');l.className='psl';l.textContent='Connected to';
+    const w=document.createElement('div');w.className='plnks';
+    links.forEach(id2=>{
+      const lt=P[id2];if(!lt)return;
+      const b=document.createElement('button');b.className='plnk';b.textContent=lt.dataset.title;
+      b.onclick=()=>op(id2);w.appendChild(b);
+    });
+    s.appendChild(l);s.appendChild(w);pb.appendChild(s);
+  }
+  document.getElementById('panel').classList.add('open');
+  document.getElementById('ovl').classList.add('open');
+}
+
+function closePanel(){
+  document.getElementById('panel').classList.remove('open');
+  document.getElementById('ovl').classList.remove('open');
+  document.querySelectorAll('.node.act,.fnode.act').forEach(n=>n.classList.remove('act'));
+}
+
+function sif(id){
+  document.querySelector('.diag-sec').scrollIntoView({behavior:'smooth',block:'start'});
+  setTimeout(()=>{
+    op(id);
+    const el=document.getElementById('n-'+id);
+    if(el){el.classList.add('pulse');setTimeout(()=>el.classList.remove('pulse'),500);}
+  },400);
+}
+
+function cp(btn,text){
+  navigator.clipboard.writeText(text).then(()=>{
+    btn.textContent='Copied!';btn.classList.add('ok');
+    setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('ok');},1800);
+  });
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closePanel();});
+</script>
+</body>
+</html>
