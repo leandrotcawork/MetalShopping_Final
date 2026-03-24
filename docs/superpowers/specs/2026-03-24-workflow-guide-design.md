@@ -70,7 +70,7 @@ The 4 Decisions block is a single clickable node. Its panel expands all four dec
 
 ### Branch — Plan Mode Gate
 ```
-Plan mode YES → [Write plan to todo.md] → [User: approve / revise / reject] → (back to T1 on approval)
+Plan mode YES → [Write plan to todo.md] → [User: approve / revise / reject] → (back to T1 Contract — start of T-stage chain — on approval)
 Plan mode NO  → (straight to T-stages)
 ```
 
@@ -79,7 +79,7 @@ Plan mode NO  → (straight to T-stages)
 [T1 Contract] → [T2 Backend Domain] → [T3a Adapters (Codex)] → [T3b Outbox+Readmodel (Claude only)]
              → [T3.5 Migration] → [T4 SDK Gen] → [T5 Frontend (split)] → [T5.5 Tests (Codex)]
 ```
-T3a and T5.5 have a Codex badge. T3b has a "NEVER Codex" warning badge.
+T3a and T5.5 have a Codex badge. T3b has a "NEVER Codex" warning badge. T4 has a "Script" badge — it runs `scripts/generate_contract_artifacts.ps1` (PowerShell), not an AI agent. The T4 panel must make this clear.
 
 ### Row 4 — Parallel Gate
 ```
@@ -218,7 +218,7 @@ One-screen scannable summary. No scrolling required.
 - [ ] Slide-in panel closes on X click and Escape key
 - [ ] All 4 bottom tabs scroll to their correct section
 - [ ] Copy buttons work on command snippets
-- [ ] "See in flow" links in skill cards highlight the correct node
+- [ ] "See in flow" links in skill cards: clicking closes the tab section, scrolls to the diagram, opens the node's slide-in panel, and applies a 400ms CSS highlight pulse on the node border
 - [ ] Page is fully readable on a 1080p monitor without horizontal scroll
 - [ ] claudewatch, $analytics-orchestrator, $workflow-guardian floating nodes are always visible
 - [ ] T3a and T5.5 show Codex badge; T3b shows NEVER Codex badge
