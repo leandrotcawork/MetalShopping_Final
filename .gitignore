@@ -21,3 +21,4 @@ coverage/
 *.pyd
 tmp_server_core_oidc.log
 tmp_server_core_oidc.err.log
+logs/agent-activity.html
