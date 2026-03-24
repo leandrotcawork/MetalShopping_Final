@@ -235,7 +235,65 @@ Commit (after review passes; T7 outcome does not affect this)
       │
       ▼
 PostTaskComplete hook fires
+      │
+      ▼
+Agent writes entry to logs/agent-activity-YYYY-MM.jsonl
 ```
+
+---
+
+### 9. Agent activity log
+
+Every agent and subagent writes one entry to `logs/agent-activity-YYYY-MM.jsonl` on task completion. Monthly rotation keeps individual files manageable. `npm run agent-log` globs all files in `logs/` and generates a unified HTML dashboard.
+
+**Log entry schema:**
+
+```json
+{
+  "timestamp": "<ISO8601>",
+  "agent": "<skill name>",
+  "parent": "<invoking agent or $ms>",
+  "stage": "<T1 | T2 | T3a | T3b | T3.5 | T4 | T5 | T5.5 | T6 | T7 | review | research>",
+  "task": "<task name from tasks/todo.md>",
+  "files_changed": ["<path>"],
+  "commit": "<hash or null if no commit>",
+  "decision": "<why this approach was taken>",
+  "status": "<success | fix-applied | false-positive | escalated | failed>",
+  "issues": "<description or null>"
+}
+```
+
+Research subagents (no commit) omit `files_changed` and `commit` and replace with `output_summary`.
+
+**HTML dashboard (`npm run agent-log`):**
+- Timeline grouped by task, filterable by agent / stage / status / month
+- Each entry expandable: full decision rationale + diff link to commit
+- Color-coded: green (success), yellow (fix applied), orange (escalated), red (failed), grey (research)
+- Full-text search across all entries
+
+---
+
+### 10. `$workflow-guardian`
+
+Inspect-and-report agent. Never auto-updates — surfaces findings for user approval, then user decides whether to invoke `skill-creator` or open a mini-brainstorm for structural changes.
+
+**Four triggers:**
+
+| Trigger | Type | Action |
+|---------|------|--------|
+| ADR committed | Hard (immediate) | Run before next task starts |
+| 3+ lessons referencing same skill/domain | Soft (queued) | Surfaces in next session briefing as `WATCH: workflow review needed for <skill>` |
+| Every 10 tasks completed | Periodic | General health check |
+| `/workflow-check` | Manual | On-demand |
+
+**What it inspects:**
+1. **Skill staleness** — does each skill reference file paths and patterns that still exist in the codebase?
+2. **Coverage gaps** — are there codebase patterns (new module type, new layer, new surface) with no skill covering them?
+3. **Lesson accumulation** — 3+ lessons in the same domain = that skill needs rewriting via `skill-creator`
+4. **Unused skills** — skills not invoked in the last 20 tasks (stale or redundant)
+5. **Unmapped features** — parts of the codebase that have grown significantly with no T-stage or skill ownership
+
+**Output:** A structured report written to `tasks/todo.md` as a `[workflow-check]` entry listing findings by severity (critical / warning / info) with a recommended action per finding. No changes made automatically.
 
 ---
 
@@ -253,3 +311,5 @@ PostTaskComplete hook fires
 10. Opus is used only in cases matching the Definitions section; Codex model column is intentionally absent — Codex manages its own model internally
 11. Plan mode produces a written plan, waits for explicit user approval, and handles revision and rejection paths before T1 begins
 12. All task types in Section 3 include T5.5 and the review gate — no task type completes without tests and review
+13. Every agent and subagent writes a log entry to `logs/agent-activity-YYYY-MM.jsonl` on completion; `npm run agent-log` generates a valid HTML file from all files in `logs/`
+14. `$workflow-guardian` runs on all four triggers, writes a `[workflow-check]` report to `tasks/todo.md`, and makes no autonomous changes
