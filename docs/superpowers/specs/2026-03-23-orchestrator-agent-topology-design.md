@@ -212,6 +212,12 @@ T5: Codex boilerplate + Claude architecture simultaneously (different files)
 T5.5 tests (Codex)
       │
       ▼
+claudewatch monitors all file writes during T-stages
+      │  violation signal fires? ──YES──▶ Claude evaluates interrupt
+      │                                   ├── confirmed ──▶ fix ──▶ lesson eval
+      │                                   └── false positive ──▶ log + continue
+      │
+      ▼
 Codex output → Claude reviews → violation? ──YES──▶ Claude fixes ──▶ lesson eval (trigger 1)
       │
       ▼

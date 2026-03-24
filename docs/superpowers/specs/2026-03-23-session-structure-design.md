@@ -75,9 +75,10 @@ Every task completion triggers this sequence automatically:
 
 1. **Mark done:** Task marked `[x]` in `tasks/todo.md`
 2. **Evaluate for lesson:** Apply quality filter (Section 3); append to `tasks/lessons.md` if it passes
-3. **Commit:** `commit-commands` produces one commit with format `<type>(<scope>): <what>`, pre-commit hooks run
-4. **Capture learnings:** `claude-md-management` updates CLAUDE.md with session-level patterns
-5. **Compress context:** `claude-mem` captures session context in background
+3. **Evaluate for memory:** Claude evaluates whether the task established a durable fact worth adding to MEMORY.md — a project-level fact, architectural decision, or user preference change that should survive indefinitely across sessions. If yes, write or update the appropriate memory file and update the MEMORY.md index. This is distinct from lessons: lessons are patterns to avoid; memory is facts about the project.
+4. **Commit:** `commit-commands` produces one commit with format `<type>(<scope>): <what>`, pre-commit hooks run
+5. **Capture learnings:** `claude-md-management` updates CLAUDE.md with session-level patterns
+6. **Compress context:** `claude-mem` captures session context in background
 
 **Partial failure handling:** If the sequence fails at any step, the failure is reported immediately and the remaining steps do not run. The incomplete state is visible in the next session's briefing (STATE will show `in-progress` or a specific error). No silent data loss — the user always knows what did and did not complete.
 

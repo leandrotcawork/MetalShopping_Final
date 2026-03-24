@@ -72,9 +72,12 @@ If a conflict arises between claude-mem output and MEMORY.md content, MEMORY.md 
 **Confirmed properties:** MIT license; reads Claude's own tool call logs; no access to repo secrets or production systems; verified against published source as of 2026-03-23.
 
 **Required behavior:**
-- Passively tracks tool call patterns each session: read/write ratios, loop detection, cost-per-commit
+- Actively monitors tool call patterns during each session: read/write ratios, loop detection, cost-per-commit
+- Fires an interrupt signal when a configured violation rule matches a file write in progress
 - Exposes `get_project_health`, `get_drift_signal`, `get_task_history` as queryable tools mid-session
 - Supports configuring project-specific alert rules tied to observable patterns
+
+**Active interrupt mode:** When claudewatch fires, it interrupts the current T-stage. Claude pauses, evaluates the signal against the violation rule, then either: (a) confirms the violation — fixes it and runs the lesson quality filter, or (b) dismisses as false positive — logs the dismissal and continues. The stage does not resume until Claude explicitly clears the interrupt.
 
 **Rule coverage for Goal 3:** The three highest-risk rules are detectable via pattern matching on tool calls and file edits:
 - Direct `fetch()` on frontend: detectable as a file write containing `fetch(` in a `.tsx`/`.ts` file not in the generated SDK paths
