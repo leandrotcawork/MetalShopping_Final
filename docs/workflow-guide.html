@@ -196,9 +196,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <div class="ps"><div class="psl">What it is</div><div class="psb"><p>Four explicit decisions before any T-stage. All logged to tasks/todo.md. These decisions determine the full execution shape of the task.</p></div></div>
   <div class="dtree">
     <div class="di"><h4>1 — Plan mode?</h4>
-      <div class="db"><span class="dy">YES</span><span>New module, &gt;2 files, arch decision, touches auth/tenant/outbox → write plan → wait for approval</span></div>
-      <div class="db"><span class="dno">NO</span><span>Single-file fix, trivial correction, boilerplate with complete pattern → straight to T-stages</span></div>
-      <div class="dim">New Go module → YES. Single CSS fix → NO.</div>
+      <div class="db"><span class="dy">YES</span><span>New module, &gt;2 files, arch decision, touches auth/tenant/outbox → write full plan to todo.md + <b>activate EnterPlanMode</b> (no file changes until you approve)</span></div>
+      <div class="db"><span class="dno">NO</span><span>Single-file fix, trivial correction, boilerplate with complete pattern → write brief intent to todo.md → straight to T-stages</span></div>
+      <div class="dim">Both paths always write to todo.md. Only YES activates Claude Code plan mode. New Go module → YES. Single CSS fix → NO.</div>
     </div>
     <div class="di"><h4>2 — Which model?</h4>
       <div class="db"><span class="dy">Opus</span><span>T1 new domain, T6 ADR, critical task (auth/tenant/outbox files), Sonnet failed on this instance</span></div>
@@ -225,14 +225,14 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 </template>
 
 <template id="tpl-plan-write" data-title="Write plan to todo.md" data-type="Plan Mode" data-tbg="rgba(5,150,105,.2)" data-tc="#34d399" data-links="plan-review t1">
-  <div class="ps"><div class="psl">What it is</div><div class="psb"><p>When plan mode is YES, $ms writes a complete plan to tasks/todo.md before starting any T-stage. Fully specified — all paths named, constraints listed, no TBD.</p></div></div>
-  <div class="ps"><div class="psl">Plan mode triggers (YES)</div><div class="psb"><ul><li>New Go module being created</li><li>More than 2 files will change</li><li>Architectural decision involved</li><li>Touches auth, tenant isolation, or outbox patterns</li></ul></div></div>
-  <div class="pex"><b>YES:</b> "New procurement module" → full T1→T7 chain planned.<br><b>NO:</b> "Fix padding on hero card" → straight to T5.</div>
+  <div class="ps"><div class="psl">What it is</div><div class="psb"><p><b>Always:</b> every task writes its intent to tasks/todo.md — even simple ones. The difference is depth and whether Claude Code's native plan mode activates.</p><p><b>Simple (NO):</b> one-line intent entry (stage + files expected), then proceed directly to T-stages.</p><p><b>Complex (YES):</b> full plan written (all stages, all files, constraints, no TBD) — then <b>EnterPlanMode is called</b>. No file writes happen until you explicitly approve. Revise or reject to abort.</p></div></div>
+  <div class="ps"><div class="psl">Complex triggers (YES → EnterPlanMode)</div><div class="psb"><ul><li>New Go module being created</li><li>More than 2 files will change</li><li>Architectural decision involved</li><li>Touches auth, tenant isolation, or outbox patterns</li></ul></div></div>
+  <div class="pex"><b>YES:</b> "New procurement module" → plan written to todo.md → EnterPlanMode → you approve → T1 starts.<br><b>NO:</b> "Fix padding on hero card" → brief intent in todo.md → straight to T5.</div>
 </template>
 
 <template id="tpl-plan-review" data-title="User: approve / revise / reject" data-type="Plan Mode" data-tbg="rgba(5,150,105,.2)" data-tc="#34d399" data-links="plan-write t1">
-  <div class="ps"><div class="psl">What it is</div><div class="psb"><p>After writing the plan, $ms presents it and waits. Implementation never starts without explicit approval.</p></div></div>
-  <div class="ps"><div class="psl">Three outcomes</div><div class="psb"><ul><li><b>Approve:</b> $ms starts T1 (first applicable T-stage)</li><li><b>Revise:</b> $ms rewrites the affected steps and presents again</li><li><b>Reject:</b> task is closed, no implementation begins</li></ul></div></div>
+  <div class="ps"><div class="psl">What it is</div><div class="psb"><p>After writing the plan to todo.md, $ms activates <b>Claude Code plan mode</b> (EnterPlanMode). The plan is shown in full — no file changes are possible until you explicitly approve. This is enforced by the tool, not by convention.</p></div></div>
+  <div class="ps"><div class="psl">Three outcomes</div><div class="psb"><ul><li><b>Approve:</b> plan mode exits, $ms starts T1 (first applicable T-stage)</li><li><b>Revise:</b> $ms updates the plan in todo.md and re-enters plan mode to show the revision</li><li><b>Reject:</b> plan mode exits, task is closed, no implementation begins</li></ul></div></div>
 </template>
 
 <template id="tpl-t1" data-title="T1 — Contract" data-type="T-stage" data-tbg="rgba(59,130,246,.2)" data-tc="#93c5fd" data-links="t2 t4">
@@ -325,6 +325,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 
 <template id="tpl-posttask" data-title="Post-task sequence" data-type="Post-task" data-tbg="rgba(71,85,105,.2)" data-tc="#94a3b8" data-links="claudemem guardian">
   <div class="ps"><div class="psl">What it is</div><div class="psb"><p>Six-step mandatory sequence after every task via the PostTaskComplete hook.</p></div></div>
+  <div class="ps"><div class="psl">Agent activity log</div><div class="psb"><p>Every T-stage and every subagent writes one entry to <code>logs/agent-activity-YYYY-MM.jsonl</code> on completion — not just at post-task. Post-task is when you generate the dashboard.</p></div></div>
   <div class="ps"><div class="psl">The 6 steps</div><div class="psb"><ul><li><b>1.</b> Mark [x] in tasks/todo.md</li><li><b>2.</b> Lesson quality filter evaluation</li><li><b>3.</b> Memory evaluation → update MEMORY.md if applicable</li><li><b>4.</b> Commit via commit-commands: &lt;type&gt;(&lt;scope&gt;): &lt;what&gt;</li><li><b>5.</b> claude-md-management updates CLAUDE.md</li><li><b>6.</b> claude-mem compresses session context</li></ul></div></div>
   <div class="ps"><div class="psl">Lesson quality filter</div><div class="psb"><p>Write to lessons.md ONLY if ALL three: (1) mistake causes a bug if repeated, (2) concerns code logic/architecture — NOT UI appearance, (3) recurring pattern, not a one-off fix.</p></div></div>
   <div class="pcmds"><div class="pcmd"><code>/commit</code><button class="cpbtn" onclick="cp(this,'/commit')">Copy</button></div></div>
