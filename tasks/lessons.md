@@ -249,3 +249,10 @@ Wrong:   Styling a workspace top bar as a self-contained route header/card with 
 Correct: Render shell-level top bars in a full-width wrapper that owns background/border/sticky behavior, and keep the header component as inner constrained content only.
 Rule:    If the bar is part of the shell, shell chrome lives in the outer wrapper, not in the page component itself.
 Layer:   Frontend
+
+## Lesson 36 — Shell bars inside padded app mains must break out at the route root
+Date: 2026-03-24 | Trigger: correction
+Wrong:   Recreating a shell top bar under a parent `main` with fixed padding but keeping it inset inside that padding box.
+Correct: Match the legacy route shape (`section > header` + content container sibling) and let the outer header wrapper escape parent padding when needed.
+Rule:    When app shell padding exists above the route, shell-level bars must break out at the route root or they will never visually match legacy.
+Layer:   Frontend

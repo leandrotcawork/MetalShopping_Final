@@ -162,7 +162,7 @@ export function UnifiedWorkspaceHeader({ model, fromPath, fromScrollY }: Unified
   }, [api, isSkuPickerOpen, skuQuery]);
 
   return (
-    <header className={styles.headerUnified}>
+    <div className={styles.headerUnified}>
       <div className={styles.headerInner}>
         <div className={styles.headerRow}>
           <div className={styles.branding}>
@@ -253,7 +253,7 @@ export function UnifiedWorkspaceHeader({ model, fromPath, fromScrollY }: Unified
           </div>
         </div>
       ) : null}
-    </header>
+    </div>
   );
 }
 
