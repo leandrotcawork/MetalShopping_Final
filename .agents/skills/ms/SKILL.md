@@ -18,9 +18,20 @@ Log all four decisions to tasks/todo.md under the task entry.
 ### Decision 1: Plan mode?
 - YES: new module, >2 files changed, architectural decision, anything touching auth/tenant/outbox
 - NO: single-file fix, trivial correction, boilerplate with complete existing pattern
-- If YES: write plan to tasks/todo.md → present to user → wait for approve/revise/reject → only start T1 on approval
-- If user revises: rewrite plan and present again
-- If user rejects: close task, no implementation
+
+**Both paths:** always write the task intent and 4-decision log to tasks/todo.md first.
+
+**If YES (complex):**
+1. Write full plan to tasks/todo.md (all applicable stages, all files, constraints, no TBD)
+2. Call `EnterPlanMode` — no file changes are possible until user explicitly approves
+3. Present the plan and wait
+4. On approve: exit plan mode, start T1 (first applicable T-stage)
+5. On revise: update plan in tasks/todo.md, call `EnterPlanMode` again with the revised plan
+6. On reject: exit plan mode, close task, no implementation
+
+**If NO (simple):**
+1. Write brief intent entry to tasks/todo.md (stage(s) expected + files expected)
+2. Proceed directly to T-stages — no plan mode, no approval gate
 
 ### Decision 2: Which model?
 - Opus: T1 for new domain, T6 ADR, critical task at review gate, Sonnet failed on this task instance
