@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { MouseEvent, ReactNode } from "react";
 
 import { Card } from "../../../components/ui";

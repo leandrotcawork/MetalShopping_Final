@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { AnalyticsHomeV2Dto } from "../../legacy_dto";
 import { resolveRegistryText } from "../analytics/registry/analyticsRegistry";
 
@@ -314,21 +313,23 @@ function mapHealthRadar(
     stockQtyNumeric?: number | null;
   }>
 ): { matrix: number[][]; cells: Record<string, HeatCellDetail> } {
-  const radar = dto?.blocks.health_radar;
+  const blocks = (dto as any)?.blocks;
+  const radar = blocks?.health_radar as any;
   if (!radar || radar.status !== "OK" || !radar.data) return { matrix: [], cells: {} };
   const impacts = radar.data.impact_levels.length ? radar.data.impact_levels : ["I1", "I2", "I3", "I4", "I5"];
   const urgencies = radar.data.urgency_levels.length ? radar.data.urgency_levels : ["U1", "U2", "U3", "U4", "U5"];
-  const maxCount = Math.max(1, ...radar.data.cells.map((cell) => Number(cell.count || 0)));
+  const maxCount = Math.max(1, ...radar.data.cells.map((cell: any) => Number(cell.count || 0)));
   const matrix = Array.from({ length: 5 }, () => Array.from({ length: 5 }, () => 0.2));
   const cells: Record<string, HeatCellDetail> = {};
-  const impactIndex = new Map(impacts.map((label, idx) => [label, idx]));
-  const urgencyIndex = new Map(urgencies.map((label, idx) => [label, idx]));
+  const impactIndex = new Map(impacts.map((label: string, idx: number) => [label, idx]));
+  const urgencyIndex = new Map(urgencies.map((label: string, idx: number) => [label, idx]));
   for (const cell of radar.data.cells) {
     const i = impactIndex.get(cell.impact);
     const u = urgencyIndex.get(cell.urgency);
-    if (i == null || u == null || i > 4 || u > 4) continue;
-    const y = 4 - i;
-    const x = u;
+    if (i == null || u == null) continue;
+    if ((i as number) > 4 || (u as number) > 4) continue;
+    const y = 4 - (i as number);
+    const x = u as number;
     const key = `heat-${y}-${x}`;
     const normalized = Math.max(0.15, Math.min(1, Number(cell.count || 0) / maxCount));
     matrix[y][x] = normalized;
@@ -368,10 +369,10 @@ function mapHealthRadar(
       });
     }
     const topPnsRaw = pnDetailsRaw.length
-      ? pnDetailsRaw.map((row) => String(row.pn || "").trim())
+      ? pnDetailsRaw.map((row: Record<string, unknown>) => String(row.pn || "").trim())
       : (
           Array.isArray(cellRecord.pns)
-            ? (cellRecord.pns as unknown[]).map((pn) => String(pn || "").trim())
+            ? (cellRecord.pns as unknown[]).map((pn: unknown) => String(pn || "").trim())
             : (Array.isArray(cell.top_pns) ? cell.top_pns.map(String) : [])
         );
     const topPns = topPnsRaw.filter(Boolean);
@@ -381,7 +382,7 @@ function mapHealthRadar(
       urgency: String(cell.urgency || ""),
       count: Number(cell.count || 0),
       topDrivers,
-      skuDetails: topPns.map((pn) => ({
+      skuDetails: topPns.map((pn: string) => ({
         ...(pnMetaMap.get(pn) || {}),
         pn,
         description: pnDetailsByPn.get(pn)?.descricao || pnMetaMap.get(pn)?.description || pnDescriptionMap.get(pn) || "-",
@@ -401,14 +402,15 @@ function mapHealthRadar(
 }
 
 export function mapAnalyticsHomeViewModel(dto: AnalyticsHomeV2Dto | null | undefined): AnalyticsHomeViewModel {
-  const actionsBlock = dto?.blocks.actions_today;
-  const alertsBlock = dto?.blocks.alerts_prioritarios;
-  const portfolioBlock = dto?.blocks.portfolio_distribution;
-  const topMetalBlock = dto?.blocks.top_metal;
-  const timelineBlock = dto?.blocks.timeline;
-  const kpisOp = dto?.blocks.kpis_operational;
-  const kpisProducts = dto?.blocks.kpis_products;
-  const kpisSeries = dto?.blocks.kpis_series;
+  const dtoAny = dto as any;
+  const actionsBlock = dtoAny?.blocks?.actions_today;
+  const alertsBlock = dtoAny?.blocks?.alerts_prioritarios;
+  const portfolioBlock = dtoAny?.blocks?.portfolio_distribution;
+  const topMetalBlock = dtoAny?.blocks?.top_metal;
+  const timelineBlock = dtoAny?.blocks?.timeline;
+  const kpisOp = dtoAny?.blocks?.kpis_operational;
+  const kpisProducts = dtoAny?.blocks?.kpis_products;
+  const kpisSeries = dtoAny?.blocks?.kpis_series;
 
   const actionItems =
     actionsBlock?.status === "OK" && actionsBlock.data
@@ -1247,7 +1249,7 @@ export function mapAnalyticsHomeViewModel(dto: AnalyticsHomeV2Dto | null | undef
 
   const portfolioRows: PortfolioRow[] =
     portfolioBlock?.status === "OK" && portfolioBlock.data
-      ? portfolioBlock.data.buckets.map((bucket, index) => {
+      ? portfolioBlock.data.buckets.map((bucket: Record<string, unknown>, index: number) => {
           const keyToken = String(bucket.key || "").toUpperCase();
           const iconStyle: PortfolioRow["iconStyle"] = keyToken === "PRUNE" ? "err" : keyToken === "EXPAND" ? "ok" : "info";
           const bucketRecord = bucket as Record<string, unknown>;
@@ -1337,7 +1339,7 @@ export function mapAnalyticsHomeViewModel(dto: AnalyticsHomeV2Dto | null | undef
 
   const timelineRows: TimelineRow[] =
     timelineBlock?.status === "OK" && timelineBlock.data
-      ? timelineBlock.data.rows.slice(0, 3).map((row, index) => {
+      ? timelineBlock.data.rows.slice(0, 3).map((row: Record<string, unknown>, index: number) => {
           const rec = asRecord(row);
           const status = String(rec.status || "").toUpperCase();
           const pin: TimelineRow["pin"] = status.includes("OK") ? "green" : status.includes("WARN") ? "blue" : "wine";

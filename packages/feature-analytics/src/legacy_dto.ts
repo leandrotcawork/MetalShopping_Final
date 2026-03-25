@@ -1,6 +1,9 @@
 import { buildMockAnalyticsHomeDto, buildMockTaxonomyScopeOverview } from "./mocks/analyticsMocks";
 
-export type AnalyticsHomeV2Dto = Record<string, unknown>;
+export type AnalyticsHomeV2Dto = {
+  blocks?: Record<string, unknown>;
+  [key: string]: unknown;
+};
 
 type AnalyticsMetricV1Dto = {
   value: number;

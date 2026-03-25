@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useMemo, useState } from "react";
 
 import { FilterDropdown, type SelectMenuOption } from "@metalshopping/ui";

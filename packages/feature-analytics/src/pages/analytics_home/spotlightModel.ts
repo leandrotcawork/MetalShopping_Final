@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { AnalyticsHomeViewModel } from "./analyticsHomeViewModel";
 
 type SignalTone = "info" | "warn" | "crit" | "ok";

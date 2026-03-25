@@ -1,4 +1,3 @@
-// @ts-nocheck
 import styles from "../analytics_home.module.css";
 
 type SpotlightCalloutProps = {

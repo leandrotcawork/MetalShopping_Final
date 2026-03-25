@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { AlertsList } from "./AlertsList";
 import { CardShell } from "./CardShell";
 import { HeatmapMatrix } from "./HeatmapMatrix";

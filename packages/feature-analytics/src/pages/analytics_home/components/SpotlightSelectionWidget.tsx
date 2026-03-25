@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useMemo, useState } from "react";
 import styles from "../analytics_home.module.css";
 import { SpotlightSkuTable } from "./SpotlightSkuTable";

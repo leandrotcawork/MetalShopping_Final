@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { type MutableRefObject, type PropsWithChildren, type ReactNode, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 

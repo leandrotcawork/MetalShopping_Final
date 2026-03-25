@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   makeAnalyticsTaxonomyScopeOverviewV1Dto,
@@ -370,7 +369,7 @@ export function AnalyticsHomePage({ updatedAtLabel, dto, onRefresh, isRefreshing
         capitalBrl: Math.max(0, Number(row.capital_brl || 0)),
         riskLevel,
         riskPct,
-        gmroi: row.gmroi ?? null,
+        gmroi: (Number.isFinite(Number(row.gmroi)) ? Number(row.gmroi) : null) as number | null,
         revenueBrl: Math.max(0, Number(row.revenue_brl || 0)),
         marginBrl: Math.max(0, Number((row as { gross_margin_brl?: number }).gross_margin_brl ?? row.margin_brl ?? 0)),
       };
@@ -387,8 +386,8 @@ export function AnalyticsHomePage({ updatedAtLabel, dto, onRefresh, isRefreshing
   const abcSpotlightRows = useMemo(() => {
     const rows = abcScopeDto?.panels.top_nodes_by_revenue || [];
     const totalRevenue = rows.reduce((acc, row) => acc + Math.max(0, Number(row.revenue_brl || 0)), 0);
-    const aMax = Number(abcScopeDto?.scope.analysis_cards?.abc_mix.a_max_cum_pct || 80);
-    const bMax = Number(abcScopeDto?.scope.analysis_cards?.abc_mix.b_max_cum_pct || 95);
+    const aMax = Number(abcScopeDto?.scope.analysis_cards?.abc_mix?.a_max_cum_pct || 80);
+    const bMax = Number(abcScopeDto?.scope.analysis_cards?.abc_mix?.b_max_cum_pct || 95);
     let cum = 0;
     return rows
       .map((row) => {
@@ -407,7 +406,7 @@ export function AnalyticsHomePage({ updatedAtLabel, dto, onRefresh, isRefreshing
         };
       })
       .sort((a, b) => b.revenueBrl - a.revenueBrl);
-  }, [abcScopeDto?.panels.top_nodes_by_revenue, abcScopeDto?.scope.analysis_cards?.abc_mix.a_max_cum_pct, abcScopeDto?.scope.analysis_cards?.abc_mix.b_max_cum_pct]);
+  }, [abcScopeDto?.panels.top_nodes_by_revenue, abcScopeDto?.scope.analysis_cards?.abc_mix?.a_max_cum_pct, abcScopeDto?.scope.analysis_cards?.abc_mix?.b_max_cum_pct]);
   const spotlightTableStateFromQuery = useMemo(() => {
     const query = new URLSearchParams(location.search);
     const querySpotlightKey = String(query.get("spotlight") || "").trim();
@@ -847,8 +846,8 @@ export function AnalyticsHomePage({ updatedAtLabel, dto, onRefresh, isRefreshing
         {isAbcSpotlight ? (
           <AbcMixSpotlight
             rows={abcSpotlightRows}
-            aMaxCumPct={Number(abcScopeDto?.scope.analysis_cards?.abc_mix.a_max_cum_pct || 80)}
-            bMaxCumPct={Number(abcScopeDto?.scope.analysis_cards?.abc_mix.b_max_cum_pct || 95)}
+            aMaxCumPct={Number(abcScopeDto?.scope.analysis_cards?.abc_mix?.a_max_cum_pct || 80)}
+            bMaxCumPct={Number(abcScopeDto?.scope.analysis_cards?.abc_mix?.b_max_cum_pct || 95)}
             searchQuery={abcSearchQuery}
             onSearchQueryChange={setAbcSearchQuery}
             brandOptions={abcBrandOptions}

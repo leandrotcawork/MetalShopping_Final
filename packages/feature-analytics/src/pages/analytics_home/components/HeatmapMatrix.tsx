@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { AnalyticsHomeViewModel } from "../analyticsHomeViewModel";
 import styles from "../analytics_home.module.css";
 
