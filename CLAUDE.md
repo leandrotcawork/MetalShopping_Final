@@ -172,6 +172,39 @@ Every decision passes this filter: *"Would a Stripe or Google senior engineer ap
 | ADR lifecycle | `$metalshopping-adr` |
 | Frontend visual / component | `$metalshopping-design-system` |
 
+## Brain Workflow File Locations
+
+When using `/brain-task`, all task artifacts follow this structure:
+
+### During Task Execution (brain-task Steps 1-5)
+
+| Step | File Location | Purpose |
+|------|---------------|---------|
+| 1 | `.brain/working-memory/context-packet-[id].md` | Assembled sinapses (context) |
+| 2 | `.brain/working-memory/codex-context.md` OR `.brain/working-memory/opus-context.md` | Execution context (sent to model) |
+| 4 | `.brain/working-memory/task-completion-[id].md` | Outcome + files + tests + lessons |
+| 5 | `.brain/working-memory/sinapse-updates-[id].md` | Proposed sinapse updates (awaiting approval) |
+
+⚠️ **Rule:** ALL task artifacts during execution go to `.brain/working-memory/` — NOT to `tasks/`
+
+### After Task Completion (brain-task Step 6)
+
+| Location | Purpose |
+|----------|---------|
+| `.brain/progress/completed-contexts/[task-id]-codex-context.md` | Archived execution context |
+| `.brain/progress/completed-contexts/[task-id]-completion-record.md` | Archived completion record |
+| `.brain/progress/completed-contexts/[task-id]-OUTCOME.md` | Outcome analysis for pattern matching |
+| `.brain/progress/activity.md` | Activity log (all tasks appended) |
+
+### Sprint Backlog (manual, not part of brain-task)
+
+| Location | Purpose |
+|----------|---------|
+| `tasks/todo.md` | Current sprint backlog + action items |
+| `tasks/lessons.md` | Permanent lessons learned |
+
+---
+
 ## Key reference docs
 
 - `docs/ARCHITECTURE.md` — frozen architecture blueprint

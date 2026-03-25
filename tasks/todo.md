@@ -71,6 +71,23 @@ Type: frontend-only now | read-only integration later | Events: no | ADR: no
 
 ---
 
+# Technical Debt — Code Quality
+
+## Analytics Home (Post-Migration Refinement)
+- [ ] **Enable TypeScript** — Remove 23 `@ts-nocheck` directives (Item 1 of 3)
+  - Effort: 2-3 hours
+  - Blocks: Type safety in API layer
+  - Details: See `hippocampus/brain-task-execution.md` for execution checklist
+  - Acceptance: `npm run web:typecheck` returns 0 errors
+- [ ] Type the API layer (Item 2) — Replace `Record<string, unknown>` with discriminated unions
+  - Effort: 4-6 hours
+- [ ] Integrate SDK contracts (Item 3) — Use auto-generated types from OpenAPI
+  - Effort: 2-3 hours
+
+---
+
 # Process maintenance
 - [ ] Keep `tasks/lessons.md` structural-only (no local cosmetic lessons)
 - [ ] Keep skills aligned with current workflow and guardrails
+- [ ] Use `hippocampus/brain-workflow.md` for Brain execution file locations
+- [ ] Use `hippocampus/brain-task-execution.md` for step-by-step scaffolding during `/brain-task`
