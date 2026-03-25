@@ -1,55 +1,55 @@
 # MetalShopping Platform Guide
 
-Estado observado em: 2026-03-25
+State observed on: 2026-03-25
 
-Este documento consolida o que o MetalShopping e hoje, quais modulos existem de fato no repositorio, como esses modulos funcionam juntos e quais sao as projecoes futuras mais consistentes com o codigo, os documentos em `docs/` e o arquivo `MetalShopping_Project_Bible.docx`.
+This document consolidates what MetalShopping is today, which modules actually exist in the repository, how those modules work together, and which future directions are most consistent with the codebase, the documents under `docs/`, and the `MetalShopping_Project_Bible.docx` file.
 
-## 1. O que e o MetalShopping
+## 1. What MetalShopping is
 
-MetalShopping nao e um e-commerce tradicional. O produto foi desenhado como uma plataforma empresarial de inteligencia operacional para empresas de materiais de acabamento.
+MetalShopping is not a traditional e-commerce product. It was designed as an enterprise operational intelligence platform for finishing-material companies.
 
-Na pratica, o sistema quer concentrar em um unico produto:
+In practice, the system aims to concentrate the following in a single product:
 
-- catalogo canonico de produtos
-- precificacao
-- estoque
-- monitoramento de mercado
-- shopping e coleta de sinais de fornecedores
-- analytics operacional e estrategico
-- CRM e automacoes futuras
-- governanca de regras, limites e feature flags
+- canonical product catalog
+- pricing
+- inventory
+- market monitoring
+- shopping workflows and supplier signal collection
+- operational and strategic analytics
+- future CRM and automation capabilities
+- governance for rules, thresholds, and feature flags
 
-A identidade congelada do projeto hoje e:
+The currently frozen identity of the project is:
 
 - monorepo
 - server-first
-- `apps/server_core` como nucleo canonico
-- workers especializados fora do core
-- Postgres como estado transacional canonico
-- Go no core
-- Python em workers de integracao e compute
-- frontend thin-client consumindo SDK gerado
+- `apps/server_core` as the canonical core
+- specialized workers outside the core
+- Postgres as the canonical transactional state
+- Go in the core
+- Python in integration and compute workers
+- thin-client frontend consuming generated SDKs
 
-Em termos de filosofia de entrega, o projeto segue explicitamente:
+In delivery terms, the project explicitly follows:
 
 `make it work -> make it clean -> make it fast`
 
-## 2. Tese arquitetural do produto
+## 2. Architectural thesis of the product
 
-O MetalShopping foi organizado para evitar dois problemas classicos:
+MetalShopping was organized to avoid two common failure modes:
 
-- espalhar regra de negocio entre frontend, backend e automacoes
-- deixar workers virarem donos do estado do produto
+- spreading business rules across frontend, backend, and automation layers
+- letting workers become owners of product state
 
-Por isso, a arquitetura atual parte destes principios:
+Because of that, the current architecture is based on these principles:
 
-- `contracts/` e a fonte de verdade para APIs, eventos e governanca
-- `server_core` implementa contratos publicos, auth, tenancy, governanca e mutacoes canonicas
-- workers processam integracao, scraping, compute e entrega assincrona
-- o frontend nao fala com endpoints via `fetch()` manual; ele consome `@metalshopping/sdk-runtime`
-- eventos relevantes saem do core via outbox e alimentam workers ou read models futuros
+- `contracts/` is the source of truth for APIs, events, and governance
+- `server_core` implements public contracts, auth, tenancy, governance, and canonical mutations
+- workers handle integration, scraping, compute, and asynchronous delivery
+- the frontend does not talk to endpoints through manual `fetch()`; it consumes `@metalshopping/sdk-runtime`
+- relevant events leave the core through outbox and feed workers or future read models
 
-O fluxo padrao do produto hoje e este:
+The standard product flow today looks like this:
 
 ```text
 contracts/api/openapi/*.yaml
@@ -58,275 +58,275 @@ contracts/api/openapi/*.yaml
     -> apps/web
 
 contracts/events/v1/*.json
-    -> outbox no server_core
-    -> workers / consumidores assincronos
+    -> outbox in server_core
+    -> workers / async consumers
 
 contracts/governance/*
     -> bootstrap/seeds/governance/*
-    -> runtime em apps/server_core/internal/platform/governance/*
+    -> runtime in apps/server_core/internal/platform/governance/*
 ```
 
-## 3. Estrutura atual do repositorio
+## 3. Current repository structure
 
-O repositorio esta dividido em blocos com responsabilidades bem definidas:
+The repository is divided into blocks with well-defined responsibilities:
 
-| Bloco | Papel atual |
+| Block | Current role |
 |---|---|
-| `apps/server_core` | Backend principal, auth, tenancy, governanca, APIs, estado transacional e outbox |
-| `apps/web` | Cliente web thin, com shell, rotas e composicao de paginas |
-| `apps/integration_worker` | Worker Python de integracao e scraping, hoje com runtime real para Shopping Price |
-| `apps/analytics_worker` | Reserva para compute analitico pesado e projecoes futuras |
-| `apps/automation_worker` | Reserva para campanhas, gatilhos e automacoes futuras |
-| `apps/notifications_worker` | Reserva para entrega por email, SMS, WhatsApp e webhooks |
-| `apps/admin_console` | Console administrativo planejado para governanca e operacao |
-| `apps/desktop` | Cliente thin planejado para futuro |
-| `contracts/` | Contratos HTTP, eventos versionados e artefatos de governanca |
-| `packages/ui` | Componentes visuais compartilhados |
-| `packages/platform-sdk` | Runtime autoral que encapsula os clientes gerados |
-| `packages/feature-*` | Adaptadores, view models e composicao por feature |
-| `packages/generated` | SDKs e tipos gerados; nunca editados manualmente |
-| `docs/` | SoT, ADRs, planos, regras operacionais e visoes de dominio |
+| `apps/server_core` | Main backend, auth, tenancy, governance, APIs, transactional state, and outbox |
+| `apps/web` | Thin web client with shell, routes, and page composition |
+| `apps/integration_worker` | Python integration and scraping worker, currently with real Shopping Price runtime |
+| `apps/analytics_worker` | Reserved for heavy analytics compute and future projections |
+| `apps/automation_worker` | Reserved for campaigns, triggers, and future automations |
+| `apps/notifications_worker` | Reserved for email, SMS, WhatsApp, and webhook delivery |
+| `apps/admin_console` | Planned thin admin console for governance and operations |
+| `apps/desktop` | Planned thin desktop client |
+| `contracts/` | HTTP contracts, versioned events, and governance artifacts |
+| `packages/ui` | Shared visual components |
+| `packages/platform-sdk` | Author-owned runtime that encapsulates generated clients |
+| `packages/feature-*` | Per-feature adapters, view models, and composition |
+| `packages/generated` | Generated SDKs and types; never edited manually |
+| `docs/` | SoT, ADRs, plans, operating rules, and domain visions |
 
-## 4. Modulos que existem hoje no core
+## 4. Modules that exist today in the core
 
-Os diretorios de modulo em `apps/server_core/internal/modules/` representam a topologia alvo do produto. Em 2026-03-25, o estado real nao e homogeneo: alguns modulos ja tem slice funcional, outros ainda sao placeholders arquiteturais.
+The directories under `apps/server_core/internal/modules/` represent the target product topology. As of 2026-03-25, the real state is not uniform: some modules already have functional slices, while others are still architectural placeholders.
 
-### 4.1 Modulos com slice funcional observada
+### 4.1 Modules with an observed functional slice
 
-| Modulo | Estado atual | Papel real hoje |
+| Module | Current state | Real role today |
 |---|---|---|
-| `iam` | Implementado | Papeis e permissoes internas do MetalShopping |
-| `catalog` | Implementado | Produto canonico, taxonomia, identificadores e portfolio base |
-| `pricing` | Implementado | Preco interno, custo de reposicao, custo medio e historico de preco |
-| `inventory` | Implementado | Posicao de estoque atual e historico de posicoes |
-| `home` | Implementado | KPIs resumidos de entrada da plataforma |
-| `shopping` | Implementado | Orquestracao de requests de coleta, leitura de runs e exportacoes |
-| `suppliers` | Implementado | Diretorio de fornecedores e manifestos de drivers |
-| `analytics_serving` | Implementado | Superficie de leitura de Analytics Home |
+| `iam` | Implemented | Internal roles and permissions for MetalShopping |
+| `catalog` | Implemented | Canonical product, taxonomy, identifiers, and portfolio base |
+| `pricing` | Implemented | Internal price, replacement cost, average cost, and price history |
+| `inventory` | Implemented | Current inventory position and position history |
+| `home` | Implemented | Entry-level summary KPIs |
+| `shopping` | Implemented | Collection request orchestration, run reads, and exports |
+| `suppliers` | Implemented | Supplier directory and driver manifests |
+| `analytics_serving` | Implemented | Analytics Home read surface |
 
-### 4.2 Modulos reservados na arquitetura, mas sem slice funcional relevante observada
+### 4.2 Modules reserved in the architecture but without a relevant functional slice yet
 
-| Modulo | Leitura correta do estado atual |
+| Module | Correct reading of the current state |
 |---|---|
-| `tenant_admin` | Reservado para administracao de tenant |
-| `sales` | Reservado para dominio comercial futuro |
-| `customers` | Base para CRM futuro |
-| `procurement` | Planejado, com fronteira documental congelada, sem runtime material ainda |
-| `market_intelligence` | Planejado para evolucao futura |
-| `crm` | Planejado para camada futura |
-| `automation` | Planejado para automacoes governadas |
-| `integrations_control` | Planejado para operacao de conectores |
-| `alerts` | Planejado para alertas operacionais e estrategicos |
+| `tenant_admin` | Reserved for tenant administration |
+| `sales` | Reserved for future commercial domain work |
+| `customers` | Foundation for future CRM |
+| `procurement` | Planned, with frozen documentary boundary, but no material runtime slice yet |
+| `market_intelligence` | Planned for future evolution |
+| `crm` | Planned for a future layer |
+| `automation` | Planned for governed automations |
+| `integrations_control` | Planned for connector operations |
+| `alerts` | Planned for operational and strategic alerts |
 
-## 5. Plataforma base dentro do `server_core`
+## 5. Platform foundation inside `server_core`
 
-Antes dos modulos de negocio, o produto ja possui uma camada de plataforma bastante definida.
+Before the business modules, the product already has a fairly well-defined platform layer.
 
-### 5.1 Auth e sessao web
+### 5.1 Auth and web session
 
-O login atual usa Keycloak como IdP inicial, mas a fronteira de sessao pertence ao `server_core`.
+The current login uses Keycloak as the initial IdP, but the session boundary belongs to `server_core`.
 
-Fluxo real:
+Real flow:
 
-1. O browser inicia `GET /api/v1/auth/session/login`.
-2. O `server_core` redireciona para o provedor OIDC.
-3. O callback volta para `GET /api/v1/auth/session/callback`.
-4. O backend valida estado, troca o codigo por token, cria sessao em Postgres e seta cookie `HttpOnly`.
-5. O frontend sobe via `GET /api/v1/auth/session/me`.
-6. Mutacoes de sessao usam CSRF cookie + header.
+1. The browser starts with `GET /api/v1/auth/session/login`.
+2. `server_core` redirects to the OIDC provider.
+3. The callback returns to `GET /api/v1/auth/session/callback`.
+4. The backend validates state, exchanges the code for a token, creates a session in Postgres, and sets an `HttpOnly` cookie.
+5. The frontend bootstraps through `GET /api/v1/auth/session/me`.
+6. Session mutations use CSRF cookie + header.
 
-Isso evita que o browser vire dono de token, permissao ou tenancy.
+This prevents the browser from becoming the owner of tokens, permissions, or tenancy.
 
 ### 5.2 Tenancy runtime
 
-A plataforma e multi-tenant desde a fundacao. O padrao atual combina:
+The platform is multi-tenant from the foundation upward. The current pattern combines:
 
-- `tenant_id` no modelo de dados
-- runtime tenant no contexto
-- sessao Postgres tenant-aware
-- `current_tenant_id()` como filtro em tabelas tenant-scoped
-- RLS como base do isolamento inicial
+- `tenant_id` in the data model
+- runtime tenant in request context
+- tenant-aware Postgres session
+- `current_tenant_id()` as a filter in tenant-scoped tables
+- RLS as the initial isolation baseline
 
-Em termos de design, isso prepara o sistema para crescimento sem duplicar a aplicacao por cliente.
+From a design perspective, this prepares the system for growth without duplicating the application per customer.
 
 ### 5.3 Runtime governance
 
-A governanca do produto nao foi deixada como configuracao espalhada em codigo.
+Product governance was not left as scattered configuration in code.
 
-Hoje existem:
+Today there are:
 
-- feature flags em `contracts/governance/feature_flags`
-- thresholds em `contracts/governance/thresholds`
-- policies em `contracts/governance/policies`
-- seeds iniciais em `bootstrap/seeds/governance`
-- resolvers em `internal/platform/governance/*`
+- feature flags in `contracts/governance/feature_flags`
+- thresholds in `contracts/governance/thresholds`
+- policies in `contracts/governance/policies`
+- initial seeds in `bootstrap/seeds/governance`
+- resolvers in `internal/platform/governance/*`
 
-Essa camada ja interfere em runtime real. Exemplos:
+This layer already affects real runtime behavior. Examples:
 
-- habilitacao de criacao de produto
-- controles de timeout de sessao
-- politica de override manual de preco
+- product creation enablement
+- session timeout controls
+- manual price override policy
 
-### 5.4 Outbox e mensageria
+### 5.4 Outbox and messaging
 
-Mutacoes relevantes nao deveriam depender de chamadas sincronas a workers. O projeto ja implementa a fundacao de outbox em `internal/platform/messaging/outbox`.
+Relevant mutations should not depend on synchronous worker calls. The project already implements the outbox foundation in `internal/platform/messaging/outbox`.
 
-Na pratica, o fluxo esperado e:
+In practice, the expected flow is:
 
-- o modulo grava no banco
-- no mesmo contexto transacional registra o evento no outbox
-- o dispatcher publica ou entrega para consumidores assincronos
+- the module writes to the database
+- in the same transactional context it records the event in the outbox
+- the dispatcher publishes or hands it off to asynchronous consumers
 
-Isso ja sustenta eventos como `catalog_product_created`, `pricing_price_set`, `inventory_position_updated` e `shopping_run_requested`.
+This already supports events such as `catalog_product_created`, `pricing_price_set`, `inventory_position_updated`, and `shopping_run_requested`.
 
-## 6. Modulos de negocio atuais e como funcionam
+## 6. Current business modules and how they work
 
 ### 6.1 IAM
 
-O modulo `iam` e o responsavel pelas permissoes internas do produto. Ele nao substitui o IdP; ele complementa a identidade externa com semantica interna de autorizacao.
+The `iam` module is responsible for the product's internal permissions. It does not replace the IdP; it complements external identity with internal authorization semantics.
 
-O que faz hoje:
+What it does today:
 
-- faz upsert de atribuicao de papeis por usuario
-- responde a checks de permissao usados por outros modulos
-- governa o acesso a operacoes de catalogo, pricing, inventory e administracao
+- upserts role assignments by user
+- responds to permission checks used by other modules
+- governs access to catalog, pricing, inventory, and administrative operations
 
-Papel arquitetural:
+Architectural role:
 
-- Keycloak autentica
-- `iam` decide o que o usuario pode fazer dentro do MetalShopping
+- Keycloak authenticates
+- `iam` decides what the user is allowed to do inside MetalShopping
 
 ### 6.2 Catalog
 
-`catalog` e o primeiro modulo canonico forte do produto. Ele e dono da identidade do produto.
+`catalog` is the first strong canonical module of the product. It owns product identity.
 
-O que o modulo ja possui:
+What the module already has:
 
-- CRUD inicial de produtos
-- taxonomia
-- identificadores do produto
-- descricao
-- status do produto
-- portfolio base para a superficie `Products`
+- initial product CRUD
+- taxonomy
+- product identifiers
+- description
+- product status
+- the base portfolio surface for `Products`
 
-Responsabilidade real:
+Real responsibility:
 
-- `catalog` nao e so cadastro; ele define a base sobre a qual `pricing`, `inventory`, `shopping`, `analytics` e `procurement` trabalham
+- `catalog` is not just registration; it defines the base on top of which `pricing`, `inventory`, `shopping`, `analytics`, and `procurement` operate
 
-Importante:
+Important details:
 
-- criacao de produto ja e governada por feature flag e thresholds
-- o modulo ja publica evento via outbox
+- product creation is already governed by feature flags and thresholds
+- the module already publishes an event through outbox
 
 ### 6.3 Pricing
 
-`pricing` e dono da semantica de preco interno.
+`pricing` owns the semantics of internal price.
 
-Capacidades atuais:
+Current capabilities:
 
-- registrar preco de produto
-- listar historico de precos
-- ler preco atual
-- armazenar custo de reposicao
-- armazenar custo medio quando disponivel
-- aplicar guardas de governanca para override manual
-- evitar historico artificial em reruns sem mudanca real
+- register product price
+- list price history
+- read current price
+- store replacement cost
+- store average cost when available
+- apply governance guards for manual override
+- avoid artificial history on reruns without real changes
 
-Papel do modulo:
+Role of the module:
 
-- transformar preco em dado operacional governado, e nao em campo espalhado pelo sistema
+- turn price into governed operational data instead of a field scattered across the system
 
 ### 6.4 Inventory
 
-`inventory` e dono da posicao de estoque viva.
+`inventory` owns live inventory position.
 
-Capacidades atuais:
+Current capabilities:
 
-- registrar posicao de estoque por produto
-- listar historico de posicoes
-- ler posicao atual
-- armazenar `on_hand_quantity`
-- armazenar `last_purchase_at`
-- armazenar `last_sale_at`
-- manter status da posicao
+- register inventory position per product
+- list position history
+- read current position
+- store `on_hand_quantity`
+- store `last_purchase_at`
+- store `last_sale_at`
+- maintain position status
 
-Papel do modulo:
+Role of the module:
 
-- ser a verdade canonica de estoque operacional
+- act as the canonical truth of operational inventory
 
-Importante:
+Important detail:
 
-- o plano oficial impede que semantica de compras, lead time ou ERP invada `inventory`
+- the official plan prevents purchasing semantics, lead time, or ERP leakage from invading `inventory`
 
 ### 6.5 Home
 
-`home` e a primeira superficie de entrada do produto.
+`home` is the product's first entry surface.
 
-Hoje o endpoint de resumo entrega:
+Today the summary endpoint returns:
 
-- quantidade total de produtos
-- quantidade de produtos ativos
-- quantidade de produtos com preco
-- quantidade de produtos com estoque rastreado
-- timestamp da ultima atualizacao
+- total product count
+- active product count
+- priced product count
+- inventory-tracked product count
+- last updated timestamp
 
-Papel do modulo:
+Role of the module:
 
-- ser um sumario operacional inicial da plataforma
-- comprovar a tese `contract -> backend -> sdk -> tela`
+- act as an initial operational summary of the platform
+- prove the `contract -> backend -> sdk -> screen` thesis
 
 ### 6.6 Shopping
 
-`shopping` e um dos modulos mais importantes hoje porque ele materializa o padrao server_core + worker.
+`shopping` is one of the most important modules today because it materializes the `server_core + worker` pattern.
 
-O que ele faz atualmente:
+What it currently does:
 
-- expor bootstrap operacional
-- expor resumo de runs
-- criar `run requests`
-- listar runs
-- detalhar um run
-- listar itens por run
-- resumir status por item e por fornecedor
-- ler snapshot mais recente por produto
-- gerenciar sinais de fornecedor
-- listar candidatos de URL manual
-- exportar resultados em XLSX
+- expose operational bootstrap
+- expose run summary
+- create `run requests`
+- list runs
+- detail a run
+- list items by run
+- summarize status by item and by supplier
+- read latest snapshot by product
+- manage supplier signals
+- list manual URL candidates
+- export results to XLSX
 
-Fluxo funcional atual:
+Current functional flow:
 
-1. O usuario inicia uma coleta pelo frontend.
-2. O `server_core` valida auth e tenant.
-3. O modulo `shopping` cria um `run_request`.
-4. O core registra evento `shopping.run_requested` no outbox.
-5. O `integration_worker` processa em modo fila ou modo evento.
-6. O worker escreve resultados no Postgres.
-7. O `server_core` volta a servir summary, runs, items, latest snapshots e exportacoes.
+1. The user starts a collection from the frontend.
+2. `server_core` validates auth and tenant.
+3. The `shopping` module creates a `run_request`.
+4. The core records the `shopping.run_requested` event in the outbox.
+5. `integration_worker` processes it in queue mode or event mode.
+6. The worker writes results into Postgres.
+7. `server_core` serves summary, runs, items, latest snapshots, and exports back to the client.
 
-Esse fluxo e importante porque representa o modelo desejado para integracoes futuras:
+This flow matters because it represents the desired model for future integrations:
 
-- Python faz scraping e processamento de campo
-- Go continua sendo a fronteira canonica de API
-- o estado fica em Postgres
+- Python performs field scraping and processing
+- Go remains the canonical API boundary
+- state lives in Postgres
 
 ### 6.7 Suppliers
 
-`suppliers` hoje nao e so um cadastro passivo. Ele funciona como camada de governanca operacional para o runtime de fornecedores.
+`suppliers` is no longer just a passive registry. It works as the operational governance layer for supplier runtime behavior.
 
-O que ja existe:
+What already exists:
 
-- diretorio de fornecedores
-- enable/disable de fornecedor
-- manifestos versionados de driver
-- validacao de manifestos por familia
-- ativacao de manifesto
+- supplier directory
+- supplier enable/disable controls
+- versioned driver manifests
+- manifest validation by family
+- manifest activation
 
-Familias de runtime observadas:
+Observed runtime families:
 
 - `http`
 - `playwright`
 
-Estrategias ja previstas/registradas:
+Strategies already registered:
 
 - `http.mock.v1`
 - `http.vtex_persisted_query.v1`
@@ -336,89 +336,89 @@ Estrategias ja previstas/registradas:
 - `playwright.mock.v1`
 - `playwright.pdp_first.v1`
 
-Na pratica, `suppliers` virou a camada que permite escalar o Shopping sem hardcode de fornecedor espalhado no worker.
+In practice, `suppliers` became the layer that allows Shopping to scale without hardcoded supplier logic spread across the worker runtime.
 
 ### 6.8 Analytics Serving
 
-`analytics_serving` e a primeira interface backend do dominio analitico.
+`analytics_serving` is the first backend interface for the analytics domain.
 
-Hoje ele entrega:
+Today it provides:
 
-- endpoint de `Analytics Home`
-- snapshot de leitura
-- blocos estruturados como KPIs, acoes do dia, alertas, distribuicao de portfolio e timeline
+- an `Analytics Home` endpoint
+- read snapshot metadata
+- structured blocks such as KPIs, actions for today, alerts, portfolio distribution, and timeline
 
-Papel atual:
+Current role:
 
-- servir uma superficie de leitura tenant-safe
-- alimentar o frontend de analytics sem colocar logica analitica pesada no browser
+- serve a tenant-safe read surface
+- feed the analytics frontend without pushing heavy analytics logic into the browser
 
-Papel futuro:
+Future role:
 
-- virar a camada de serving do modulo de inteligencia comercial
+- become the serving layer of the commercial intelligence module
 
-## 7. Workers atuais e como entram no fluxo
+## 7. Current workers and how they enter the flow
 
 ### 7.1 Integration Worker
 
-E o worker Python mais concreto hoje no repositorio.
+This is the most concrete Python worker in the repository today.
 
-Funciona assim:
+It works like this:
 
-- pode operar em `queue` mode ou `event` mode
-- processa `shopping_price_run_requests`
-- usa estrategias `http` e `playwright`
-- decide o termo de busca via politica de lookup
-- executa a estrategia
-- grava observacoes em tabelas de shopping no Postgres
+- it can run in `queue` mode or `event` mode
+- it processes `shopping_price_run_requests`
+- it uses `http` and `playwright` strategies
+- it decides the lookup term according to lookup policy
+- it executes the strategy
+- it writes observations into Shopping tables in Postgres
 
-Ponto arquitetural chave:
+Key architectural point:
 
-- ele nao chama endpoint HTTP do core para concluir o trabalho
-- ele escreve no banco; o core le e expoe
+- it does not call core HTTP endpoints to complete the job
+- it writes to the database; the core reads and exposes the results
 
-Esse e o padrao oficial para integracao assincrona nivel 1.
+This is the official level-1 pattern for asynchronous integration.
 
 ### 7.2 Analytics Worker
 
-Hoje esta mais como boundary reservada do que como slice operacional ativa, mas sua missao esta muito clara nos docs:
+Today it is more of a reserved boundary than an active operational slice, but its mission is very clear in the docs:
 
 - scoring
-- projecoes
+- projections
 - explainability
-- simulacoes
-- processamento pesado
-- atualizacao de read models analiticos
+- simulations
+- heavy processing
+- analytics read model refresh
 
 ### 7.3 Automation Worker
 
-Planejado para:
+Planned for:
 
-- gatilhos
-- campanhas
-- acoes governadas
-- follow-ups assincronos
+- triggers
+- campaigns
+- governed actions
+- asynchronous follow-ups
 
 ### 7.4 Notifications Worker
 
-Planejado para:
+Planned for:
 
 - email
 - SMS
 - WhatsApp
 - webhooks
 
-O dominio de alerta continua no core; este worker so entrega.
+The alert domain remains in the core; this worker only delivers.
 
-## 8. Frontend atual e boundary de cliente fino
+## 8. Current frontend and thin-client boundary
 
-O frontend foi explicitamente desenhado para nao virar uma segunda aplicacao de negocio.
+The frontend was explicitly designed not to become a second business application.
 
 ### 8.1 `apps/web`
 
-E o thin client principal hoje.
+This is the main thin client today.
 
-Rotas observadas:
+Observed routes:
 
 - `/home`
 - `/products`
@@ -427,35 +427,35 @@ Rotas observadas:
 - `/analytics/products/:pn/*`
 - `/login`
 
-Ele e dono de:
+It owns:
 
 - shell
-- roteamento
+- routing
 - providers
-- composicao de paginas
+- page composition
 
-Ele nao deve ser dono de:
+It should not own:
 
-- contratos canonicos
-- regras de negocio
-- chamadas HTTP manuais
+- canonical contracts
+- business rules
+- manual HTTP calls
 
 ### 8.2 `packages/platform-sdk`
 
-Esse pacote e central para a arquitetura web atual.
+This package is central to the current web architecture.
 
-Ele:
+It:
 
-- encapsula clientes gerados
-- padroniza headers, trace id, CSRF e credentials
-- mapeia erros HTTP para um runtime consistente
-- expande a superficie usada pelo frontend com metodos mais ergonomicos
+- encapsulates generated clients
+- standardizes headers, trace id, CSRF, and credentials
+- maps HTTP errors into a consistent runtime layer
+- expands the surface used by the frontend with more ergonomic methods
 
-Sem ele, o frontend dependeria diretamente dos gerados; com ele, existe uma camada autoral estavel e controlada.
+Without it, the frontend would depend directly on generated code; with it, there is a stable and controlled author-owned layer.
 
 ### 8.3 `packages/ui`
 
-Centraliza componentes compartilhados ja reutilizados entre superficies, como:
+It centralizes shared components already reused across surfaces, such as:
 
 - `AppFrame`
 - `Button`
@@ -474,27 +474,27 @@ Centraliza componentes compartilhados ja reutilizados entre superficies, como:
 `feature-auth-session`
 
 - login
-- bootstrap de sessao
-- rota autenticada
-- telas de redirect/auth bootstrap
+- session bootstrap
+- authenticated route
+- redirect/auth bootstrap screens
 
 `feature-products`
 
-- adaptadores e widgets da superficie Products
-- composicao do portfolio
+- adapters and widgets for the Products surface
+- portfolio composition
 
 `feature-analytics`
 
-- adaptadores e DTOs de compatibilidade com o frontend legado
-- superficies atuais de Analytics
-- workspace de produto
-- trilha de migracao visual com foco em paridade
+- compatibility adapters and DTOs for the legacy frontend
+- current Analytics surfaces
+- product workspace
+- visual migration track focused on parity
 
-## 9. Contratos atuais e estado de integracao
+## 9. Current contracts and integration state
 
-### 9.1 OpenAPI surfaces observadas
+### 9.1 Observed OpenAPI surfaces
 
-Hoje o repositorio ja possui contratos para:
+Today the repository already has contracts for:
 
 - `analytics`
 - `auth_session`
@@ -507,9 +507,9 @@ Hoje o repositorio ja possui contratos para:
 - `shopping`
 - `suppliers`
 
-### 9.2 Eventos observados
+### 9.2 Observed events
 
-Ja existem eventos versionados para:
+There are already versioned events for:
 
 - `catalog_product_created`
 - `iam_role_assigned`
@@ -517,51 +517,51 @@ Ja existem eventos versionados para:
 - `pricing_price_set`
 - `shopping_run_requested`
 
-### 9.3 Governanca observada
+### 9.3 Observed governance
 
-Ja existem artefatos de:
+There are already artifacts for:
 
 - feature flags
 - thresholds
 - policies
 
-Ou seja: o projeto ja passou da fase de "pasta pronta" e entrou em uma fase onde contratos, persistencia, frontend e fluxo assincrono realmente conversam.
+In other words, the project has already moved beyond the "folder structure only" phase and entered a phase where contracts, persistence, frontend, and asynchronous flow are actually connected.
 
-## 10. Como o sistema funciona ponta a ponta hoje
+## 10. How the system works end to end today
 
-### 10.1 Fluxo HTTP sincrono padrao
+### 10.1 Standard synchronous HTTP flow
 
-1. O usuario entra pelo `apps/web`.
-2. A sessao e autenticada via `auth/session`.
-3. O frontend chama `sdk.*` via `@metalshopping/sdk-runtime`.
-4. O `server_core` autentica o principal e resolve o tenant.
-5. O modulo de negocio executa validacoes e regras.
-6. O acesso a dados acontece em Postgres tenant-aware.
-7. O backend responde DTO alinhado ao contrato.
+1. The user enters through `apps/web`.
+2. The session is authenticated via `auth/session`.
+3. The frontend calls `sdk.*` through `@metalshopping/sdk-runtime`.
+4. `server_core` authenticates the principal and resolves the tenant.
+5. The business module executes validations and rules.
+6. Data access happens through tenant-aware Postgres paths.
+7. The backend responds with contract-aligned DTOs.
 
-### 10.2 Fluxo de mutacao com evento
+### 10.2 Mutation flow with an event
 
-1. O cliente chama uma mutacao do core.
-2. O modulo grava estado transacional.
-3. O evento correspondente entra no outbox.
-4. O consumidor assincrono processa depois.
-5. O sistema evita acoplamento sincrono entre request e worker.
+1. The client calls a core mutation.
+2. The module writes transactional state.
+3. The corresponding event enters the outbox.
+4. The async consumer processes it later.
+5. The system avoids synchronous coupling between request and worker.
 
-### 10.3 Fluxo de read surface composta
+### 10.3 Composed read-surface flow
 
-O melhor exemplo hoje e `Products`.
+The best example today is `Products`.
 
-Ela existe porque o backend consolida:
+It exists because the backend consolidates:
 
-- identidade do produto via `catalog`
-- preco atual via `pricing`
-- posicao atual via `inventory`
+- product identity through `catalog`
+- current price through `pricing`
+- current inventory position through `inventory`
 
-Assim, o frontend nao precisa costurar tres modulos manualmente.
+That way, the frontend does not need to stitch three modules together manually.
 
-### 10.4 Fluxo de Shopping Price
+### 10.4 Shopping Price flow
 
-Esse e o fluxo mais representativo do modelo alvo:
+This is the most representative flow of the target model:
 
 ```text
 apps/web
@@ -571,126 +571,126 @@ apps/web
   -> integration_worker
   -> Postgres: runs, items, snapshots, signals
   -> server_core/shopping read APIs
-  -> apps/web exibe progresso e resultado
+  -> apps/web shows progress and results
 ```
 
-## 11. Limites de ownership que o projeto ja congelou
+## 11. Ownership boundaries that are already frozen
 
-Um ponto forte do MetalShopping e que varios limites de ownership ja foram congelados cedo. Isso reduz o risco de drift semantico.
+One of MetalShopping's strengths is that several ownership boundaries were frozen early. This reduces the risk of semantic drift.
 
-Exemplos importantes:
+Important examples:
 
-- `catalog` e dono da identidade do produto
-- `pricing` e dono do preco interno e semantica de custo
-- `inventory` e dono da posicao de estoque
-- `procurement` sera dono de semantica de reposicao e lead time, nao `inventory`
-- `analytics` sera dono de metricas derivadas, score, recomendacao e explainability, nao de escrita canonica
-- workers nao viram donos da verdade de negocio
+- `catalog` owns product identity
+- `pricing` owns internal price and cost semantics
+- `inventory` owns inventory position
+- `procurement` will own replenishment and lead-time semantics, not `inventory`
+- `analytics` will own derived metrics, scoring, recommendations, and explainability, not canonical writes
+- workers must not become owners of business truth
 
-## 12. Onde o projeto esta hoje
+## 12. Where the project stands today
 
-Cruzar o codigo com o SoT mostra um estado bem claro:
+Crossing the codebase with the SoT shows a very clear state:
 
-- a fundacao de auth, tenancy, governance e outbox esta montada
-- `catalog`, `pricing` e `inventory` ja existem como modulos reais
-- `Products` ja e uma superficie real usando backend e SDK
-- `Home` ja tem endpoint e pagina
-- `Shopping` ja tem backend funcional e worker real
-- `Analytics` ja tem serving inicial e forte migracao de frontend em andamento
-- `CRM`, `procurement`, `alerts`, `automation` e partes mais fortes de AI ainda estao na fronteira futura
+- the auth, tenancy, governance, and outbox foundation is in place
+- `catalog`, `pricing`, and `inventory` already exist as real modules
+- `Products` is already a real surface using backend + SDK
+- `Home` already has an endpoint and page
+- `Shopping` already has a functional backend and a real worker
+- `Analytics` already has an initial serving layer and a strong frontend migration in progress
+- `CRM`, `procurement`, `alerts`, `automation`, and the stronger AI layers still live in the future boundary
 
-Em resumo: o produto ja saiu da fase conceitual. Ele esta em fundacao implementada com slices reais de produto.
+In short, the product has already left the purely conceptual phase. It is in a foundation-implemented stage with real product slices.
 
-## 13. Projecoes futuras de funcionamento
+## 13. Future projections of how the platform should work
 
-As projecoes mais consistentes nao sao chute; elas aparecem repetidamente no codigo, nos ADRs, no SoT e no Project Bible.
+The most consistent projections are not guesswork; they appear repeatedly in the codebase, ADRs, SoT, and Project Bible.
 
-### 13.1 Horizonte imediato
+### 13.1 Immediate horizon
 
-O horizonte imediato do produto e fechar a Camada 1 operacional.
+The immediate horizon of the product is to close the operational Layer 1.
 
-Isso significa:
+That means:
 
-- consolidar `Home`
-- fechar `Shopping` com paridade operacional maior
-- continuar a subida de `Analytics` sobre endpoints reais
-- abrir `CRM v1`
+- consolidating `Home`
+- closing `Shopping` with stronger operational parity
+- continuing the rise of `Analytics` on top of real endpoints
+- opening `CRM v1`
 
-Leitura correta: o projeto quer primeiro colocar de pe os modulos que o time interno usa no dia a dia.
+The correct reading is: the project first wants to put the modules used daily by the internal team on solid ground.
 
-### 13.2 Horizonte de dominio
+### 13.2 Domain horizon
 
-Depois da camada operacional inicial, a tendencia mais clara do repo e esta:
+After the initial operational layer, the clearest trend in the repository is:
 
-- `procurement` nasce em cima de entradas publicadas e nao em leitura direta de ERP
-- `analytics` cresce de dashboard para motor de decisao
-- `suppliers` evolui de diretorio/manifesto para malha governada de conectores
-- `shopping` deixa de ser uma tela e vira workflow operacional completo
-- `products` segue como read surface consolidada sobre dominios canonicos
+- `procurement` is born on top of published inputs, not direct ERP reads
+- `analytics` evolves from dashboard to decision engine
+- `suppliers` evolves from directory/manifest into a governed connector mesh
+- `shopping` stops being just a page and becomes a complete operational workflow
+- `products` remains a consolidated read surface on top of canonical domains
 
-### 13.3 Horizonte analitico
+### 13.3 Analytics horizon
 
-O repositorio ja descreve `analytics` como um modulo de inteligencia em oito camadas:
+The repository already describes `analytics` as an intelligence module in eight layers:
 
-- metricas
-- regras
-- calculos
-- classificacoes
-- recomendacoes
-- campanhas
-- alertas
+- metrics
+- rules
+- calculations
+- classifications
+- recommendations
+- campaigns
+- alerts
 - AI
 
-Se essa visao for seguida, o futuro do produto e:
+If that vision is followed, the future of the product is:
 
-- mostrar o que esta piorando e por que
-- sugerir acao por SKU, marca e taxonomia
-- priorizar filas de trabalho
-- gerar explainability rastreavel
-- produzir sugestoes de compra e de preco com evidencia
+- showing what is getting worse and why
+- suggesting actions by SKU, brand, and taxonomy
+- prioritizing work queues
+- generating traceable explainability
+- producing buying and pricing suggestions backed by evidence
 
-### 13.4 Horizonte de automacao e AI
+### 13.4 Automation and AI horizon
 
-O Project Bible aponta uma linha bem objetiva:
+The Project Bible points to a very clear line:
 
-- campanhas automaticas
-- agentes de marketplace
-- pesquisa de mercado com AI
-- perfil preditivo de cliente
-- recomendacoes de compra
-- alertas inteligentes
+- automatic campaigns
+- marketplace agents
+- AI-powered market research
+- predictive customer profiling
+- buying recommendations
+- intelligent alerts
 
-Pelo desenho atual do repo, isso provavelmente acontecera assim:
+Based on the current repository design, this will probably happen like this:
 
-- `analytics_worker` produz score e recomendacao
-- `automation_worker` transforma recomendacao em acao governada
-- `notifications_worker` entrega alerta ou campanha
-- `server_core` continua como fronteira oficial de leitura, aprovacao e auditoria
+- `analytics_worker` produces scoring and recommendations
+- `automation_worker` turns recommendations into governed actions
+- `notifications_worker` delivers alerts or campaign outputs
+- `server_core` remains the official boundary for reads, approval, and auditability
 
-### 13.5 Horizonte multi-cliente
+### 13.5 Multi-customer horizon
 
-Hoje o foco e o time interno, mas a arquitetura ja foi desenhada para futuro multi-tenant mais amplo.
+Today the focus is the internal team, but the architecture was already designed for a broader multi-tenant future.
 
-Os principais sinais disso sao:
+The strongest signals are:
 
-- tenancy desde a base
-- governanca runtime
-- contratos versionados
+- tenancy from the foundation upward
+- runtime governance
+- versioned contracts
 - thin clients
-- separacao entre identidade externa e IAM interno
+- separation between external identity and internal IAM
 
-Isso prepara o produto para sair de um software de operacao interna e virar plataforma comercializavel sem reescrever os fundamentos.
+That prepares the product to move from internal operational software to a commercial platform without rewriting the foundations.
 
-## 14. Leitura executiva final
+## 14. Final executive reading
 
-O MetalShopping hoje ja e uma plataforma empresarial em construcao avancada, nao um prototipo desorganizado.
+MetalShopping today is already an enterprise platform under advanced construction, not a disorganized prototype.
 
-Sua forma atual pode ser resumida assim:
+Its current shape can be summarized as follows:
 
-- o core em Go ja controla auth, tenancy, governanca, contratos e dados canonicos
-- o web ja funciona como thin client apoiado em SDK gerado
-- o Shopping ja prova o modelo `Go + Python + Postgres + outbox`
-- os dominios basicos `catalog`, `pricing` e `inventory` ja sustentam a primeira superficie forte do produto
-- a proxima grande evolucao e transformar `Analytics`, `Shopping`, `CRM` e depois `procurement` em motores operacionais completos
+- the Go core already controls auth, tenancy, governance, contracts, and canonical data
+- the web app already works as a thin client on top of generated SDKs
+- Shopping already proves the `Go + Python + Postgres + outbox` model
+- the foundational domains `catalog`, `pricing`, and `inventory` already support the first strong product surface
+- the next major evolution is to turn `Analytics`, `Shopping`, `CRM`, and then `procurement` into complete operational engines
 
-Se o plano continuar coerente com o que ja foi congelado, o resultado nao sera apenas um sistema de cadastro e dashboard. Sera uma plataforma de inteligencia comercial, execucao operacional e automacao governada para o varejo de materiais de acabamento.
+If the plan remains coherent with what has already been frozen, the result will not be only a system for registration and dashboards. It will become a platform for commercial intelligence, operational execution, and governed automation for the finishing-material retail sector.
