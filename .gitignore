@@ -22,3 +22,4 @@ coverage/
 tmp_server_core_oidc.log
 tmp_server_core_oidc.err.log
 logs/agent-activity.html
+.superpowers/brainstorm/1963-1774330079/.server.pid
