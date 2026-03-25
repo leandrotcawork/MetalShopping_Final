@@ -23,6 +23,7 @@
     "vite": "^6.1.1"
   },
   "scripts": {
+    "dev:local": "powershell -ExecutionPolicy Bypass -File ./scripts/start_metalshopping_local.ps1",
     "web:typecheck": "npm --workspace @metalshopping/web run typecheck",
     "web:build": "npm --workspace @metalshopping/web run build",
     "web:test": "npm --workspace @metalshopping/web run test",

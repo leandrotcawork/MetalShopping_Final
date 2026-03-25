@@ -256,3 +256,10 @@ Wrong:   Recreating a shell top bar under a parent `main` with fixed padding but
 Correct: Match the legacy route shape (`section > header` + content container sibling) and let the outer header wrapper escape parent padding when needed.
 Rule:    When app shell padding exists above the route, shell-level bars must break out at the route root or they will never visually match legacy.
 Layer:   Frontend
+
+## Lesson 37 — PowerShell entry scripts must declare `param` before executable statements
+Date: 2026-03-25 | Trigger: correction
+Wrong:   Setting `$ErrorActionPreference` before the `param(...)` block in a reusable PowerShell entry script.
+Correct: Keep `param(...)` as the first executable construct, then apply runtime settings like `$ErrorActionPreference`.
+Rule:    Any PowerShell script that accepts parameters must declare its parameter block before executable statements.
+Layer:   Process
