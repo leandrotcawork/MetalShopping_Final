@@ -1,130 +1,69 @@
 ---
 id: hippocampus-conventions
-title: Conventions
-region: hippocampus
-tags: [conventions, rules, patterns, absolute-rules]
-links:
-  - hippocampus/architecture
-  - cortex/backend/index
-weight: 0.95
-updated_at: 2026-03-24T10:00:00Z
+title: MetalShopping Conventions
+type: hippocampus
+tags: [conventions, rules, go, frontend, python, process]
+updated_at: 2026-03-26
 ---
 
-# MetalShopping Conventions & Absolute Rules
+# MetalShopping Conventions
 
-## Go Backend — Absolute Rules (No Exceptions)
+## Go (server_core) — Absolute Rules
 
-### Tenant Safety (Non-Negotiable)
+- `pgdb.BeginTenantTx` on **every** Postgres adapter query — no exceptions
+- `current_tenant_id()` in **every** WHERE clause on tenant-scoped tables
+- `platformauth.PrincipalFromContext` → 401 before any handler operation
+- `tenancy_runtime.TenantFromContext` → 403 before any handler operation
+- `outbox.AppendInTx` inside the **same transaction** as INSERT — never after Commit
+- Every new module must be registered in `composition_modules.go`
+- Error codes: `MODULE_ENTITY_REASON` structured format
+- Every handler logs: `trace_id`, `action`, `result`, `duration_ms`
+- Every write is idempotent and retry-safe
+- No query ever returns cross-tenant data
 
-1. **`pgdb.BeginTenantTx` on every Postgres adapter query** — no exceptions
-   - Usage: Start every database transaction with tenant context
-   - Why: Prevents cross-tenant data leaks
+## Frontend — Absolute Rules
 
-2. **`current_tenant_id()` in every WHERE clause on tenant-scoped tables**
-   - Usage: Every SELECT/UPDATE/DELETE must filter by tenant
-   - Why: Defense in depth against accidental cross-tenant queries
+- Data only via `sdk.*` methods from `@metalshopping/sdk-runtime` — no raw `fetch()`
+- Design tokens only — no hardcoded hex values (`$metalshopping-design-system`)
+- Check `packages/ui/src/index.ts` before creating any component
+- Every data-fetching component must have loading + error + empty states
+- Fetch pattern: `useEffect + cancelled flag`
 
-3. **`platformauth.PrincipalFromContext` → 401 before any handler operation**
-   - Usage: First line in every HTTP handler
-   - Why: Unauthenticated requests must fail fast
+## Python Workers — Absolute Rules
 
-4. **`tenancy_runtime.TenantFromContext` → 403 before any handler operation**
-   - Usage: Second line in every HTTP handler (after auth check)
-   - Why: Wrong-tenant requests must fail fast
+- `set_config('app.current_tenant_id', %s, true)` before every write transaction
+- `ON CONFLICT ... DO UPDATE` on every insert (idempotency)
+- Never call `server_core` HTTP endpoints (one-way dependency)
 
-### Event Publishing
+## Contract Layer
 
-5. **`outbox.AppendInTx` inside the same transaction as INSERT — never after Commit**
-   - Usage: Events must be published within the same database transaction
-   - Why: Ensures atomicity; prevents lost events
-
-### Module Registration
-
-6. **Every new module registered in `composition_modules.go`**
-   - Usage: New module = add entry to composition
-   - Why: Ensures module is wired into the application
-
-## Python Worker — Absolute Rules
-
-1. **`set_config('app.current_tenant_id', %s, true)` before every write transaction**
-   - Usage: Set tenant context before any database write
-   - Why: Worker runs in separate process; must explicitly set tenant
-
-2. **`ON CONFLICT ... DO UPDATE` on every insert (idempotency)**
-   - Usage: All inserts must be idempotent (safe to retry)
-   - Why: Worker is retry-safe; idempotency prevents duplicates
-
-3. **Never call `server_core` HTTP endpoints (one-way dependency)**
-   - Usage: Worker reads from database only, never calls backend
-   - Why: Maintains separation; prevents circular dependencies
-
-## Frontend (React) — Absolute Rules
-
-1. **Data only via `sdk.*` methods from `@metalshopping/sdk-runtime` — no raw `fetch()`**
-   - Usage: All data access through SDK
-   - Why: Enforces contract-driven data flow
-
-2. **Design tokens only — no hardcoded hex values**
-   - Usage: Use `$metalshopping-design-system` tokens
-   - Why: Maintains visual consistency
-
-3. **Check `packages/ui/src/index.ts` before creating any component**
-   - Usage: Reuse shared components before building new ones
-   - Why: Prevents duplication, maintains consistency
-
-4. **Every data-fetching component must have loading + error + empty states**
-   - Usage: Three explicit states for async operations
-   - Why: Users see explicit feedback; no ambiguous UI
-
-5. **Fetch pattern: `useEffect + cancelled flag`**
-   - Usage: Standard async pattern for data fetching
-   - Why: Prevents memory leaks from unmounted components
+- `contracts/` are hand-authored — never derive contracts from code
+- Auto-generated SDK artifacts in `packages/` are never edited manually
+- Run `scripts/generate_contract_artifacts.ps1 -Target all` after any contract change
+- Run `scripts/validate_contracts.ps1 -Scope all` before committing contract changes
 
 ## Commit Format
 
 ```
 <type>(<scope>): <what>
 ```
+Types: `feat | fix | docs | chore | refactor`
 
-**Types:** `feat | fix | docs | chore | refactor`
+## Process
 
-**Example:**
-```
-feat(products): add price override endpoint
-fix(auth): prevent token expiry race condition
-docs(readme): update setup instructions
-```
-
-## Process Rules
-
-1. **A task is done only when:**
-   - Build passes
-   - Real data verified (not just happy path)
-   - One commit made
-
-2. **One commit per completed task — no uncommitted work at session end**
-
-3. **ADR committed only after the acceptance test passes**
+- A task is done only when: build passes + real data verified + commit made
+- One commit per completed task — no uncommitted work at session end
+- ADR committed only after the acceptance test passes
+- Names are self-documenting — no cryptic abbreviations
 
 ## Engineering Bar
 
-**Filter:** *"Would a Stripe or Google senior engineer approve this in code review?"*
+Every decision passes: *"Would a Stripe or Google senior engineer approve this in code review?"*
 
-- **Names:** Self-documenting (no cryptic abbreviations)
-- **Errors:** Structured codes (`MODULE_ENTITY_REASON`)
-- **Logging:** Every handler logs `trace_id`, `action`, `result`, `duration_ms`
-- **Idempotency:** Every write is idempotent and retry-safe
-- **Tenant safety:** No query returns cross-tenant data
+## Module Creation Checklist
 
-## Code Organization
-
-- **Folder structure:** `apps/` for runnable applications, `packages/` for reusable libraries
-- **Module naming:** `internal/modules/<domain>` for Go modules
-- **Feature naming:** `packages/feature-<surface>` for feature packages
-- **Layer naming:** `domain`, `application`, `ports`, `adapters`, `transport` in consistent order
-
----
-
-**Created:** 2026-03-23 | **Last Updated:** 2026-03-24 | **Weight:** 0.95
-
-See [[hippocampus/architecture.md]] for architecture overview
+1. Create under `internal/modules/<name>/` with full layer structure
+2. Register in `composition_modules.go`
+3. Add OpenAPI spec in `contracts/api/openapi/<name>.yaml`
+4. Add event schemas if emitting events
+5. Regenerate SDK artifacts after contract changes

@@ -1,65 +1,57 @@
 ---
 id: hippocampus-strategy
-title: Product Strategy & Goals
-region: hippocampus
-tags: [strategy, goals, business, product]
-links:
-  - hippocampus/architecture
-weight: 0.85
-updated_at: 2026-03-24T10:00:00Z
+title: MetalShopping Strategy
+type: hippocampus
+tags: [strategy, product, phase, goals]
+updated_at: 2026-03-26
 ---
 
-# MetalShopping: Product Strategy & Goals
+# MetalShopping Strategy
+
+## Current Phase
+
+**Foundation implementation** — make it work first
+
+- Architecture: approved and frozen
+- Code status: core foundation running with initial platform + business slices
+- Delivery mode: close structural gaps while staying aligned with frozen architecture
+- Legacy backend: intentionally not in use
+- Next gate: complete remaining business modules and analytics surfaces
 
 ## Product Vision
 
-MetalShopping is a **server-first B2B platform for commercial operations** — enabling companies to manage strategy, pricing, analytics, procurement, and CRM in a single, unified interface. Production-intended v1.
+MetalShopping is the operational intelligence layer for metal and construction material commerce. It enables:
 
-## Core Goals
+1. **Commercial strategy** — pricing intelligence, margin control, competitive positioning
+2. **Procurement** — supplier management, negotiation tracking, purchase orders
+3. **Market monitoring** — price signals, market index, competitor tracking
+4. **CRM** — customer portfolio, opportunity management
+5. **Automations** — workflow triggers, notification rules
+6. **Analytics** — operational and strategic dashboards for all domains
 
-1. **Commercial Strategy** — Pricing rules, competitive positioning, market response
-2. **Analytics** — Real-time visibility into sales, margins, customer behavior
-3. **Procurement** — Supplier management, order fulfillment, cost control
-4. **CRM** — Customer relationships, account management, opportunity tracking
-5. **Unified Data Model** — Single source of truth across all domains
+## Platform Direction
 
-## Business Constraints
+- Server-first: Go monolith owns canonical state
+- Thin clients (web, desktop, admin_console) consume via SDK
+- Explicit contracts drive the SDK boundary — no ad-hoc API calls
+- Workers (Python) handle compute-heavy tasks without calling back into server_core
+- Governance layer controls feature flags, policies, thresholds at runtime
 
-- **Multi-tenant SaaS** — Strict tenant isolation, no cross-tenant data leaks
-- **Production grade** — v1 must be suitable for live customer data
-- **Compliance-ready** — Audit trails, data retention, GDPR-compatible
-- **Real-time analytics** — Customers see up-to-date insights, not stale data
-- **API-first** — All features exposed via contracts, not just UI
+## Non-Goals (Current Phase)
 
-## Current Phase: 3A — Foundation Hardening
+- One database per tenant
+- Legacy backend reuse
+- Premature optimization or caching
+- Feature flags for backwards compatibility
 
-- Analytics legacy migration (Home, Products, Taxonomy, Brands surfaces)
-- Shopping module coming next
-- Focus: **quality and reliability** over new features
+## Priorities
 
-## Success Metrics
+1. Structural completeness — all 18 modules minimally functional
+2. Tenant isolation correctness — no cross-tenant data leaks ever
+3. Contract parity — SDK and contracts reflect actual behavior
+4. Analytics surfaces — all 11 read surfaces operational
+5. Frontend migration — feature-* packages replace legacy UI
 
-- **User adoption** — How many customers use each module
-- **Data accuracy** — Are analytics insights trusted by customers?
-- **System reliability** — Uptime SLA, error rate
-- **Performance** — Page load times, API latency (p99 < 200ms)
-- **Cost efficiency** — Cloud spend per customer transaction
+## Decision Filter
 
-## Technical Priorities (Ranked)
-
-1. **Reliability** — Tenant isolation cannot fail; data must never be corrupted
-2. **Correctness** — Analytics must be accurate; business logic must not have bugs
-3. **Maintainability** — Code patterns must be clear and reusable
-4. **Performance** — Customer experience must not degrade as data grows
-5. **Developer experience** — New modules must be easy to add without mistakes
-6. **Cost efficiency** — Infrastructure must scale linearly with customer base
-
-## Design Philosophy
-
-- **Make it work → make it beautiful → make it fast** (in that order)
-- Not a prototype; treat v1 as production from day one
-- Engineering bar: Stripe / Google senior engineer approval standard
-
----
-
-**Created:** 2026-03-24 | **Updated:** 2026-03-24 | **Weight:** 0.85
+Every decision passes: *"Would a Stripe or Google senior engineer approve this in code review?"*

@@ -1,119 +1,68 @@
 ---
 id: cortex-backend-index
-title: Backend Domain
-region: cortex/backend
-tags: [backend, go, modular-monolith, architecture]
-links:
-  - hippocampus/architecture
-  - hippocampus/conventions
-  - hippocampus/decisions_log
-weight: 0.9
-updated_at: 2026-03-24T10:00:00Z
+title: Backend Cortex Index
+region: backend
+type: cortex-index
+tags: [backend, go, server_core, modules, patterns]
+updated_at: 2026-03-26
 ---
 
-# Backend Domain
+# Backend Cortex
 
-MetalShopping's Go backend implements a **modular monolith** with strict layer separation and tenant-aware data access.
+## Scope
 
-## Architecture
+Everything in `apps/server_core/` — Go 1.23 modular monolith.
 
-### Module Structure (Strict Layers)
+## Module Catalogue
 
-Every module under `internal/modules/<name>/` follows this hierarchy:
+All modules under `internal/modules/`:
 
-```
-domain/           Business entities, invariants, value objects
-application/      Use-case handlers, command/query orchestration
-ports/            Input/output interfaces (repository, event, external service)
-adapters/         Postgres persistence, external API clients
-transport/        HTTP handlers, request/response serialization
-events/           Domain events, publisher
-readmodel/        Denormalized query views, projections
-```
+| Module | Domain | Status |
+|--------|--------|--------|
+| `alerts` | Notification triggers | Active |
+| `analytics_serving` | Analytics read surfaces | Active |
+| `automation` | Workflow automations | Active |
+| `catalog` | Product catalog | Active |
+| `crm` | Customer relationships | Active |
+| `customers` | Customer accounts | Active |
+| `home` | Home dashboard aggregator | Active |
+| `iam` | Identity and access | Active |
+| `integrations_control` | External integrations | Active |
+| `inventory` | Stock management | Active |
+| `market_intelligence` | Price signals, market index | Active |
+| `pricing` | Pricing engine | Active |
+| `procurement` | Purchase orders, supplier ops | Active |
+| `sales` | Sales pipeline | Active |
+| `shopping` | Shopping workflows | Active |
+| `suppliers` | Supplier management | Active |
+| `tenant_admin` | Tenant administration | Active |
 
-**Rule:** No cross-layer shortcuts. Adapters never import transport. Transport never imports domain directly.
-
-### Module Registration
-
-Every new module must be registered in `composition_modules.go`. This is the dependency injection entry point — without registration, the module won't initialize.
-
-## Platform Infrastructure
-
-All modules depend on shared infrastructure in `internal/platform/`:
-
-| Component | Purpose |
-|-----------|---------|
-| `db/postgres/` | Tenant-aware transaction and query helpers (`BeginTenantTx`, `current_tenant_id()`) |
-| `auth/` | JWT validation, principal extraction, middleware |
-| `tenancy_runtime/` | Tenant context extraction from request headers |
-| `governance/` | Feature flags, policies, thresholds runtime resolution |
-| `outbox/` | Transactional event publishing (append events within transactions) |
-| `logger/` | Structured logging with trace ID, action, duration, result |
-
-## Tenant Safety (Non-Negotiable)
-
-Every database query must:
-1. **Start with tenant tx**: `pgdb.BeginTenantTx(ctx)` at adapter entry
-2. **Filter by tenant**: `current_tenant_id()` in every WHERE clause on tenant-scoped tables
-3. **Validate principal**: `platformauth.PrincipalFromContext(r)` → 401 if missing
-4. **Validate tenant**: `tenancy_runtime.TenantFromContext(r)` → 403 if wrong
-
-**Anti-pattern:** Running a SELECT without `current_tenant_id()` in WHERE. This is a data leak.
-
-## Event Publishing (Outbox Pattern)
-
-All state changes that trigger events must use the transactional outbox:
+## Layer Pattern
 
 ```
-1. Start transaction: tx := pgdb.BeginTenantTx(ctx)
-2. Perform write (INSERT/UPDATE)
-3. Append event: outbox.AppendInTx(tx, event)
-4. Commit: tx.Commit()
+domain/       Entities, value objects, domain logic — no infrastructure imports
+application/  Use-case handlers, command/query dispatchers
+ports/        Input/output interfaces (repos, event bus, external services)
+adapters/     Postgres implementations of port interfaces
+transport/    HTTP handlers, request parsing, response serialization
+events/       Event type definitions, emission
+readmodel/    Denormalized views, projections for queries
 ```
 
-Events are processed asynchronously. All event handlers must be idempotent (safe to retry).
+## Critical Platform Calls
 
-## API Contracts
+Every adapter: `pgdb.BeginTenantTx(ctx, db)` — never use raw `db.Begin()`
+Every handler: `platformauth.PrincipalFromContext(ctx)` → 401 | `tenancy_runtime.TenantFromContext(ctx)` → 403
+Every event emit: `outbox.AppendInTx(tx, event)` inside the same tx as the write
 
-All HTTP endpoints are defined in `contracts/api/openapi/`. These are the source of truth for:
-- Request/response shapes
-- Authentication requirements
-- Status codes
-- Error formats
+## New Module Checklist
 
-**Rule:** Contracts are hand-authored. Generate SDK and types from contracts, never the reverse.
+1. Create directory structure with all 7 layers
+2. Register in `composition_modules.go`
+3. Add OpenAPI spec in `contracts/api/openapi/<name>.yaml`
+4. Wire handlers via router in `transport/`
+5. Add event schemas if module emits events
 
-## Logging & Observability
+## Sinapses in This Region
 
-Every handler must log:
-
-```go
-logger.Info("action_result",
-  zap.String("trace_id", traceID),
-  zap.String("action", "create_product"),
-  zap.String("result", "success"),
-  zap.Int64("duration_ms", elapsed),
-)
-```
-
-All errors carry structured error codes: `MODULE_ENTITY_REASON` (e.g., `PRODUCTS_SKU_DUPLICATE`).
-
-## Testing
-
-- Unit tests: Pure domain logic, no database
-- Integration tests: Real Postgres with tenant isolation (use test fixtures)
-- Contract tests: Verify HTTP handlers match OpenAPI spec
-
-## Known Pitfalls
-
-These lessons capture repeated mistakes in backend development:
-
-- [[lessons/lesson-0001]] — Tenant-safe DB access is mandatory
-- [[lessons/lesson-0002]] — Handlers must fail fast on auth and tenancy
-- [[lessons/lesson-0003]] — Outbox must be atomic with writes
-- [[lessons/lesson-0004]] — Worker writes require tenant context and idempotency
-- [[lessons/lesson-0013]] — Observability is part of the contract
-
----
-
-**Created:** 2026-03-24 | **Updated:** 2026-03-24 | **Weight:** 0.9
+_Add links to `.brain/sinapses/<backend-topic>.md` files as they are created._
