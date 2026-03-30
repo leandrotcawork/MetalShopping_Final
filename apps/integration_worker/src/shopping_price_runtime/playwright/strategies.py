@@ -53,6 +53,49 @@ def _extract_price_text_from_html(html_text: str, price_regex: re.Pattern[str]) 
     return ""
 
 
+def _is_static_start_url_without_signal(
+    *,
+    config: SupplierRuntimeConfig,
+    signal: SupplierSignal | None,
+    fallback_enabled: bool,
+) -> bool:
+    if fallback_enabled:
+        return False
+    if signal is not None and safe_str(signal.product_url, "").strip() != "":
+        return False
+    start_url = safe_str(config.config_json.get("startUrl"), "").strip()
+    if start_url == "":
+        return False
+    placeholders = (
+        "{supplier_code}",
+        "{product_id}",
+        "{productId}",
+        "{term}",
+        "{lookup_mode}",
+    )
+    return not any(token in start_url for token in placeholders)
+
+
+def _missing_target_observation(
+    *,
+    base_price: float,
+    seller_default: str,
+    strategy: str,
+    lookup_term: str,
+    note: str,
+) -> RuntimeObservation:
+    return RuntimeObservation(
+        "NOT_FOUND",
+        safe_float(base_price, base_price),
+        seller_default,
+        "PLAYWRIGHT",
+        None,
+        note,
+        strategy,
+        lookup_term,
+    )
+
+
 def execute_playwright_runtime(
     *,
     config: SupplierRuntimeConfig,
@@ -99,21 +142,6 @@ def _execute_playwright_pdp_first_non_mock(
     signal: SupplierSignal | None,
     seller_default: str,
 ) -> RuntimeObservation:
-    try:
-        from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
-        from playwright.sync_api import sync_playwright
-    except Exception as exc:
-        return RuntimeObservation(
-            "ERROR",
-            safe_float(base_price, base_price),
-            seller_default,
-            "PLAYWRIGHT",
-            None,
-            f"playwright_not_installed:{str(exc)[:220]}",
-            strategy,
-            lookup_term,
-        )
-
     timeout_seconds = safe_int(config.config_json.get("timeoutSeconds"), 30, 1, 120)
     max_retries = safe_int(config.config_json.get("maxRetries"), 2, 1, 8)
     headless = bool(config.config_json.get("headless", True))
@@ -125,6 +153,14 @@ def _execute_playwright_pdp_first_non_mock(
     fallback_enabled = bool(config.config_json.get("fallbackSearchEnabled", False))
     if signal is not None and not signal.allow_url_discovery and safe_str(signal.product_url, "").strip() == "":
         fallback_enabled = False
+    if _is_static_start_url_without_signal(config=config, signal=signal, fallback_enabled=fallback_enabled):
+        return _missing_target_observation(
+            base_price=base_price,
+            seller_default=seller_default,
+            strategy=strategy,
+            lookup_term=lookup_term,
+            note="playwright_product_url_missing_no_fallback",
+        )
     price_regex_raw = safe_str(
         config.config_json.get("priceRegex"),
         r"(\d{1,3}(?:\.\d{3})*,\d{2}|\d{1,7}(?:[\.,]\d{2})?)",
@@ -155,13 +191,25 @@ def _execute_playwright_pdp_first_non_mock(
         fallback_enabled=fallback_enabled,
     )
     if len(candidate_urls) == 0:
+        return _missing_target_observation(
+            base_price=base_price,
+            seller_default=seller_default,
+            strategy=strategy,
+            lookup_term=lookup_term,
+            note="playwright_runtime_url_missing",
+        )
+
+    try:
+        from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+        from playwright.sync_api import sync_playwright
+    except Exception as exc:
         return RuntimeObservation(
             "ERROR",
             safe_float(base_price, base_price),
             seller_default,
             "PLAYWRIGHT",
             None,
-            "playwright_runtime_url_missing",
+            f"playwright_not_installed:{str(exc)[:220]}",
             strategy,
             lookup_term,
         )

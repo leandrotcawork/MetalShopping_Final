@@ -13,6 +13,8 @@ from .strategies import (
     _build_candidate_urls,
     _detect_block_reason,
     _extract_price_text_from_html,
+    _is_static_start_url_without_signal,
+    _missing_target_observation,
     _price_from_text,
 )
 
@@ -68,6 +70,15 @@ async def _execute_single(
     fallback_enabled = bool(config.config_json.get("fallbackSearchEnabled", False))
     if item.signal is not None and not item.signal.allow_url_discovery and safe_str(item.signal.product_url, "").strip() == "":
         fallback_enabled = False
+    if _is_static_start_url_without_signal(config=config, signal=item.signal, fallback_enabled=fallback_enabled):
+        observation = _missing_target_observation(
+            base_price=item.base_price,
+            seller_default=seller_default,
+            strategy=strategy,
+            lookup_term=item.lookup_term,
+            note="playwright_product_url_missing_no_fallback",
+        )
+        return BatchResult(item.index, observation, 0.0)
 
     candidate_urls = _build_candidate_urls(
         config=config,
@@ -77,15 +88,12 @@ async def _execute_single(
         fallback_enabled=fallback_enabled,
     )
     if len(candidate_urls) == 0:
-        observation = RuntimeObservation(
-            "ERROR",
-            safe_float(item.base_price, item.base_price),
-            seller_default,
-            "PLAYWRIGHT",
-            None,
-            "playwright_runtime_url_missing",
-            strategy,
-            item.lookup_term,
+        observation = _missing_target_observation(
+            base_price=item.base_price,
+            seller_default=seller_default,
+            strategy=strategy,
+            lookup_term=item.lookup_term,
+            note="playwright_runtime_url_missing",
         )
         return BatchResult(item.index, observation, 0.0)
 
