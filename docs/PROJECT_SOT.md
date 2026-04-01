@@ -2,7 +2,15 @@
 
 ## Purpose
 
-This document is the operational source of truth for the planning and foundation implementation phases of MetalShopping Final.
+This document is the operational source of truth for MetalShopping.
+
+It defines:
+
+- what MetalShopping is building
+- which documentation governs the repository
+- which document wins in case of conflict
+- how strategy is consolidated into repository truth
+- which execution model the agents and humans must follow
 
 ## Current state
 
@@ -37,6 +45,39 @@ MetalShopping is not a traditional e-commerce product. It is an enterprise platf
 - Python in workers during transition
 - explicit contracts and governance outside app code
 - thin clients for `web`, `desktop`, and `admin_console`
+
+## Documentation hierarchy and precedence
+
+MetalShopping uses a strict documentation hierarchy so humans and AI agents do not operate from competing interpretations.
+
+### Precedence order
+
+1. `docs/PROJECT_SOT.md`
+2. `ARCHITECTURE.md`
+3. `AGENTS.md`
+4. `CLAUDE.md` and `CODEX.md`
+5. `docs/IMPLEMENTATION_PLAN.md`
+6. `docs/PROGRESS.md`
+7. focused specs and plans under `docs/superpowers/`
+
+### Strategic source during this restructuring
+
+For the governance restructuring tranche, `C:\Users\leandro.theodoro.MN-NTB-LEANDROT\Documents\fulldocs` is the accepted strategic input source.
+
+That strategic content does not override the repository at runtime automatically. Once a decision is accepted and consolidated here, repository execution follows the repository SoTs, not `fulldocs`.
+
+### Document ownership
+
+- `docs/PROJECT_SOT.md`: operational truth, hierarchy, precedence, execution direction
+- `ARCHITECTURE.md`: stable architecture thesis and long-lived technical boundaries
+- `AGENTS.md`: mandatory repository-level entry rules for all agents
+- `CLAUDE.md` and `CODEX.md`: agent-specific instructions aligned to the same project truth
+- `docs/IMPLEMENTATION_PLAN.md`: macro phase and sequence planning
+- `docs/PROGRESS.md`: factual status, next gates, and blockers
+
+### Conflict rule
+
+If two documents disagree, the higher-precedence document wins. If the disagreement is architectural and durable, resolve it through an ADR and then update the affected SoT documents.
 
 ## Frozen platform rules
 
@@ -84,6 +125,23 @@ MetalShopping is not a traditional e-commerce product. It is an enterprise platf
 - Prefer writing or updating SoT docs, ADRs, and phase plans first
 - Avoid duplicate planning docs that restate the same rule in different wording
 - Structural changes must be paired with `docs/PROJECT_SOT.md` and `docs/PROGRESS.md` updates in the same tranche
+- Governance entrypoint files must always require reading `docs/PROJECT_SOT.md`
+- Do not let agent-specific files become competing sources of project truth
+- Strategy may originate outside the repository, but runtime execution must follow the accepted repository SoTs
+- Plan the project in this order: governance -> orchestration -> one module spec -> one implementation plan
+
+## Documentation update protocol
+
+Use this update flow to prevent drift:
+
+1. New strategic insight starts in `fulldocs` or structured planning discussion.
+2. Accepted operational truth is consolidated into `docs/PROJECT_SOT.md`.
+3. Stable architectural changes are frozen through ADRs and reflected in `ARCHITECTURE.md` when needed.
+4. Macro execution order changes update `docs/IMPLEMENTATION_PLAN.md`.
+5. Status and delivery movement update `docs/PROGRESS.md`.
+6. Agent behavior changes update `AGENTS.md`, `CLAUDE.md`, and `CODEX.md`.
+
+No document should duplicate another document in full. Each document should point to the canonical owner of its subject.
 
 ## Current implementation baseline
 
