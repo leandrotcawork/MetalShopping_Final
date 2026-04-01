@@ -1,46 +1,68 @@
 # AGENTS — MetalShopping
 
-## On every session start
-1. Read `tasks/lessons.md` — apply every rule before touching code
-2. Read `tasks/todo.md` — know current state
-3. After any correction: write lesson to `tasks/lessons.md` immediately
+## Purpose
+
+This file is the repository-wide mandatory entrypoint for any AI agent working in MetalShopping.
+
+## Mandatory read order
+
+1. Read `docs/PROJECT_SOT.md`
+2. Read `ARCHITECTURE.md`
+3. Read the agent-specific file (`CLAUDE.md` or `CODEX.md`)
+4. Read `tasks/todo.md`
+5. Read `tasks/lessons.md`
+
+Do not start planning, implementation, or review before completing that read order.
+
+## Documentation precedence
+
+If documents conflict, follow this order:
+
+1. `docs/PROJECT_SOT.md`
+2. `ARCHITECTURE.md`
+3. `AGENTS.md`
+4. `CLAUDE.md` or `CODEX.md`
+5. `docs/IMPLEMENTATION_PLAN.md`
+6. `docs/PROGRESS.md`
+
+## Product objective
+
+MetalShopping is a long-lived enterprise platform for commercial strategy, pricing, procurement, CRM, analytics, automation, and future AI-assisted operations.
+
+Do not optimize for one-off delivery. Always preserve future module growth, clean boundaries, governance, and multi-tenant safety.
+
+## Absolute rules
+
+### Go
+- `pgdb.BeginTenantTx` on every Postgres adapter query
+- `current_tenant_id()` in every WHERE on tenant-scoped tables
+- `platformauth.PrincipalFromContext` -> 401 before handler work
+- `tenancy_runtime.TenantFromContext` -> 403 before handler work
+- `outbox.AppendInTx` inside the same transaction as the write
+- every new module registered in `composition_modules.go`
+
+### Python worker
+- `set_config('app.current_tenant_id', %s, true)` before every write transaction
+- `ON CONFLICT ... DO UPDATE` on every insert
+- never call `server_core` HTTP endpoints directly
+
+### Frontend
+- data only through `sdk.*` from `@metalshopping/sdk-runtime`
+- design tokens only, no hardcoded hex values
+- check `packages/ui/src/index.ts` before creating a component
+- every data-fetching surface has loading, error, and empty states
+- fetch pattern is `useEffect + cancelled flag`
+
+### Process
+- `packages/generated/` and `packages/generated-types/` are never edited manually
+- no task is done without verification and a commit
+- no architectural rule changes without updating SoT documents and ADRs when needed
 
 ## Engineering bar
-Every decision passes this filter:
-*"Would a Stripe or Google senior engineer approve this in code review?"*
-- Names are self-documenting — no comment needed to understand them
-- Errors carry structured codes: `MODULE_ENTITY_REASON`
-- Every handler logs `trace_id`, `action`, `result`, `duration_ms`
-- Every write is idempotent and retry-safe
-- No query ever returns cross-tenant data
 
-## Absolute rules — violation = stop and fix immediately
+Every decision must survive the question:
 
-**Go**
-- `pgdb.BeginTenantTx` on every Postgres adapter query — no exceptions
-- `current_tenant_id()` in every WHERE on tenant-scoped tables
-- `platformauth.PrincipalFromContext` → 401 before any handler operation
-- `tenancy_runtime.TenantFromContext` → 403 before any handler operation
-- `outbox.AppendInTx` inside the same tx as INSERT — never after Commit
-- Every new module registered in `composition_modules.go`
-
-**Python worker**
-- `set_config('app.current_tenant_id', %s, true)` before every write tx
-- `ON CONFLICT ... DO UPDATE` on every insert
-- Never call server_core HTTP endpoints
-
-**Frontend**
-- Data only via `sdk.*` methods from `@metalshopping/sdk-runtime` — no `fetch()`
-- Design tokens only — no hardcoded hex values (see `$metalshopping-design-system`)
-- Check `packages/ui/src/index.ts` before creating any component
-- Loading + error + empty state on every data-fetching component
-- Fetch pattern: `useEffect + cancelled flag` — no hooks that don't exist in the SDK
-
-**Process**
-- No task marked [x] without: build passes + real data verified + commit made
-- ADR done only when acceptance test passes and commit is made
-- `packages/generated/` never edited manually
-- One commit per completed task — no uncommitted work at session end
+`Would a Stripe or Google senior engineer approve this in code review?`
 
 ## Skill map
 
@@ -52,17 +74,4 @@ Every decision passes this filter:
 | Governance contract | `$metalshopping-governance-contracts` |
 | SDK generation | `$metalshopping-sdk-generation` |
 | ADR lifecycle | `$metalshopping-adr` |
-| Frontend — any visual or component task | `$metalshopping-design-system` |
-
-## Lesson format (write to tasks/lessons.md after every correction)
-```
-## Lesson N — <title>
-Date: YYYY-MM-DD | Trigger: <correction | review | build failure>
-Wrong:   <exact code or decision>
-Correct: <exact code or decision>
-Rule:    <one sentence>
-Layer:   <Go adapter | handler | worker | frontend | process>
-```
-
-## Commit format
-`<type>(<scope>): <what>` — feat | fix | docs | chore | refactor
+| Frontend visual/component work | `$metalshopping-design-system` |
