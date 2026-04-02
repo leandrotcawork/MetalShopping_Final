@@ -24,6 +24,7 @@ export const schemaIds = {
   "erp_resolve_review_request_v1.schema": "https://contracts.metalshopping.local/schema/erp_integrations/resolve_review_request/v1",
   "erp_review_item_list_v1.schema": "https://contracts.metalshopping.local/schema/erp_integrations/review_item_list/v1",
   "erp_review_item_v1.schema": "https://contracts.metalshopping.local/schema/erp_integrations/review_item/v1",
+  "erp_run_completed_payload_v1.schema": "https://contracts.metalshopping.local/schema/erp_integrations/run_completed_payload/v1",
   "erp_sync_run_list_v1.schema": "https://contracts.metalshopping.local/schema/erp_integrations/sync_run_list/v1",
   "erp_sync_run_v1.schema": "https://contracts.metalshopping.local/schema/erp_integrations/sync_run/v1",
   "erp_trigger_run_request_v1.schema": "https://contracts.metalshopping.local/schema/erp_integrations/trigger_run_request/v1",
@@ -289,6 +290,24 @@ export type ErpReviewItemV1 = {
   item_status: "open" | "resolved" | "dismissed";
   resolved_at?: string | null;
   resolved_by?: string | null;
+  created_at: string;
+};
+
+export type ErpRunCompletedPayloadV1 = {
+  run_id: string;
+  tenant_id: string;
+  instance_id: string;
+  connector_type: string;
+  run_mode: "bulk" | "incremental" | "manual_rerun";
+  entity_scope: Array<string>;
+  status: "completed" | "failed" | "partial";
+  started_at?: string | null;
+  completed_at?: string | null;
+  promoted_count: number;
+  warning_count: number;
+  rejected_count: number;
+  review_count: number;
+  failure_summary?: string | null;
   created_at: string;
 };
 
