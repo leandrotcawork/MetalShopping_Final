@@ -9,10 +9,20 @@ Before any planning, implementation, or review:
 1. Read `docs/PROJECT_SOT.md`
 2. Read `ARCHITECTURE.md`
 3. Read `AGENTS.md`
-4. Read `tasks/todo.md`
-5. Read `tasks/lessons.md`
+4. Read this file (`CLAUDE.md`)
+5. Read `tasks/todo.md`
+6. Read `tasks/lessons.md`
 
-If documents conflict, follow `docs/PROJECT_SOT.md` first, then `ARCHITECTURE.md`, then `AGENTS.md`.
+If documents conflict, follow this order:
+
+1. `docs/PROJECT_SOT.md`
+2. `ARCHITECTURE.md`
+3. `AGENTS.md`
+4. `CLAUDE.md`
+5. `docs/IMPLEMENTATION_PLAN.md`
+6. `docs/PROGRESS.md`
+7. `tasks/todo.md`
+8. `tasks/lessons.md`
 
 ## Scope
 

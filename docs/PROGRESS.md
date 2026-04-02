@@ -106,7 +106,7 @@
 - Shopping API contract surface was frozen in draft (`contracts/api/openapi/shopping_v1.openapi.yaml`) with summary, runs list/detail, and latest-by-product schemas
 - Shopping Level 1 advanced with server_core read endpoints wired, sdk-runtime facade methods available, and `apps/web` route `/shopping` now bound to real API data instead of placeholder
 - integration worker scaffold for Shopping Price added in `apps/integration_worker/shopping_price_worker.py` (worker writes Postgres, Go reads Postgres)
-- root `SKILLS.md` maps specialist skills by ordered step without a dedicated orchestrator skill
+- `$ms` is now the default implementation orchestrator path through the repository entrypoint files
 - Shopping Level 1 acceptance was formally closed with evidence in `docs/SHOPPING_LEVEL1_ACCEPTANCE.md`
 - ADR-0021 frontend migration closure recorded with legacy workflow preserved and thin-client boundaries enforced (`docs/SHOPPING_ADR021_ACCEPTANCE.md`)
 - Shopping Price Phase 2 ADRs (ADR-0025..ADR-0028) accepted with objective evidence (`docs/SHOPPING_ADR025_ACCEPTANCE.md` -> `docs/SHOPPING_ADR028_ACCEPTANCE.md`)
@@ -129,7 +129,6 @@
 - keep ADR set complete and stable
 - implement manual URL candidates listing from catalog (ADR-0045) so the panel works when signals are empty
 - execute Shopping frontend parity ADR tranche (ADR-0036..ADR-0039) before expanding Shopping UX/features
-- execute Shopping legacy suppliers driver pack ADR tranche (ADR-0040..ADR-0042) to add `TELHA_NORTE`, `LEROY`, `ABC` under governed manifests (complete)
 - freeze and follow the Shopping Price Level 2 ADR set (ADR-0017 .. ADR-0024) before implementation work starts
 - keep CI workflow scope aligned with future structural package boundaries and new quality gates
 - apply pricing migrations and database-backed governance defaults in runtime
