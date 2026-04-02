@@ -65,10 +65,6 @@ class PublishedRunRequestedEvent:
     run_request_id: str
 
 
-RUN_COMPLETED_EVENT_NAME = "shopping.run_completed"
-RUN_COMPLETED_EVENT_VERSION = "v1"
-
-
 def utc_now_iso() -> str:
     return datetime.now(tz=timezone.utc).isoformat()
 
@@ -159,8 +155,8 @@ def deterministic_run_item_id(
     return f"{digest[0:8]}-{digest[8:12]}-{digest[12:16]}-{digest[16:20]}-{digest[20:32]}"
 
 
-def upsert_run_in_tx(
-    cur: psycopg.Cursor,
+def upsert_run(
+    conn: psycopg.Connection,
     tenant_id: str,
     run_id: str,
     run_status: str,
@@ -172,260 +168,238 @@ def upsert_run_in_tx(
     processed_items = len(items)
     total_items = len(items)
 
-    cur.execute(
-        """
-        INSERT INTO shopping_price_runs (
-          run_id, tenant_id, run_status, started_at, finished_at, processed_items, total_items, notes
-        )
-        VALUES (%s, current_tenant_id(), %s, %s, %s, %s, %s, %s)
-        ON CONFLICT (run_id) DO UPDATE SET
-          run_status = EXCLUDED.run_status,
-          finished_at = EXCLUDED.finished_at,
-          processed_items = EXCLUDED.processed_items,
-          total_items = EXCLUDED.total_items,
-          notes = EXCLUDED.notes,
-          updated_at = NOW()
-        """,
-        (run_id, run_status, started_at, finished_at, processed_items, total_items, notes),
-    )
-
-    for item in items:
-        log(
-            "shopping_run_item",
-            tenant_id=tenant_id,
-            run_id=run_id,
-            product_id=item.product_id,
-            supplier_code=item.supplier_code,
-            item_status=item.item_status,
-            channel=item.channel,
-            observed_price=item.observed_price,
-            currency_code=item.currency_code,
-            http_status=item.http_status,
-            elapsed_s=item.elapsed_s,
-            product_url=item.product_url,
-            notes=item.notes,
-        )
-        run_item_id = deterministic_run_item_id(
-            tenant_id=tenant_id,
-            run_id=run_id,
-            product_id=item.product_id,
-            supplier_code=item.supplier_code,
-        )
-        chosen_seller_json = item.chosen_seller_json or {}
-        cur.execute(
-            """
-            INSERT INTO shopping_price_run_items (
-              run_item_id, tenant_id, run_id, product_id, seller_name, channel,
-              supplier_code, item_status, observed_price, currency_code, observed_at,
-              product_url, http_status, elapsed_s, chosen_seller_json, notes
-            )
-            VALUES (
-              %s, current_tenant_id(), %s, %s, %s, %s,
-              %s, %s, %s, %s, %s,
-              %s, %s, %s, %s::jsonb, %s
-            )
-            ON CONFLICT (tenant_id, run_id, product_id, supplier_code) DO UPDATE SET
-              seller_name = EXCLUDED.seller_name,
-              channel = EXCLUDED.channel,
-              item_status = EXCLUDED.item_status,
-              observed_price = EXCLUDED.observed_price,
-              currency_code = EXCLUDED.currency_code,
-              observed_at = EXCLUDED.observed_at,
-              product_url = EXCLUDED.product_url,
-              http_status = EXCLUDED.http_status,
-              elapsed_s = EXCLUDED.elapsed_s,
-              chosen_seller_json = EXCLUDED.chosen_seller_json,
-              notes = EXCLUDED.notes,
-              updated_at = NOW()
-            """,
-            (
-                run_item_id,
-                run_id,
-                item.product_id,
-                item.seller_name,
-                item.channel,
-                item.supplier_code,
-                item.item_status,
-                item.observed_price,
-                item.currency_code,
-                item.observed_at,
-                item.product_url,
-                item.http_status,
-                item.elapsed_s,
-                json.dumps(chosen_seller_json),
-                item.notes,
-            ),
-        )
-
-        inferred_lookup_mode = infer_lookup_mode(item)
-        cur.execute(
-            """
-            INSERT INTO shopping_supplier_product_signals (
-              tenant_id, product_id, supplier_code, product_url, url_status, lookup_mode, lookup_mode_source,
-              manual_override, last_checked_at, last_success_at, last_http_status, last_error_message,
-              next_discovery_at, not_found_count,
-              created_by, created_at, updated_at
-            )
-            VALUES (
-              current_tenant_id(), %s, %s, %s::text,
-              CASE
-                WHEN %s::int IN (404, 410) THEN 'INVALID'
-                WHEN %s::text IS NULL OR %s::text = '' THEN 'STALE'
-                ELSE 'ACTIVE'
-              END,
-              %s, 'INFERRED',
-              FALSE, (%s)::timestamptz,
-              CASE WHEN %s::text IS NULL OR %s::text = '' THEN NULL ELSE (%s)::timestamptz END,
-              %s, %s,
-              CASE WHEN %s::text = 'NOT_FOUND' THEN NOW() + INTERVAL '30 days' ELSE NULL END,
-              CASE WHEN %s::text = 'NOT_FOUND' THEN 1 ELSE 0 END,
-              'shopping_worker', NOW(), NOW()
-            )
-            ON CONFLICT (tenant_id, product_id, supplier_code) DO UPDATE SET
-              product_url = CASE
-                WHEN shopping_supplier_product_signals.manual_override THEN shopping_supplier_product_signals.product_url
-                WHEN EXCLUDED.last_http_status IN (404, 410) THEN NULL
-                ELSE COALESCE(EXCLUDED.product_url, shopping_supplier_product_signals.product_url)
-              END,
-              url_status = CASE
-                WHEN shopping_supplier_product_signals.manual_override THEN shopping_supplier_product_signals.url_status
-                WHEN EXCLUDED.last_http_status IN (404, 410) THEN 'INVALID'
-                WHEN EXCLUDED.product_url IS NULL OR EXCLUDED.product_url = '' THEN 'STALE'
-                ELSE 'ACTIVE'
-              END,
-              lookup_mode = CASE
-                WHEN shopping_supplier_product_signals.manual_override THEN shopping_supplier_product_signals.lookup_mode
-                ELSE EXCLUDED.lookup_mode
-              END,
-              lookup_mode_source = CASE
-                WHEN shopping_supplier_product_signals.manual_override THEN shopping_supplier_product_signals.lookup_mode_source
-                ELSE 'INFERRED'
-              END,
-              last_checked_at = EXCLUDED.last_checked_at,
-              last_success_at = CASE
-                WHEN EXCLUDED.product_url IS NULL OR EXCLUDED.product_url = '' THEN shopping_supplier_product_signals.last_success_at
-                ELSE EXCLUDED.last_success_at
-              END,
-              last_http_status = EXCLUDED.last_http_status,
-              last_error_message = EXCLUDED.last_error_message,
-              next_discovery_at = CASE
-                WHEN shopping_supplier_product_signals.manual_override THEN shopping_supplier_product_signals.next_discovery_at
-                WHEN EXCLUDED.last_http_status IN (404, 410) THEN NOW() + INTERVAL '30 days'
-                WHEN EXCLUDED.product_url IS NOT NULL AND EXCLUDED.product_url <> '' THEN NULL
-                WHEN %s::text = 'NOT_FOUND' THEN NOW() + INTERVAL '30 days'
-                WHEN %s::text = 'ERROR' AND (
-                  EXCLUDED.last_error_message ILIKE '%%cloudflare%%'
-                  OR EXCLUDED.last_error_message ILIKE '%%captcha%%'
-                  OR EXCLUDED.last_error_message ILIKE '%%access denied%%'
-                ) THEN NOW() + INTERVAL '7 days'
-                ELSE shopping_supplier_product_signals.next_discovery_at
-              END,
-              not_found_count = CASE
-                WHEN shopping_supplier_product_signals.manual_override THEN shopping_supplier_product_signals.not_found_count
-                WHEN EXCLUDED.product_url IS NOT NULL AND EXCLUDED.product_url <> '' THEN 0
-                WHEN %s::text = 'NOT_FOUND' THEN shopping_supplier_product_signals.not_found_count + 1
-                ELSE shopping_supplier_product_signals.not_found_count
-              END,
-              updated_at = NOW()
-            """,
-            (
-                item.product_id,
-                item.supplier_code,
-                item.product_url,
-                item.http_status,
-                item.product_url,
-                item.product_url,
-                inferred_lookup_mode,
-                item.observed_at,
-                item.product_url,
-                item.product_url,
-                item.observed_at,
-                item.http_status,
-                item.notes,
-                item.item_status,
-                item.item_status,
-                item.item_status,
-                item.item_status,
-                item.item_status,
-            ),
-        )
-
-        snapshot_id = f"{tenant_id}:{item.product_id}:{item.supplier_code}"
-        cur.execute(
-            """
-            INSERT INTO shopping_price_latest_snapshot (
-              snapshot_id, tenant_id, product_id, run_id, seller_name, channel,
-              supplier_code, item_status, observed_price, currency_code, observed_at,
-              product_url, http_status, elapsed_s, chosen_seller_json, notes
-            )
-            VALUES (
-              %s, current_tenant_id(), %s, %s, %s, %s,
-              %s, %s, %s, %s, %s,
-              %s, %s, %s, %s::jsonb, %s
-            )
-            ON CONFLICT (tenant_id, product_id, supplier_code) DO UPDATE SET
-              run_id = EXCLUDED.run_id,
-              seller_name = EXCLUDED.seller_name,
-              channel = EXCLUDED.channel,
-              item_status = EXCLUDED.item_status,
-              observed_price = EXCLUDED.observed_price,
-              currency_code = EXCLUDED.currency_code,
-              observed_at = EXCLUDED.observed_at,
-              product_url = EXCLUDED.product_url,
-              http_status = EXCLUDED.http_status,
-              elapsed_s = EXCLUDED.elapsed_s,
-              chosen_seller_json = EXCLUDED.chosen_seller_json,
-              notes = EXCLUDED.notes,
-              updated_at = NOW()
-            """,
-            (
-                snapshot_id,
-                item.product_id,
-                run_id,
-                item.seller_name,
-                item.channel,
-                item.supplier_code,
-                item.item_status,
-                item.observed_price,
-                item.currency_code,
-                item.observed_at,
-                item.product_url,
-                item.http_status,
-                item.elapsed_s,
-                json.dumps(chosen_seller_json),
-                item.notes,
-            ),
-        )
-
-    return len(items)
-
-
-def upsert_run(
-    conn: psycopg.Connection,
-    tenant_id: str,
-    run_id: str,
-    run_status: str,
-    started_at: str,
-    finished_at: str | None,
-    notes: str,
-    items: list[RunItem],
-) -> int:
     with conn.cursor() as cur:
         cur.execute("BEGIN")
         # RLS uses current_tenant_id() -> current_setting('app.tenant_id')
         cur.execute("SELECT set_config('app.tenant_id', %s, true)", (tenant_id,))
-        rows_written = upsert_run_in_tx(
-            cur=cur,
-            tenant_id=tenant_id,
-            run_id=run_id,
-            run_status=run_status,
-            started_at=started_at,
-            finished_at=finished_at,
-            notes=notes,
-            items=items,
+
+        cur.execute(
+            """
+            INSERT INTO shopping_price_runs (
+              run_id, tenant_id, run_status, started_at, finished_at, processed_items, total_items, notes
+            )
+            VALUES (%s, current_tenant_id(), %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (run_id) DO UPDATE SET
+              run_status = EXCLUDED.run_status,
+              finished_at = EXCLUDED.finished_at,
+              processed_items = EXCLUDED.processed_items,
+              total_items = EXCLUDED.total_items,
+              notes = EXCLUDED.notes,
+              updated_at = NOW()
+            """,
+            (run_id, run_status, started_at, finished_at, processed_items, total_items, notes),
         )
+
+        for item in items:
+            log(
+                "shopping_run_item",
+                tenant_id=tenant_id,
+                run_id=run_id,
+                product_id=item.product_id,
+                supplier_code=item.supplier_code,
+                item_status=item.item_status,
+                channel=item.channel,
+                observed_price=item.observed_price,
+                currency_code=item.currency_code,
+                http_status=item.http_status,
+                elapsed_s=item.elapsed_s,
+                product_url=item.product_url,
+                notes=item.notes,
+            )
+            run_item_id = deterministic_run_item_id(
+                tenant_id=tenant_id,
+                run_id=run_id,
+                product_id=item.product_id,
+                supplier_code=item.supplier_code,
+            )
+            chosen_seller_json = item.chosen_seller_json or {}
+            cur.execute(
+                """
+                INSERT INTO shopping_price_run_items (
+                  run_item_id, tenant_id, run_id, product_id, seller_name, channel,
+                  supplier_code, item_status, observed_price, currency_code, observed_at,
+                  product_url, http_status, elapsed_s, chosen_seller_json, notes
+                )
+                VALUES (
+                  %s, current_tenant_id(), %s, %s, %s, %s,
+                  %s, %s, %s, %s, %s,
+                  %s, %s, %s, %s::jsonb, %s
+                )
+                ON CONFLICT (tenant_id, run_id, product_id, supplier_code) DO UPDATE SET
+                  seller_name = EXCLUDED.seller_name,
+                  channel = EXCLUDED.channel,
+                  item_status = EXCLUDED.item_status,
+                  observed_price = EXCLUDED.observed_price,
+                  currency_code = EXCLUDED.currency_code,
+                  observed_at = EXCLUDED.observed_at,
+                  product_url = EXCLUDED.product_url,
+                  http_status = EXCLUDED.http_status,
+                  elapsed_s = EXCLUDED.elapsed_s,
+                  chosen_seller_json = EXCLUDED.chosen_seller_json,
+                  notes = EXCLUDED.notes,
+                  updated_at = NOW()
+                """,
+                (
+                    run_item_id,
+                    run_id,
+                    item.product_id,
+                    item.seller_name,
+                    item.channel,
+                    item.supplier_code,
+                    item.item_status,
+                    item.observed_price,
+                    item.currency_code,
+                    item.observed_at,
+                    item.product_url,
+                    item.http_status,
+                    item.elapsed_s,
+                    json.dumps(chosen_seller_json),
+                    item.notes,
+                ),
+            )
+
+            inferred_lookup_mode = infer_lookup_mode(item)
+            cur.execute(
+                """
+                INSERT INTO shopping_supplier_product_signals (
+                  tenant_id, product_id, supplier_code, product_url, url_status, lookup_mode, lookup_mode_source,
+                  manual_override, last_checked_at, last_success_at, last_http_status, last_error_message,
+                  next_discovery_at, not_found_count,
+                  created_by, created_at, updated_at
+                )
+                VALUES (
+                  current_tenant_id(), %s, %s, %s::text,
+                  CASE
+                    WHEN %s::int IN (404, 410) THEN 'INVALID'
+                    WHEN %s::text IS NULL OR %s::text = '' THEN 'STALE'
+                    ELSE 'ACTIVE'
+                  END,
+                  %s, 'INFERRED',
+                  FALSE, (%s)::timestamptz,
+                  CASE WHEN %s::text IS NULL OR %s::text = '' THEN NULL ELSE (%s)::timestamptz END,
+                  %s, %s,
+                  CASE WHEN %s::text = 'NOT_FOUND' THEN NOW() + INTERVAL '30 days' ELSE NULL END,
+                  CASE WHEN %s::text = 'NOT_FOUND' THEN 1 ELSE 0 END,
+                  'shopping_worker', NOW(), NOW()
+                )
+                ON CONFLICT (tenant_id, product_id, supplier_code) DO UPDATE SET
+                  product_url = CASE
+                    WHEN shopping_supplier_product_signals.manual_override THEN shopping_supplier_product_signals.product_url
+                    WHEN EXCLUDED.last_http_status IN (404, 410) THEN NULL
+                    ELSE COALESCE(EXCLUDED.product_url, shopping_supplier_product_signals.product_url)
+                  END,
+                  url_status = CASE
+                    WHEN shopping_supplier_product_signals.manual_override THEN shopping_supplier_product_signals.url_status
+                    WHEN EXCLUDED.last_http_status IN (404, 410) THEN 'INVALID'
+                    WHEN EXCLUDED.product_url IS NULL OR EXCLUDED.product_url = '' THEN 'STALE'
+                    ELSE 'ACTIVE'
+                  END,
+                  lookup_mode = CASE
+                    WHEN shopping_supplier_product_signals.manual_override THEN shopping_supplier_product_signals.lookup_mode
+                    ELSE EXCLUDED.lookup_mode
+                  END,
+                  lookup_mode_source = CASE
+                    WHEN shopping_supplier_product_signals.manual_override THEN shopping_supplier_product_signals.lookup_mode_source
+                    ELSE 'INFERRED'
+                  END,
+                  last_checked_at = EXCLUDED.last_checked_at,
+                  last_success_at = CASE
+                    WHEN EXCLUDED.product_url IS NULL OR EXCLUDED.product_url = '' THEN shopping_supplier_product_signals.last_success_at
+                    ELSE EXCLUDED.last_success_at
+                  END,
+                  last_http_status = EXCLUDED.last_http_status,
+                  last_error_message = EXCLUDED.last_error_message,
+                  next_discovery_at = CASE
+                    WHEN shopping_supplier_product_signals.manual_override THEN shopping_supplier_product_signals.next_discovery_at
+                    WHEN EXCLUDED.last_http_status IN (404, 410) THEN NOW() + INTERVAL '30 days'
+                    WHEN EXCLUDED.product_url IS NOT NULL AND EXCLUDED.product_url <> '' THEN NULL
+                    WHEN %s::text = 'NOT_FOUND' THEN NOW() + INTERVAL '30 days'
+                    WHEN %s::text = 'ERROR' AND (
+                      EXCLUDED.last_error_message ILIKE '%%cloudflare%%'
+                      OR EXCLUDED.last_error_message ILIKE '%%captcha%%'
+                      OR EXCLUDED.last_error_message ILIKE '%%access denied%%'
+                    ) THEN NOW() + INTERVAL '7 days'
+                    ELSE shopping_supplier_product_signals.next_discovery_at
+                  END,
+                  not_found_count = CASE
+                    WHEN shopping_supplier_product_signals.manual_override THEN shopping_supplier_product_signals.not_found_count
+                    WHEN EXCLUDED.product_url IS NOT NULL AND EXCLUDED.product_url <> '' THEN 0
+                    WHEN %s::text = 'NOT_FOUND' THEN shopping_supplier_product_signals.not_found_count + 1
+                    ELSE shopping_supplier_product_signals.not_found_count
+                  END,
+                  updated_at = NOW()
+                """,
+                (
+                    item.product_id,
+                    item.supplier_code,
+                    item.product_url,
+                    item.http_status,
+                    item.product_url,
+                    item.product_url,
+                    inferred_lookup_mode,
+                    item.observed_at,
+                    item.product_url,
+                    item.product_url,
+                    item.observed_at,
+                    item.http_status,
+                    item.notes,
+                    item.item_status,
+                    item.item_status,
+                    item.item_status,
+                    item.item_status,
+                    item.item_status,
+                ),
+            )
+
+            snapshot_id = f"{tenant_id}:{item.product_id}:{item.supplier_code}"
+            cur.execute(
+                """
+                INSERT INTO shopping_price_latest_snapshot (
+                  snapshot_id, tenant_id, product_id, run_id, seller_name, channel,
+                  supplier_code, item_status, observed_price, currency_code, observed_at,
+                  product_url, http_status, elapsed_s, chosen_seller_json, notes
+                )
+                VALUES (
+                  %s, current_tenant_id(), %s, %s, %s, %s,
+                  %s, %s, %s, %s, %s,
+                  %s, %s, %s, %s::jsonb, %s
+                )
+                ON CONFLICT (tenant_id, product_id, supplier_code) DO UPDATE SET
+                  run_id = EXCLUDED.run_id,
+                  seller_name = EXCLUDED.seller_name,
+                  channel = EXCLUDED.channel,
+                  item_status = EXCLUDED.item_status,
+                  observed_price = EXCLUDED.observed_price,
+                  currency_code = EXCLUDED.currency_code,
+                  observed_at = EXCLUDED.observed_at,
+                  product_url = EXCLUDED.product_url,
+                  http_status = EXCLUDED.http_status,
+                  elapsed_s = EXCLUDED.elapsed_s,
+                  chosen_seller_json = EXCLUDED.chosen_seller_json,
+                  notes = EXCLUDED.notes,
+                  updated_at = NOW()
+                """,
+                (
+                    snapshot_id,
+                    item.product_id,
+                    run_id,
+                    item.seller_name,
+                    item.channel,
+                    item.supplier_code,
+                    item.item_status,
+                    item.observed_price,
+                    item.currency_code,
+                    item.observed_at,
+                    item.product_url,
+                    item.http_status,
+                    item.elapsed_s,
+                    json.dumps(chosen_seller_json),
+                    item.notes,
+                ),
+            )
+
         cur.execute("COMMIT")
-    return rows_written
+    return len(items)
 
 
 def claim_next_request(
@@ -623,171 +597,6 @@ def mark_request_completed(
             (run_request_id,),
         )
         cur.execute("COMMIT")
-
-
-def mark_request_terminal_in_tx(
-    cur: psycopg.Cursor,
-    tenant_id: str,
-    run_request_id: str,
-    run_status: str,
-    error_message: str | None,
-) -> None:
-    if run_status == "failed":
-        cur.execute(
-            """
-            UPDATE shopping_price_run_requests
-            SET request_status = 'failed',
-                finished_at = NOW(),
-                error_message = %s,
-                updated_at = NOW()
-            WHERE tenant_id = current_tenant_id()
-              AND run_request_id = %s
-            """,
-            (error_message[:500] if error_message else None, run_request_id),
-        )
-        return
-
-    request_status = run_status if run_status in {"completed", "partial"} else "completed"
-    cur.execute(
-        """
-        UPDATE shopping_price_run_requests
-        SET request_status = %s,
-            finished_at = NOW(),
-            error_message = NULL,
-            updated_at = NOW()
-        WHERE tenant_id = current_tenant_id()
-          AND run_request_id = %s
-        """,
-        (request_status, run_request_id),
-    )
-
-
-def append_run_completed_outbox_in_tx(
-    cur: psycopg.Cursor,
-    tenant_id: str,
-    run_request: RunRequest,
-    run_id: str,
-    run_status: str,
-    started_at: str,
-    finished_at: str,
-    notes: str,
-    rows_written: int,
-    total_items: int,
-    error_message: str | None,
-) -> None:
-    payload: dict[str, Any] = {
-        "run_request_id": run_request.run_request_id,
-        "run_id": run_id,
-        "tenant_id": tenant_id,
-        "run_status": run_status,
-        "input_mode": run_request.input_mode,
-        "requested_by": run_request.requested_by,
-        "started_at": started_at,
-        "finished_at": finished_at,
-        "processed_items": rows_written,
-        "total_items": total_items,
-        "notes": notes,
-    }
-    if error_message:
-        payload["error_message"] = error_message
-
-    cur.execute(
-        """
-        INSERT INTO outbox_events (
-          event_id,
-          aggregate_type,
-          aggregate_id,
-          event_name,
-          event_version,
-          tenant_id,
-          trace_id,
-          idempotency_key,
-          payload_json,
-          status,
-          attempts,
-          available_at,
-          created_at,
-          published_at,
-          last_error
-        )
-        VALUES (
-          %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, 'pending', 0, NOW(), NOW(), NULL, NULL
-        )
-        ON CONFLICT (idempotency_key) DO UPDATE SET
-          payload_json = EXCLUDED.payload_json,
-          trace_id = EXCLUDED.trace_id
-        """,
-        (
-            generate_outbox_event_id(),
-            "shopping_price_run",
-            run_id,
-            RUN_COMPLETED_EVENT_NAME,
-            RUN_COMPLETED_EVENT_VERSION,
-            tenant_id,
-            run_request.run_request_id,
-            run_completed_idempotency_key(run_id),
-            json.dumps(payload),
-        ),
-    )
-
-
-def run_completed_idempotency_key(run_id: str) -> str:
-    return f"{RUN_COMPLETED_EVENT_NAME}:{run_id}"
-
-
-def generate_outbox_event_id() -> str:
-    return f"evt_{uuid4().hex}"
-
-
-def finalize_run_request(
-    conn: psycopg.Connection,
-    tenant_id: str,
-    run_request: RunRequest,
-    run_id: str,
-    run_status: str,
-    started_at: str,
-    finished_at: str,
-    notes: str,
-    items: list[RunItem],
-    rows_written: int,
-    total_items: int,
-    error_message: str | None,
-) -> None:
-    with conn.cursor() as cur:
-        try:
-            cur.execute("BEGIN")
-            cur.execute("SELECT set_config('app.tenant_id', %s, true)", (tenant_id,))
-            upsert_run_in_tx(
-                cur=cur,
-                tenant_id=tenant_id,
-                run_id=run_id,
-                run_status=run_status,
-                started_at=started_at,
-                finished_at=finished_at,
-                notes=notes,
-                items=items,
-            )
-            mark_request_terminal_in_tx(cur, tenant_id, run_request.run_request_id, run_status, error_message)
-            append_run_completed_outbox_in_tx(
-                cur=cur,
-                tenant_id=tenant_id,
-                run_request=run_request,
-                run_id=run_id,
-                run_status=run_status,
-                started_at=started_at,
-                finished_at=finished_at,
-                notes=notes,
-                rows_written=rows_written,
-                total_items=total_items,
-                error_message=error_message,
-            )
-            cur.execute("COMMIT")
-        except Exception:
-            try:
-                cur.execute("ROLLBACK")
-            except Exception:
-                pass
-            raise
 
 
 def mark_request_failed(
@@ -1614,7 +1423,7 @@ def process_claimed_request(
     conn: psycopg.Connection,
     run_request: RunRequest,
     xlsx_fallback_limit: int,
-) -> tuple[str, int, str]:
+) -> tuple[str, int]:
     run_id = str(uuid4())
     run_started_at = utc_now_iso()
     mark_request_running(conn, run_request.tenant_id, run_request.run_request_id, run_id, run_started_at)
@@ -1623,87 +1432,55 @@ def process_claimed_request(
     notes = f"requested_by={run_request.requested_by}; input_mode={run_request.input_mode}"
     supplier_codes = parse_supplier_codes(run_request.input_payload)
     effective_supplier_codes = fetch_active_valid_supplier_codes(conn, run_request.tenant_id, supplier_codes)
-
-    items: list[RunItem] = []
-    terminal_status = "completed"
-    error_message: str | None = None
-    try:
-        if len(effective_supplier_codes) == 0:
-            raise ValueError("no active valid supplier manifests available for this tenant/request")
-        notes = f"{notes}; suppliers={','.join(effective_supplier_codes)}"
-        if run_request.input_mode == "catalog":
-            product_ids = parse_catalog_product_ids(run_request.input_payload)
-            if len(product_ids) == 0:
-                raise ValueError("catalog mode requires at least one catalogProductIds entry")
+    if len(effective_supplier_codes) == 0:
+        raise ValueError("no active valid supplier manifests available for this tenant/request")
+    notes = f"{notes}; suppliers={','.join(effective_supplier_codes)}"
+    if run_request.input_mode == "catalog":
+        product_ids = parse_catalog_product_ids(run_request.input_payload)
+        if len(product_ids) == 0:
+            raise ValueError("catalog mode requires at least one catalogProductIds entry")
+        items, _ = query_catalog_items(conn, run_request.tenant_id, product_ids, effective_supplier_codes, progress)
+    elif run_request.input_mode == "xlsx":
+        xlsx_file_path = parse_xlsx_file_path(run_request.input_payload)
+        product_ids = parse_catalog_product_ids(run_request.input_payload)
+        unresolved_scope = parse_catalog_product_ids(
+            {"catalogProductIds": run_request.input_payload.get("unresolvedScopeIdentifiers")}
+        )
+        ambiguous_scope = parse_catalog_product_ids(
+            {"catalogProductIds": run_request.input_payload.get("ambiguousScopeIdentifiers")}
+        )
+        if len(product_ids) > 0:
             items, _ = query_catalog_items(conn, run_request.tenant_id, product_ids, effective_supplier_codes, progress)
-        elif run_request.input_mode == "xlsx":
-            xlsx_file_path = parse_xlsx_file_path(run_request.input_payload)
-            product_ids = parse_catalog_product_ids(run_request.input_payload)
-            unresolved_scope = parse_catalog_product_ids(
-                {"catalogProductIds": run_request.input_payload.get("unresolvedScopeIdentifiers")}
+            notes = (
+                f"{notes}; xlsx_path={xlsx_file_path or 'not_provided'}; "
+                f"mode=xlsx_resolved; resolved={len(product_ids)}; "
+                f"unresolved={len(unresolved_scope)}; ambiguous={len(ambiguous_scope)}"
             )
-            ambiguous_scope = parse_catalog_product_ids(
-                {"catalogProductIds": run_request.input_payload.get("ambiguousScopeIdentifiers")}
-            )
-            if len(product_ids) > 0:
-                items, _ = query_catalog_items(
-                    conn,
-                    run_request.tenant_id,
-                    product_ids,
-                    effective_supplier_codes,
-                    progress,
-                )
-                notes = (
-                    f"{notes}; xlsx_path={xlsx_file_path or 'not_provided'}; "
-                    f"mode=xlsx_resolved; resolved={len(product_ids)}; "
-                    f"unresolved={len(unresolved_scope)}; ambiguous={len(ambiguous_scope)}"
-                )
-            else:
-                items, _ = query_xlsx_fallback_items(
-                    conn,
-                    run_request.tenant_id,
-                    xlsx_fallback_limit,
-                    effective_supplier_codes,
-                    progress,
-                )
-                notes = f"{notes}; xlsx_path={xlsx_file_path or 'not_provided'}; mode=xlsx_fallback"
         else:
-            raise ValueError(f"unsupported input_mode: {run_request.input_mode}")
-    except Exception as exc:
-        terminal_status = "failed"
-        error_message = str(exc)
-        notes = f"{notes}; error={error_message}"
-        try:
-            conn.rollback()
-        except Exception:
-            pass
+            items, _ = query_xlsx_fallback_items(
+                conn,
+                run_request.tenant_id,
+                xlsx_fallback_limit,
+                effective_supplier_codes,
+                progress,
+            )
+            notes = f"{notes}; xlsx_path={xlsx_file_path or 'not_provided'}; mode=xlsx_fallback"
+    else:
+        raise ValueError(f"unsupported input_mode: {run_request.input_mode}")
 
-    finished_at = utc_now_iso()
-    finalize_run_request(
+    upsert_run(
         conn=conn,
         tenant_id=run_request.tenant_id,
-        run_request=run_request,
         run_id=run_id,
-        run_status=terminal_status,
+        run_status="completed",
         started_at=run_started_at,
-        finished_at=finished_at,
+        finished_at=utc_now_iso(),
         notes=notes,
         items=items,
-        rows_written=len(items),
-        total_items=progress.total_items or len(items),
-        error_message=error_message,
     )
-
-    try:
-        progress.finalize()
-    except Exception as exc:  # pragma: no cover - non-critical progress write
-        log(
-            "shopping_request_progress_finalize_failed",
-            tenant_id=run_request.tenant_id,
-            run_request_id=run_request.run_request_id,
-            error=str(exc),
-        )
-    return run_id, len(items), terminal_status
+    progress.finalize()
+    mark_request_completed(conn, run_request.tenant_id, run_request.run_request_id)
+    return run_id, len(items)
 
 
 def run_queue_once(
@@ -1725,7 +1502,7 @@ def run_queue_once(
         input_mode=run_request.input_mode,
     )
     try:
-        run_id, rows_written, run_status = process_claimed_request(conn, run_request, xlsx_fallback_limit)
+        run_id, rows_written = process_claimed_request(conn, run_request, xlsx_fallback_limit)
     except Exception as exc:
         try:
             conn.rollback()
@@ -1741,25 +1518,14 @@ def run_queue_once(
         )
         return True
 
-    if run_status == "failed":
-        log(
-            "shopping_queue_failed",
-            tenant_id=run_request.tenant_id,
-            worker_id=worker_id,
-            run_request_id=run_request.run_request_id,
-            run_id=run_id,
-            rows_written=rows_written,
-            error="run finalization recorded failed status",
-        )
-    else:
-        log(
-            "shopping_queue_completed",
-            tenant_id=run_request.tenant_id,
-            worker_id=worker_id,
-            run_request_id=run_request.run_request_id,
-            run_id=run_id,
-            rows_written=rows_written,
-        )
+    log(
+        "shopping_queue_completed",
+        tenant_id=run_request.tenant_id,
+        worker_id=worker_id,
+        run_request_id=run_request.run_request_id,
+        run_id=run_id,
+        rows_written=rows_written,
+    )
     return True
 
 
@@ -1798,7 +1564,7 @@ def run_event_once(
         input_mode=run_request.input_mode,
     )
     try:
-        run_id, rows_written, run_status = process_claimed_request(conn, run_request, xlsx_fallback_limit)
+        run_id, rows_written = process_claimed_request(conn, run_request, xlsx_fallback_limit)
     except Exception as exc:
         try:
             conn.rollback()
@@ -1815,27 +1581,15 @@ def run_event_once(
         )
         return True
 
-    if run_status == "failed":
-        log(
-            "shopping_event_failed",
-            worker_id=worker_id,
-            event_id=event.event_id,
-            tenant_id=run_request.tenant_id,
-            run_request_id=run_request.run_request_id,
-            run_id=run_id,
-            rows_written=rows_written,
-            error="run finalization recorded failed status",
-        )
-    else:
-        log(
-            "shopping_event_completed",
-            worker_id=worker_id,
-            event_id=event.event_id,
-            tenant_id=run_request.tenant_id,
-            run_request_id=run_request.run_request_id,
-            run_id=run_id,
-            rows_written=rows_written,
-        )
+    log(
+        "shopping_event_completed",
+        worker_id=worker_id,
+        event_id=event.event_id,
+        tenant_id=run_request.tenant_id,
+        run_request_id=run_request.run_request_id,
+        run_id=run_id,
+        rows_written=rows_written,
+    )
     return True
 
 
