@@ -1,6 +1,6 @@
-# CLAUDE.md
+# CODEX.md
 
-This file provides guidance to Claude when working in this repository.
+This file provides guidance to Codex when working in this repository.
 
 ## Mandatory startup
 
@@ -16,7 +16,7 @@ If documents conflict, follow `docs/PROJECT_SOT.md` first, then `ARCHITECTURE.md
 
 ## Scope
 
-Use this file for Claude-specific operating guidance only. Do not treat it as a competing source of project truth.
+Use this file for Codex-specific operating guidance only. Do not treat it as a competing source of project truth.
 
 ## Commands
 
