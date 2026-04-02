@@ -24,10 +24,11 @@ const (
 )
 
 type scriptStep struct {
-	kind  scriptStepKind
-	query string
-	args  []any
-	rows  [][]driver.Value
+	kind         scriptStepKind
+	query        string
+	args         []any
+	rows         [][]driver.Value
+	rowsAffected *int64
 }
 
 type scriptState struct {
@@ -88,8 +89,12 @@ func (c *scriptConn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver
 }
 
 func (c *scriptConn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
-	c.state.expect(stepExec, query, args)
-	return driver.RowsAffected(1), nil
+	step := c.state.expect(stepExec, query, args)
+	rowsAffected := int64(1)
+	if step.rowsAffected != nil {
+		rowsAffected = *step.rowsAffected
+	}
+	return driver.RowsAffected(rowsAffected), nil
 }
 
 func (c *scriptConn) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
@@ -176,6 +181,10 @@ func (s *scriptState) done() {
 	if s.pos != len(s.steps) {
 		s.t.Fatalf("expected %d scripted operations, consumed %d", len(s.steps), s.pos)
 	}
+}
+
+func int64Ptr(v int64) *int64 {
+	return &v
 }
 
 func TestBeginTenantTxSetsTenantSession(t *testing.T) {
@@ -269,6 +278,52 @@ func TestSaveCursorUsesRunTenantContext(t *testing.T) {
 	}
 	if err := ledger.SaveCursor(tenantCtx, "run-1", `{"cursor":"abc"}`); err != nil {
 		t.Fatalf("SaveCursor error: %v", err)
+	}
+	state.done()
+}
+
+func TestMarkCompletedReturnsErrorWhenNoRowsUpdated(t *testing.T) {
+	db, state := newScriptedDB(t,
+		scriptStep{kind: stepBegin},
+		scriptStep{kind: stepExec, query: "SELECT set_config('app.tenant_id', $1, true)", args: []any{"tenant-1"}},
+		scriptStep{kind: stepExec, query: "SET status = 'completed'", args: []any{"run-1", 7, 1, 2, 3}, rowsAffected: int64Ptr(0)},
+		scriptStep{kind: stepRollback},
+	)
+
+	ledger := NewLedger(db)
+	tenantCtx, err := tenantdb.WithTenantID(context.Background(), "tenant-1")
+	if err != nil {
+		t.Fatalf("WithTenantID error: %v", err)
+	}
+	err = ledger.MarkCompleted(tenantCtx, "run-1", 7, 1, 2, 3)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "no rows updated") {
+		t.Fatalf("expected no rows updated error, got %v", err)
+	}
+	state.done()
+}
+
+func TestSaveCursorReturnsErrorForTenantMismatch(t *testing.T) {
+	db, state := newScriptedDB(t,
+		scriptStep{kind: stepBegin},
+		scriptStep{kind: stepExec, query: "SELECT set_config('app.tenant_id', $1, true)", args: []any{"tenant-2"}},
+		scriptStep{kind: stepExec, query: "SET cursor_state = $2::jsonb", args: []any{"run-1", `{"cursor":"abc"}`}, rowsAffected: int64Ptr(0)},
+		scriptStep{kind: stepRollback},
+	)
+
+	ledger := NewLedger(db)
+	tenantCtx, err := tenantdb.WithTenantID(context.Background(), "tenant-2")
+	if err != nil {
+		t.Fatalf("WithTenantID error: %v", err)
+	}
+	err = ledger.SaveCursor(tenantCtx, "run-1", `{"cursor":"abc"}`)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "no rows updated") {
+		t.Fatalf("expected no rows updated error, got %v", err)
 	}
 	state.done()
 }

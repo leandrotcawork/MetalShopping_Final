@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"strings"
 
 	"metalshopping/integration_worker/internal/erp_runtime/tenantdb"
@@ -103,8 +104,7 @@ SET status = 'completed',
     review_count   = $5
 WHERE run_id = $1
   AND tenant_id = current_tenant_id()`
-		_, err := tx.ExecContext(ctx, q, runID, promoted, warnings, rejected, reviews)
-		return err
+		return execTenantUpdate(ctx, tx, runID, "mark completed", q, runID, promoted, warnings, rejected, reviews)
 	})
 }
 
@@ -122,8 +122,7 @@ SET status = 'partial',
     review_count    = $6
 WHERE run_id = $1
   AND tenant_id = current_tenant_id()`
-		_, err := tx.ExecContext(ctx, q, runID, failureSummary, promoted, warnings, rejected, reviews)
-		return err
+		return execTenantUpdate(ctx, tx, runID, "mark partial", q, runID, failureSummary, promoted, warnings, rejected, reviews)
 	})
 }
 
@@ -137,8 +136,7 @@ SET status = 'failed',
     failure_summary = $2
 WHERE run_id = $1
   AND tenant_id = current_tenant_id()`
-		_, err := tx.ExecContext(ctx, q, runID, failureSummary)
-		return err
+		return execTenantUpdate(ctx, tx, runID, "mark failed", q, runID, failureSummary)
 	})
 }
 
@@ -150,11 +148,30 @@ UPDATE erp_sync_runs
 SET cursor_state = $2::jsonb
 WHERE run_id = $1
   AND tenant_id = current_tenant_id()`
-		_, err := tx.ExecContext(ctx, q, runID, cursorJSON)
-		return err
+		return execTenantUpdate(ctx, tx, runID, "save cursor", q, runID, cursorJSON)
 	})
 }
 
+func execTenantUpdate(ctx context.Context, tx *sql.Tx, runID, op, query string, args ...any) error {
+	result, err := tx.ExecContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%s run %s: inspect rows affected: %w", op, runID, err)
+	}
+	if rows == 0 {
+		return fmt.Errorf("%s run %s: no rows updated", op, runID)
+	}
+	return nil
+}
+
+// withRunTenantTx runs a terminal/cursor update in a tenant-bound transaction.
+// Preferred callers set the tenant in context first, which lets us bind the
+// session before any tenant-scoped query/write. The fallback path exists only
+// for compatibility with older callers that haven't been threaded yet.
 func (l *Ledger) withRunTenantTx(ctx context.Context, runID string, fn func(*sql.Tx) error) error {
 	tenantID, ok := tenantdb.TenantIDFromContext(ctx)
 	if !ok {

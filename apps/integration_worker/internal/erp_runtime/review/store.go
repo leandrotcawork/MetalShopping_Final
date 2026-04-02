@@ -3,6 +3,7 @@ package review
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -52,8 +53,17 @@ func (s *Store) CreateFromReconciliation(
 	}
 
 	idx := stagingIndex(stagingRecords)
+	tenantID := actionable[0].TenantID
+	if tenantID == "" {
+		return fmt.Errorf("review items: actionable reconciliation %s missing tenant id", actionable[0].ReconciliationID)
+	}
+	for _, r := range actionable[1:] {
+		if r.TenantID != tenantID {
+			return fmt.Errorf("review items: actionable results span multiple tenants: %s and %s", tenantID, r.TenantID)
+		}
+	}
 
-	tx, err := tenantdb.BeginTenantTx(ctx, s.db, actionable[0].TenantID, nil)
+	tx, err := tenantdb.BeginTenantTx(ctx, s.db, tenantID, nil)
 	if err != nil {
 		return err
 	}

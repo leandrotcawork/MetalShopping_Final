@@ -100,13 +100,13 @@ func main() {
 		}
 
 		// Execute in a goroutine so the claim loop can pick up the next run immediately
-		go func(c *runs.RunClaim, ref string) {
-			if execErr := runner.Execute(tenantCtx, c, ref); execErr != nil {
+		go func(c *runs.RunClaim, ref string, runCtx context.Context) {
+			if execErr := runner.Execute(runCtx, c, ref); execErr != nil {
 				log.Printf("erp-sync: run %s failed: %v", c.RunID, execErr)
 			} else {
 				log.Printf("erp-sync: run %s completed", c.RunID)
 			}
-		}(claim, connectionRef)
+		}(claim, connectionRef, tenantCtx)
 	}
 }
 
