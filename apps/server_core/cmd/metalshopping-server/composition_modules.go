@@ -13,8 +13,9 @@ import (
 	catalogapp "metalshopping/server_core/internal/modules/catalog/application"
 	catalogreadmodel "metalshopping/server_core/internal/modules/catalog/readmodel"
 	cataloghttp "metalshopping/server_core/internal/modules/catalog/transport/http"
-	erpiam "metalshopping/server_core/internal/modules/erp_integrations/adapters/iam"
+	erpcatalog "metalshopping/server_core/internal/modules/erp_integrations/adapters/catalog"
 	erpgov "metalshopping/server_core/internal/modules/erp_integrations/adapters/governance"
+	erpiam "metalshopping/server_core/internal/modules/erp_integrations/adapters/iam"
 	erppg "metalshopping/server_core/internal/modules/erp_integrations/adapters/postgres"
 	erpapp "metalshopping/server_core/internal/modules/erp_integrations/application"
 	erphttp "metalshopping/server_core/internal/modules/erp_integrations/transport/http"
@@ -102,6 +103,8 @@ func composeModules(ctx context.Context, runtime runtimeComposition, governance 
 	erpEnabledGuard := erpgov.NewIntegrationEnabledGuard(governance.featureFlags, runtime.environment)
 	erpAutoPromoGuard := erpgov.NewAutoPromotionGuard(governance.policies, runtime.environment)
 	erpPermChecker := erpiam.NewPermissionChecker(iamAuthorization)
+	erpProductWriter := erpcatalog.NewProductWriter(runtime.db, outboxStore)
+	erpProductPromotion := erpapp.NewProductPromotion(erpRepos.Staging, erpProductWriter)
 	erpSvc := erpapp.NewService(
 		erpRepos.Instances,
 		erpRepos.Runs,
@@ -111,7 +114,7 @@ func composeModules(ctx context.Context, runtime runtimeComposition, governance 
 		outboxStore,
 	)
 	erpHandler := erphttp.NewHandler(erpSvc)
-	erpPromoConsumer := erpapp.NewPromotionConsumer(erpRepos.Reconciliations, erpAutoPromoGuard, outboxStore)
+	erpPromoConsumer := erpapp.NewPromotionConsumer(erpRepos.Reconciliations, erpAutoPromoGuard, erpProductPromotion)
 	go erpPromoConsumer.Start(ctx)
 
 	return moduleComposition{

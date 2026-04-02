@@ -39,6 +39,9 @@ type RunRepo struct{ base }
 // ReviewRepo implements ports.ReviewRepository.
 type ReviewRepo struct{ base }
 
+// StagingRepo implements ports.StagingReader.
+type StagingRepo struct{ base }
+
 // ReconciliationRepo implements ports.ReconciliationReader.
 type ReconciliationRepo struct{ base }
 
@@ -46,6 +49,7 @@ type ReconciliationRepo struct{ base }
 var _ ports.InstanceRepository = (*InstanceRepo)(nil)
 var _ ports.RunRepository = (*RunRepo)(nil)
 var _ ports.ReviewRepository = (*ReviewRepo)(nil)
+var _ ports.StagingReader = (*StagingRepo)(nil)
 var _ ports.ReconciliationReader = (*ReconciliationRepo)(nil)
 
 // ---------------------------------------------------------------------------
@@ -57,6 +61,7 @@ type Repos struct {
 	Instances       *InstanceRepo
 	Runs            *RunRepo
 	Reviews         *ReviewRepo
+	Staging         *StagingRepo
 	Reconciliations *ReconciliationRepo
 }
 
@@ -69,6 +74,7 @@ func NewRepos(db *sql.DB, outboxStore *outbox.Store) *Repos {
 		Instances:       &InstanceRepo{b},
 		Runs:            &RunRepo{b},
 		Reviews:         &ReviewRepo{b},
+		Staging:         &StagingRepo{b},
 		Reconciliations: &ReconciliationRepo{b},
 	}
 }
@@ -572,7 +578,62 @@ WHERE tenant_id = current_tenant_id()
 }
 
 // ---------------------------------------------------------------------------
-// ReconciliationRepo — implements ports.ReconciliationReader
+// StagingRepo - implements ports.StagingReader
+// ---------------------------------------------------------------------------
+
+func (r *StagingRepo) GetStagingRecord(ctx context.Context, tenantID, stagingID string) (*domain.StagingRecord, error) {
+	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	const querySQL = `
+SELECT staging_id, tenant_id, run_id, raw_id, entity_type, source_id,
+       normalized_json, validation_status, validation_errors, normalized_at
+FROM erp_staging_records
+WHERE tenant_id = current_tenant_id()
+  AND staging_id = $1
+`
+	row := tx.QueryRowContext(ctx, querySQL, stagingID)
+
+	var item domain.StagingRecord
+	var entityType string
+	var normalizedJSON []byte
+	var validationErrors sql.NullString
+	if err := row.Scan(
+		&item.StagingID,
+		&item.TenantID,
+		&item.RunID,
+		&item.RawID,
+		&entityType,
+		&item.SourceID,
+		&normalizedJSON,
+		&item.ValidationStatus,
+		&validationErrors,
+		&item.NormalizedAt,
+	); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, domain.ErrStagingRecordNotFound
+		}
+		return nil, fmt.Errorf("get erp staging record: %w", err)
+	}
+	item.EntityType = domain.EntityType(entityType)
+	item.NormalizedJSON = append([]byte(nil), normalizedJSON...)
+	if validationErrors.Valid {
+		value := validationErrors.String
+		item.ValidationErrors = &value
+	}
+	item.NormalizedAt = item.NormalizedAt.UTC()
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit erp staging record get: %w", err)
+	}
+	return &item, nil
+}
+
+// ---------------------------------------------------------------------------
+// ReconciliationRepo - implements ports.ReconciliationReader
 // ---------------------------------------------------------------------------
 
 func (r *ReconciliationRepo) ListPromotableResults(ctx context.Context, tenantID string, limit int) ([]*domain.ReconciliationResult, error) {
@@ -648,10 +709,10 @@ LIMIT $1
 	return items, nil
 }
 
-func (r *ReconciliationRepo) ClaimForPromotion(ctx context.Context, tenantID, reconciliationID string) error {
+func (r *ReconciliationRepo) ClaimForPromotion(ctx context.Context, tenantID, reconciliationID string) (bool, error) {
 	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, nil)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer func() { _ = tx.Rollback() }()
 
@@ -664,21 +725,21 @@ WHERE tenant_id = current_tenant_id()
 `
 	result, err := tx.ExecContext(ctx, updateSQL, reconciliationID)
 	if err != nil {
-		return fmt.Errorf("claim erp reconciliation result for promotion: %w", err)
+		return false, fmt.Errorf("claim erp reconciliation result for promotion: %w", err)
 	}
 	n, err := result.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("claim erp reconciliation result rows affected: %w", err)
+		return false, fmt.Errorf("claim erp reconciliation result rows affected: %w", err)
 	}
 	if n == 0 {
-		// Already claimed or not found — treat as a no-op conflict.
+		// Already claimed or not found - treat as a no-op conflict.
 		_ = tx.Rollback()
-		return nil
+		return false, nil
 	}
 	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit erp reconciliation claim: %w", err)
+		return false, fmt.Errorf("commit erp reconciliation claim: %w", err)
 	}
-	return nil
+	return true, nil
 }
 
 func (r *ReconciliationRepo) MarkPromoted(ctx context.Context, tenantID, reconciliationID, canonicalID string) error {
@@ -722,6 +783,32 @@ WHERE tenant_id = current_tenant_id()
 	}
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit erp reconciliation mark failed: %w", err)
+	}
+	return nil
+}
+
+func (r *ReconciliationRepo) MarkReviewRequired(ctx context.Context, tenantID, reconciliationID, reasonCode string) error {
+	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	const updateSQL = `
+UPDATE erp_reconciliation_results
+SET promotion_status = 'failed',
+    classification   = 'review_required',
+    action           = 'skip',
+    reason_code      = $1,
+    canonical_id     = NULL
+WHERE tenant_id = current_tenant_id()
+  AND reconciliation_id = $2
+`
+	if _, err := tx.ExecContext(ctx, updateSQL, reasonCode, reconciliationID); err != nil {
+		return fmt.Errorf("mark erp reconciliation result review required: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit erp reconciliation mark review required: %w", err)
 	}
 	return nil
 }

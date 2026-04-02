@@ -7,40 +7,31 @@ import (
 	"time"
 
 	"metalshopping/server_core/internal/modules/erp_integrations/domain"
-	"metalshopping/server_core/internal/modules/erp_integrations/events"
 	"metalshopping/server_core/internal/modules/erp_integrations/ports"
-	"metalshopping/server_core/internal/platform/messaging/outbox"
 )
 
 const promotionBatchSize = 50
 
-// PromotionConsumer polls erp_reconciliation_results for promotable records
-// and promotes them into canonical domain tables.
-//
-// v1 limitation: the canonical module write ports are not available from this
-// service layer. The consumer therefore writes a placeholder "promoted" marker:
-// it claims the record, marks it as promoted (using source_id as a proxy for
-// the canonical_id), and publishes the entity_promoted outbox event. The actual
-// domain write (e.g., updating the canonical products table) will be added in a
-// follow-up task when canonical module ports are wired into this layer.
+// PromotionConsumer polls erp_reconciliation_results for promotable records and
+// promotes product rows into the canonical catalog.
 type PromotionConsumer struct {
-	reconRepo      ports.ReconciliationReader
-	autoPromoGuard ports.AutoPromotionGuard
-	outboxStore    *outbox.Store
-	interval       time.Duration
+	reconRepo        ports.ReconciliationReader
+	autoPromoGuard   ports.AutoPromotionGuard
+	productPromotion *ProductPromotion
+	interval         time.Duration
 }
 
 // NewPromotionConsumer constructs a PromotionConsumer.
 func NewPromotionConsumer(
 	reconRepo ports.ReconciliationReader,
 	autoPromoGuard ports.AutoPromotionGuard,
-	outboxStore *outbox.Store,
+	productPromotion *ProductPromotion,
 ) *PromotionConsumer {
 	return &PromotionConsumer{
-		reconRepo:      reconRepo,
-		autoPromoGuard: autoPromoGuard,
-		outboxStore:    outboxStore,
-		interval:       5 * time.Second,
+		reconRepo:        reconRepo,
+		autoPromoGuard:   autoPromoGuard,
+		productPromotion: productPromotion,
+		interval:         5 * time.Second,
 	}
 }
 
@@ -75,6 +66,11 @@ func (c *PromotionConsumer) runPromotion(ctx context.Context) {
 }
 
 func (c *PromotionConsumer) promoteOne(ctx context.Context, result *domain.ReconciliationResult) {
+	if result == nil {
+		log.Printf("WARN erp PromotionConsumer: skip nil reconciliation result")
+		return
+	}
+
 	// Check whether auto-promotion is permitted for this tenant.
 	if err := c.autoPromoGuard.CheckAutoPromotion(ctx, result.TenantID); err != nil {
 		if errors.Is(err, domain.ErrAutoPromotionDisabled) {
@@ -85,37 +81,55 @@ func (c *PromotionConsumer) promoteOne(ctx context.Context, result *domain.Recon
 		return
 	}
 
-	// Atomically claim the record (promotion_status: pending → promoting).
-	if err := c.reconRepo.ClaimForPromotion(ctx, result.TenantID, result.ReconciliationID); err != nil {
+	// Atomically claim the record (promotion_status: pending -> promoting).
+	claimed, err := c.reconRepo.ClaimForPromotion(ctx, result.TenantID, result.ReconciliationID)
+	if err != nil {
 		log.Printf("WARN erp PromotionConsumer: claim reconciliation %s: %v", result.ReconciliationID, err)
 		return
 	}
+	if !claimed {
+		log.Printf("INFO erp PromotionConsumer: skip already claimed reconciliation %s", result.ReconciliationID)
+		return
+	}
 
-	// v1 placeholder: no canonical module write in v1.
-	// Use source_id as a proxy canonical_id until canonical module ports are wired.
-	// TODO(follow-up): replace with actual canonical module write when ports are available.
-	canonicalID := result.SourceID
+	if result.EntityType != domain.EntityTypeProducts {
+		if err := c.reconRepo.MarkReviewRequired(ctx, result.TenantID, result.ReconciliationID, unsupportedPromotionEntityReasonCode); err != nil {
+			log.Printf("WARN erp PromotionConsumer: mark review required for reconciliation %s: %v", result.ReconciliationID, err)
+			if failErr := c.reconRepo.MarkPromotionFailed(ctx, result.TenantID, result.ReconciliationID); failErr != nil {
+				log.Printf("WARN erp PromotionConsumer: mark promotion failed for reconciliation %s: %v", result.ReconciliationID, failErr)
+			}
+		}
+		log.Printf(
+			"WARN erp PromotionConsumer: unsupported entity type for reconciliation %s tenant=%s entity_type=%s reason_code=%s",
+			result.ReconciliationID,
+			result.TenantID,
+			result.EntityType,
+			unsupportedPromotionEntityReasonCode,
+		)
+		return
+	}
 
-	if err := c.reconRepo.MarkPromoted(ctx, result.TenantID, result.ReconciliationID, canonicalID); err != nil {
-		log.Printf("WARN erp PromotionConsumer: mark promoted for reconciliation %s: %v", result.ReconciliationID, err)
+	canonicalID, err := c.productPromotion.PromoteProduct(ctx, result)
+	if err != nil {
+		log.Printf(
+			"WARN erp PromotionConsumer: promote product reconciliation %s tenant=%s staging_id=%s source_id=%s entity_type=%s: %v",
+			result.ReconciliationID,
+			result.TenantID,
+			result.StagingID,
+			result.SourceID,
+			result.EntityType,
+			err,
+		)
 		if failErr := c.reconRepo.MarkPromotionFailed(ctx, result.TenantID, result.ReconciliationID); failErr != nil {
 			log.Printf("WARN erp PromotionConsumer: mark promotion failed for reconciliation %s: %v", result.ReconciliationID, failErr)
 		}
 		return
 	}
 
-	// Publish entity_promoted outbox event (best-effort).
-	if c.outboxStore != nil {
-		now := time.Now().UTC()
-		// Set the canonical_id on the result for the event payload.
-		result.CanonicalID = &canonicalID
-		record, err := events.NewEntityPromotedOutboxRecord(result, "", now)
-		if err != nil {
-			log.Printf("WARN erp PromotionConsumer: build entity_promoted outbox record for %s: %v", result.ReconciliationID, err)
-			return
-		}
-		if appendErr := c.outboxStore.Append(ctx, []outbox.Record{record}); appendErr != nil {
-			log.Printf("WARN erp PromotionConsumer: append entity_promoted outbox event for %s: %v (promotion already marked)", result.ReconciliationID, appendErr)
+	if err := c.reconRepo.MarkPromoted(ctx, result.TenantID, result.ReconciliationID, canonicalID); err != nil {
+		log.Printf("WARN erp PromotionConsumer: mark promoted for reconciliation %s: %v", result.ReconciliationID, err)
+		if failErr := c.reconRepo.MarkPromotionFailed(ctx, result.TenantID, result.ReconciliationID); failErr != nil {
+			log.Printf("WARN erp PromotionConsumer: mark promotion failed for reconciliation %s: %v", result.ReconciliationID, failErr)
 		}
 	}
 }

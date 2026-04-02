@@ -7,6 +7,28 @@ import (
 	"metalshopping/server_core/internal/modules/erp_integrations/domain"
 )
 
+// ProductPromotionIdentifierInput captures a canonical product identifier that
+// should be written alongside the promoted catalog product.
+type ProductPromotionIdentifierInput struct {
+	IdentifierType  string
+	IdentifierValue string
+	SourceSystem    string
+	IsPrimary       bool
+}
+
+// ProductPromotionInput captures the canonical product payload derived from ERP
+// staging data.
+type ProductPromotionInput struct {
+	SKU                   string
+	Name                  string
+	Description           string
+	BrandName             string
+	StockProfileCode      string
+	PrimaryTaxonomyNodeID string
+	Status                string
+	Identifiers           []ProductPromotionIdentifierInput
+}
+
 // InstanceRepository manages persistence for ERP integration instances.
 type InstanceRepository interface {
 	Create(ctx context.Context, instance *domain.IntegrationInstance) error
@@ -40,11 +62,23 @@ type ReconciliationReader interface {
 	// tenant filtering so that the consumer can process records from all tenants.
 	ListAllPendingPromotion(ctx context.Context, limit int) ([]*domain.ReconciliationResult, error)
 	// ClaimForPromotion atomically sets promotion_status = 'promoting' for a single result.
-	ClaimForPromotion(ctx context.Context, tenantID, reconciliationID string) error
+	ClaimForPromotion(ctx context.Context, tenantID, reconciliationID string) (bool, error)
 	// MarkPromoted records a successful promotion and stores the canonical entity ID.
 	MarkPromoted(ctx context.Context, tenantID, reconciliationID, canonicalID string) error
 	// MarkPromotionFailed records a failed promotion attempt.
 	MarkPromotionFailed(ctx context.Context, tenantID, reconciliationID string) error
+	// MarkReviewRequired records a non-promotable record that needs manual review.
+	MarkReviewRequired(ctx context.Context, tenantID, reconciliationID, reasonCode string) error
+}
+
+// StagingReader provides read access to normalized ERP staging records.
+type StagingReader interface {
+	GetStagingRecord(ctx context.Context, tenantID, stagingID string) (*domain.StagingRecord, error)
+}
+
+// ProductWriter performs the canonical catalog write for promoted ERP products.
+type ProductWriter interface {
+	PromoteProduct(ctx context.Context, traceID string, result *domain.ReconciliationResult, input ProductPromotionInput) (string, error)
 }
 
 // PermissionChecker verifies tenant-scoped access rights.

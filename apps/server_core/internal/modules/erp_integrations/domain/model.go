@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"encoding/json"
 	"strings"
 	"time"
 )
@@ -281,4 +282,19 @@ type ReconciliationResult struct {
 	WarningDetails   *string // JSON string
 	ReconciledAt     time.Time
 	PromotionStatus  PromotionStatus
+}
+
+// StagingRecord captures the normalized ERP payload that is eligible for
+// promotion into a canonical domain module.
+type StagingRecord struct {
+	StagingID        string
+	TenantID         string
+	RunID            string
+	RawID            string
+	EntityType       EntityType
+	SourceID         string
+	NormalizedJSON   json.RawMessage
+	ValidationStatus string
+	ValidationErrors *string
+	NormalizedAt     time.Time
 }

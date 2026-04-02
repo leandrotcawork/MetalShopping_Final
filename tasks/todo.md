@@ -6,6 +6,17 @@
 - Active tranche: master orchestration planning
 - Source spec: `docs/superpowers/specs/2026-04-01-master-orchestration-plan-design.md`
 
+## Current Task
+
+- Task: Remediation Task 5 - replace placeholder ERP promotion with real product promotion in `server_core`
+- State: in-progress
+- Scope: `apps/server_core/internal/modules/erp_integrations/{application,adapters,ports}`, `apps/server_core/cmd/metalshopping-server/composition_modules.go`
+- Decision log:
+  - Plan mode: yes, because this touches promotion/outbox semantics and multiple files.
+  - Model: Codex for implementation and tests.
+  - Claude vs Codex: Codex for code changes; review and verification remain mandatory before completion.
+  - Parallel dispatch: yes, after discovery, to keep code wiring and tests moving together.
+
 ## Completed Tasks
 
 - [x] Create `docs/MASTER_ORCHESTRATION_PLAN.md` as the live orchestration index
