@@ -16,20 +16,22 @@ const unsupportedPromotionEntityReasonCode = "ERP_PROMOTION_UNSUPPORTED_ENTITY_T
 // a canonical catalog write input.
 type ProductPromotion struct {
 	stagingRepo ports.StagingReader
+	runRepo     ports.RunRepository
 	writer      ports.ProductWriter
 }
 
 // NewProductPromotion constructs a product-only promotion service.
-func NewProductPromotion(stagingRepo ports.StagingReader, writer ports.ProductWriter) *ProductPromotion {
+func NewProductPromotion(stagingRepo ports.StagingReader, runRepo ports.RunRepository, writer ports.ProductWriter) *ProductPromotion {
 	return &ProductPromotion{
 		stagingRepo: stagingRepo,
+		runRepo:     runRepo,
 		writer:      writer,
 	}
 }
 
 // PromoteProduct promotes a reconciled ERP product into the canonical catalog.
 func (p *ProductPromotion) PromoteProduct(ctx context.Context, result *domain.ReconciliationResult) (string, error) {
-	if p == nil || p.stagingRepo == nil || p.writer == nil {
+	if p == nil || p.stagingRepo == nil || p.runRepo == nil || p.writer == nil {
 		return "", fmt.Errorf("product promotion is not configured")
 	}
 	if result == nil {
@@ -55,8 +57,16 @@ func (p *ProductPromotion) PromoteProduct(ctx context.Context, result *domain.Re
 		return "", err
 	}
 
+	run, err := p.runRepo.Get(ctx, result.TenantID, result.RunID)
+	if err != nil {
+		return "", fmt.Errorf("load erp sync run %s: %w", result.RunID, err)
+	}
+	if run == nil {
+		return "", fmt.Errorf("load erp sync run %s returned no data", result.RunID)
+	}
+
 	traceID := promotionTraceID(result)
-	return p.writer.PromoteProduct(ctx, traceID, result, input)
+	return p.writer.PromoteProduct(ctx, traceID, result, run, input)
 }
 
 func buildProductPromotionInput(staging *domain.StagingRecord) (ports.ProductPromotionInput, error) {

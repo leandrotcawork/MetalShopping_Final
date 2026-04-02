@@ -30,6 +30,28 @@ func (r *Repository) CreateProduct(ctx context.Context, product domain.Product, 
 	}
 	defer func() { _ = tx.Rollback() }()
 
+	if err := r.CreateProductInTx(ctx, tx, product, traceID); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit catalog product: %w", err)
+	}
+	return nil
+}
+
+func (r *Repository) CreateProductInTx(ctx context.Context, tx *sql.Tx, product domain.Product, traceID string) error {
+	if tx == nil {
+		return fmt.Errorf("catalog product transaction is required")
+	}
+
+	if err := r.createProductInTx(ctx, tx, product, traceID); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *Repository) createProductInTx(ctx context.Context, tx *sql.Tx, product domain.Product, traceID string) error {
 	const insertSQL = `
 INSERT INTO catalog_products (
   product_id,
@@ -111,10 +133,6 @@ VALUES (
 		if err := r.outboxStore.AppendInTx(ctx, tx, []outbox.Record{record}); err != nil {
 			return err
 		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit catalog product: %w", err)
 	}
 	return nil
 }

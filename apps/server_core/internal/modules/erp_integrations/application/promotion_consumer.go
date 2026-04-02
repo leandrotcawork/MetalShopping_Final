@@ -2,7 +2,9 @@ package application
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -93,9 +95,11 @@ func (c *PromotionConsumer) promoteOne(ctx context.Context, result *domain.Recon
 	}
 
 	if result.EntityType != domain.EntityTypeProducts {
-		if err := c.reconRepo.MarkReviewRequired(ctx, result.TenantID, result.ReconciliationID, unsupportedPromotionEntityReasonCode); err != nil {
+		warningDetails := buildPromotionFailureWarningDetails(result, unsupportedPromotionEntityReasonCode, "unsupported entity type", nil)
+		if err := c.reconRepo.MarkReviewRequired(ctx, result.TenantID, result.ReconciliationID, unsupportedPromotionEntityReasonCode, warningDetails); err != nil {
 			log.Printf("WARN erp PromotionConsumer: mark review required for reconciliation %s: %v", result.ReconciliationID, err)
-			if failErr := c.reconRepo.MarkPromotionFailed(ctx, result.TenantID, result.ReconciliationID); failErr != nil {
+			failureDetails := buildPromotionFailureWarningDetails(result, promotionFailureReasonCode, "mark review required failed", err)
+			if failErr := c.reconRepo.MarkPromotionFailed(ctx, result.TenantID, result.ReconciliationID, promotionFailureReasonCode, failureDetails); failErr != nil {
 				log.Printf("WARN erp PromotionConsumer: mark promotion failed for reconciliation %s: %v", result.ReconciliationID, failErr)
 			}
 		}
@@ -120,7 +124,8 @@ func (c *PromotionConsumer) promoteOne(ctx context.Context, result *domain.Recon
 			result.EntityType,
 			err,
 		)
-		if failErr := c.reconRepo.MarkPromotionFailed(ctx, result.TenantID, result.ReconciliationID); failErr != nil {
+		failureDetails := buildPromotionFailureWarningDetails(result, promotionFailureReasonCode, "catalog promotion failed", err)
+		if failErr := c.reconRepo.MarkPromotionFailed(ctx, result.TenantID, result.ReconciliationID, promotionFailureReasonCode, failureDetails); failErr != nil {
 			log.Printf("WARN erp PromotionConsumer: mark promotion failed for reconciliation %s: %v", result.ReconciliationID, failErr)
 		}
 		return
@@ -128,8 +133,41 @@ func (c *PromotionConsumer) promoteOne(ctx context.Context, result *domain.Recon
 
 	if err := c.reconRepo.MarkPromoted(ctx, result.TenantID, result.ReconciliationID, canonicalID); err != nil {
 		log.Printf("WARN erp PromotionConsumer: mark promoted for reconciliation %s: %v", result.ReconciliationID, err)
-		if failErr := c.reconRepo.MarkPromotionFailed(ctx, result.TenantID, result.ReconciliationID); failErr != nil {
+		failureDetails := buildPromotionFailureWarningDetails(result, promotionFailureReasonCode, "mark promoted failed", err)
+		if failErr := c.reconRepo.MarkPromotionFailed(ctx, result.TenantID, result.ReconciliationID, promotionFailureReasonCode, failureDetails); failErr != nil {
 			log.Printf("WARN erp PromotionConsumer: mark promotion failed for reconciliation %s: %v", result.ReconciliationID, failErr)
 		}
 	}
+}
+
+const promotionFailureReasonCode = "ERP_PROMOTION_FAILED"
+
+func buildPromotionFailureWarningDetails(result *domain.ReconciliationResult, reasonCode, failureStep string, cause error) *string {
+	if result == nil {
+		return nil
+	}
+
+	details := map[string]any{
+		"reason_code":       reasonCode,
+		"failure_step":      failureStep,
+		"reconciliation_id": result.ReconciliationID,
+		"tenant_id":         result.TenantID,
+		"run_id":            result.RunID,
+		"staging_id":        result.StagingID,
+		"source_id":         result.SourceID,
+		"entity_type":       result.EntityType,
+		"promotion_status":  result.PromotionStatus,
+		"reconciled_at":     result.ReconciledAt.UTC().Format(time.RFC3339),
+	}
+	if cause != nil {
+		details["error"] = cause.Error()
+	}
+
+	payload, err := json.Marshal(details)
+	if err != nil {
+		fallback := fmt.Sprintf(`{"reason_code":%q,"failure_step":%q,"error":%q}`, reasonCode, failureStep, err.Error())
+		return &fallback
+	}
+	value := string(payload)
+	return &value
 }

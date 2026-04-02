@@ -43,3 +43,54 @@ func TestNewRunCompletedOutboxRecordIncludesCreatedAt(t *testing.T) {
 		t.Fatalf("expected created_at %s, got %s", want, got)
 	}
 }
+
+func TestNewEntityPromotedOutboxRecordIncludesRunProvenance(t *testing.T) {
+	result := &domain.ReconciliationResult{
+		ReconciliationID: "rec_123",
+		TenantID:         "tenant_1",
+		RunID:            "run_123",
+		EntityType:       domain.EntityTypeProducts,
+		SourceID:         "src_123",
+		CanonicalID:      stringPtr("prd_123"),
+		Action:           "create",
+		ReconciledAt:     time.Date(2026, 4, 2, 10, 0, 0, 0, time.UTC),
+	}
+	run := &domain.SyncRun{
+		RunID:         "run_123",
+		TenantID:      "tenant_1",
+		InstanceID:    "inst_123",
+		ConnectorType: domain.ConnectorTypeSankhya,
+	}
+
+	record, err := NewEntityPromotedOutboxRecord(result, run, "trace_1", time.Date(2026, 4, 2, 15, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("NewEntityPromotedOutboxRecord error: %v", err)
+	}
+
+	var payload struct {
+		ReconciliationID string `json:"reconciliation_id"`
+		TenantID         string `json:"tenant_id"`
+		InstanceID       string `json:"instance_id"`
+		ConnectorType    string `json:"connector_type"`
+		RunID            string `json:"run_id"`
+	}
+	if err := json.Unmarshal(record.PayloadJSON, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if payload.ReconciliationID != result.ReconciliationID || payload.TenantID != result.TenantID {
+		t.Fatalf("unexpected payload tenant/reconciliation: %+v", payload)
+	}
+	if payload.InstanceID != run.InstanceID {
+		t.Fatalf("expected instance_id %s, got %s", run.InstanceID, payload.InstanceID)
+	}
+	if payload.ConnectorType != string(run.ConnectorType) {
+		t.Fatalf("expected connector_type %s, got %s", string(run.ConnectorType), payload.ConnectorType)
+	}
+	if payload.RunID != run.RunID {
+		t.Fatalf("expected run_id %s, got %s", run.RunID, payload.RunID)
+	}
+}
+
+func stringPtr(value string) *string {
+	return &value
+}

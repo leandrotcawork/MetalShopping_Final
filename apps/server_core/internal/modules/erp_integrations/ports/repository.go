@@ -66,9 +66,9 @@ type ReconciliationReader interface {
 	// MarkPromoted records a successful promotion and stores the canonical entity ID.
 	MarkPromoted(ctx context.Context, tenantID, reconciliationID, canonicalID string) error
 	// MarkPromotionFailed records a failed promotion attempt.
-	MarkPromotionFailed(ctx context.Context, tenantID, reconciliationID string) error
+	MarkPromotionFailed(ctx context.Context, tenantID, reconciliationID, reasonCode string, warningDetails *string) error
 	// MarkReviewRequired records a non-promotable record that needs manual review.
-	MarkReviewRequired(ctx context.Context, tenantID, reconciliationID, reasonCode string) error
+	MarkReviewRequired(ctx context.Context, tenantID, reconciliationID, reasonCode string, warningDetails *string) error
 }
 
 // StagingReader provides read access to normalized ERP staging records.
@@ -78,7 +78,7 @@ type StagingReader interface {
 
 // ProductWriter performs the canonical catalog write for promoted ERP products.
 type ProductWriter interface {
-	PromoteProduct(ctx context.Context, traceID string, result *domain.ReconciliationResult, input ProductPromotionInput) (string, error)
+	PromoteProduct(ctx context.Context, traceID string, result *domain.ReconciliationResult, run *domain.SyncRun, input ProductPromotionInput) (string, error)
 }
 
 // PermissionChecker verifies tenant-scoped access rights.

@@ -103,8 +103,8 @@ func composeModules(ctx context.Context, runtime runtimeComposition, governance 
 	erpEnabledGuard := erpgov.NewIntegrationEnabledGuard(governance.featureFlags, runtime.environment)
 	erpAutoPromoGuard := erpgov.NewAutoPromotionGuard(governance.policies, runtime.environment)
 	erpPermChecker := erpiam.NewPermissionChecker(iamAuthorization)
-	erpProductWriter := erpcatalog.NewProductWriter(runtime.db, outboxStore)
-	erpProductPromotion := erpapp.NewProductPromotion(erpRepos.Staging, erpProductWriter)
+	erpProductWriter := erpcatalog.NewProductWriter(runtime.db, outboxStore, catalogRepo)
+	erpProductPromotion := erpapp.NewProductPromotion(erpRepos.Staging, erpRepos.Runs, erpProductWriter)
 	erpSvc := erpapp.NewService(
 		erpRepos.Instances,
 		erpRepos.Runs,

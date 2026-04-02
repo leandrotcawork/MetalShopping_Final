@@ -765,7 +765,7 @@ WHERE tenant_id = current_tenant_id()
 	return nil
 }
 
-func (r *ReconciliationRepo) MarkPromotionFailed(ctx context.Context, tenantID, reconciliationID string) error {
+func (r *ReconciliationRepo) MarkPromotionFailed(ctx context.Context, tenantID, reconciliationID, reasonCode string, warningDetails *string) error {
 	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, nil)
 	if err != nil {
 		return err
@@ -774,11 +774,13 @@ func (r *ReconciliationRepo) MarkPromotionFailed(ctx context.Context, tenantID, 
 
 	const updateSQL = `
 UPDATE erp_reconciliation_results
-SET promotion_status = 'failed'
+SET promotion_status = 'failed',
+    reason_code      = $1,
+    warning_details  = $2
 WHERE tenant_id = current_tenant_id()
-  AND reconciliation_id = $1
+  AND reconciliation_id = $3
 `
-	if _, err := tx.ExecContext(ctx, updateSQL, reconciliationID); err != nil {
+	if _, err := tx.ExecContext(ctx, updateSQL, reasonCode, nullableText(warningDetails), reconciliationID); err != nil {
 		return fmt.Errorf("mark erp reconciliation result promotion failed: %w", err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -787,7 +789,7 @@ WHERE tenant_id = current_tenant_id()
 	return nil
 }
 
-func (r *ReconciliationRepo) MarkReviewRequired(ctx context.Context, tenantID, reconciliationID, reasonCode string) error {
+func (r *ReconciliationRepo) MarkReviewRequired(ctx context.Context, tenantID, reconciliationID, reasonCode string, warningDetails *string) error {
 	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, nil)
 	if err != nil {
 		return err
@@ -800,11 +802,12 @@ SET promotion_status = 'failed',
     classification   = 'review_required',
     action           = 'skip',
     reason_code      = $1,
+    warning_details  = $2,
     canonical_id     = NULL
 WHERE tenant_id = current_tenant_id()
-  AND reconciliation_id = $2
+  AND reconciliation_id = $3
 `
-	if _, err := tx.ExecContext(ctx, updateSQL, reasonCode, reconciliationID); err != nil {
+	if _, err := tx.ExecContext(ctx, updateSQL, reasonCode, nullableText(warningDetails), reconciliationID); err != nil {
 		return fmt.Errorf("mark erp reconciliation result review required: %w", err)
 	}
 	if err := tx.Commit(); err != nil {

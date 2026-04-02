@@ -48,6 +48,9 @@ type runCompletedPayload struct {
 type entityPromotedPayload struct {
 	ReconciliationID string  `json:"reconciliation_id"`
 	TenantID         string  `json:"tenant_id"`
+	InstanceID       string  `json:"instance_id"`
+	ConnectorType    string  `json:"connector_type"`
+	RunID            string  `json:"run_id"`
 	EntityType       string  `json:"entity_type"`
 	SourceID         string  `json:"source_id"`
 	CanonicalID      *string `json:"canonical_id,omitempty"`
@@ -149,10 +152,21 @@ func NewRunCompletedOutboxRecord(run *domain.SyncRun, traceID string, now time.T
 
 // NewEntityPromotedOutboxRecord creates an outbox record for the
 // erp_integrations.entity_promoted event.
-func NewEntityPromotedOutboxRecord(result *domain.ReconciliationResult, traceID string, now time.Time) (outbox.Record, error) {
+func NewEntityPromotedOutboxRecord(result *domain.ReconciliationResult, run *domain.SyncRun, traceID string, now time.Time) (outbox.Record, error) {
+	instanceID := ""
+	connectorType := ""
+	runID := ""
+	if run != nil {
+		instanceID = run.InstanceID
+		connectorType = string(run.ConnectorType)
+		runID = run.RunID
+	}
 	p := entityPromotedPayload{
 		ReconciliationID: result.ReconciliationID,
 		TenantID:         result.TenantID,
+		InstanceID:       instanceID,
+		ConnectorType:    connectorType,
+		RunID:            runID,
 		EntityType:       string(result.EntityType),
 		SourceID:         result.SourceID,
 		CanonicalID:      result.CanonicalID,

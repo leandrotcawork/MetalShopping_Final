@@ -34,20 +34,47 @@ func (r *stubPromotionReader) GetStagingRecord(_ context.Context, _, stagingID s
 	return nil, domain.ErrStagingRecordNotFound
 }
 
+type stubRunRepo struct {
+	runs map[string]*domain.SyncRun
+}
+
+func (r *stubRunRepo) Create(_ context.Context, _ *domain.SyncRun) error {
+	return nil
+}
+
+func (r *stubRunRepo) Get(_ context.Context, _, runID string) (*domain.SyncRun, error) {
+	if r == nil {
+		return nil, domain.ErrRunNotFound
+	}
+	if run, ok := r.runs[runID]; ok {
+		return run, nil
+	}
+	return nil, domain.ErrRunNotFound
+}
+
+func (r *stubRunRepo) List(_ context.Context, _, _ string, _, _ int) ([]*domain.SyncRun, error) {
+	return nil, nil
+}
+
 type recordedPromotion struct {
 	reconciliationID string
 	canonicalID      string
+}
+
+type recordedFailure struct {
+	reconciliationID string
+	reasonCode       string
+	warningDetails   *string
 }
 
 type stubPromotionRepository struct {
 	claimResult bool
 	claimErr    error
 
-	claimCalls        []string
-	promoted          []recordedPromotion
-	failed            []string
-	reviewRequired    []recordedPromotion
-	reviewReasonCodes []string
+	claimCalls     []string
+	promoted       []recordedPromotion
+	failed         []recordedFailure
+	reviewRequired []recordedFailure
 }
 
 func (r *stubPromotionRepository) ListPromotableResults(context.Context, string, int) ([]*domain.ReconciliationResult, error) {
@@ -68,28 +95,29 @@ func (r *stubPromotionRepository) MarkPromoted(_ context.Context, _, reconciliat
 	return nil
 }
 
-func (r *stubPromotionRepository) MarkPromotionFailed(_ context.Context, _, reconciliationID string) error {
-	r.failed = append(r.failed, reconciliationID)
+func (r *stubPromotionRepository) MarkPromotionFailed(_ context.Context, _, reconciliationID, reasonCode string, warningDetails *string) error {
+	r.failed = append(r.failed, recordedFailure{reconciliationID: reconciliationID, reasonCode: reasonCode, warningDetails: warningDetails})
 	return nil
 }
 
-func (r *stubPromotionRepository) MarkReviewRequired(_ context.Context, _, reconciliationID, reasonCode string) error {
-	r.reviewRequired = append(r.reviewRequired, recordedPromotion{reconciliationID: reconciliationID})
-	r.reviewReasonCodes = append(r.reviewReasonCodes, reasonCode)
+func (r *stubPromotionRepository) MarkReviewRequired(_ context.Context, _, reconciliationID, reasonCode string, warningDetails *string) error {
+	r.reviewRequired = append(r.reviewRequired, recordedFailure{reconciliationID: reconciliationID, reasonCode: reasonCode, warningDetails: warningDetails})
 	return nil
 }
 
 type recordingProductWriter struct {
 	traceID     string
 	result      *domain.ReconciliationResult
+	run         *domain.SyncRun
 	input       ports.ProductPromotionInput
 	canonicalID string
 	err         error
 }
 
-func (w *recordingProductWriter) PromoteProduct(_ context.Context, traceID string, result *domain.ReconciliationResult, input ports.ProductPromotionInput) (string, error) {
+func (w *recordingProductWriter) PromoteProduct(_ context.Context, traceID string, result *domain.ReconciliationResult, run *domain.SyncRun, input ports.ProductPromotionInput) (string, error) {
 	w.traceID = traceID
 	w.result = result
+	w.run = run
 	w.input = input
 	if w.err != nil {
 		return "", w.err
@@ -117,8 +145,18 @@ func TestPromotionConsumerPromotesProductSuccessfully(t *testing.T) {
 			},
 		},
 	}
+	runRepo := &stubRunRepo{
+		runs: map[string]*domain.SyncRun{
+			"run_1": {
+				RunID:         "run_1",
+				TenantID:      "tenant-1",
+				InstanceID:    "inst_1",
+				ConnectorType: domain.ConnectorTypeSankhya,
+			},
+		},
+	}
 	writer := &recordingProductWriter{canonicalID: "prd_123"}
-	consumer := NewPromotionConsumer(reconRepo, &stubAutoPromoGuard{}, NewProductPromotion(stagingRepo, writer))
+	consumer := NewPromotionConsumer(reconRepo, &stubAutoPromoGuard{}, NewProductPromotion(stagingRepo, runRepo, writer))
 
 	result := &domain.ReconciliationResult{
 		ReconciliationID: "rec_1",
@@ -147,6 +185,9 @@ func TestPromotionConsumerPromotesProductSuccessfully(t *testing.T) {
 	}
 	if got := len(reconRepo.reviewRequired); got != 0 {
 		t.Fatalf("expected no review-required rows, got %d", got)
+	}
+	if writer.run == nil || writer.run.RunID != "run_1" {
+		t.Fatalf("expected run lookup to be passed to writer, got %#v", writer.run)
 	}
 	if writer.traceID != "erp-promotion:rec_1" {
 		t.Fatalf("expected promotion trace id, got %s", writer.traceID)
@@ -179,7 +220,7 @@ func TestPromotionConsumerPromotesProductSuccessfully(t *testing.T) {
 
 func TestPromotionConsumerSkipsDuplicateClaim(t *testing.T) {
 	reconRepo := &stubPromotionRepository{claimResult: false}
-	consumer := NewPromotionConsumer(reconRepo, &stubAutoPromoGuard{}, NewProductPromotion(&stubPromotionReader{}, &recordingProductWriter{}))
+	consumer := NewPromotionConsumer(reconRepo, &stubAutoPromoGuard{}, NewProductPromotion(&stubPromotionReader{}, &stubRunRepo{}, &recordingProductWriter{}))
 
 	result := &domain.ReconciliationResult{
 		ReconciliationID: "rec_1",
@@ -208,7 +249,7 @@ func TestPromotionConsumerSkipsDuplicateClaim(t *testing.T) {
 func TestPromotionConsumerSkipsWhenAutoPromotionDisabled(t *testing.T) {
 	reconRepo := &stubPromotionRepository{claimResult: true}
 	guard := &stubAutoPromoGuard{err: domain.ErrAutoPromotionDisabled}
-	consumer := NewPromotionConsumer(reconRepo, guard, NewProductPromotion(&stubPromotionReader{}, &recordingProductWriter{}))
+	consumer := NewPromotionConsumer(reconRepo, guard, NewProductPromotion(&stubPromotionReader{}, &stubRunRepo{}, &recordingProductWriter{}))
 
 	result := &domain.ReconciliationResult{
 		ReconciliationID: "rec_1",
@@ -238,8 +279,18 @@ func TestPromotionConsumerMarksFailedOnDomainWriteFailure(t *testing.T) {
 			},
 		},
 	}
+	runRepo := &stubRunRepo{
+		runs: map[string]*domain.SyncRun{
+			"run_1": {
+				RunID:         "run_1",
+				TenantID:      "tenant-1",
+				InstanceID:    "inst_1",
+				ConnectorType: domain.ConnectorTypeSankhya,
+			},
+		},
+	}
 	writer := &recordingProductWriter{err: errors.New("catalog write failed")}
-	consumer := NewPromotionConsumer(reconRepo, &stubAutoPromoGuard{}, NewProductPromotion(stagingRepo, writer))
+	consumer := NewPromotionConsumer(reconRepo, &stubAutoPromoGuard{}, NewProductPromotion(stagingRepo, runRepo, writer))
 
 	result := &domain.ReconciliationResult{
 		ReconciliationID: "rec_1",
@@ -260,11 +311,17 @@ func TestPromotionConsumerMarksFailedOnDomainWriteFailure(t *testing.T) {
 	if got := len(reconRepo.failed); got != 1 {
 		t.Fatalf("expected 1 failed row, got %d", got)
 	}
+	if reconRepo.failed[0].reasonCode != promotionFailureReasonCode {
+		t.Fatalf("expected reason code %s, got %s", promotionFailureReasonCode, reconRepo.failed[0].reasonCode)
+	}
+	if reconRepo.failed[0].warningDetails == nil || !strings.Contains(*reconRepo.failed[0].warningDetails, "catalog promotion failed") {
+		t.Fatalf("expected structured warning details, got %#v", reconRepo.failed[0].warningDetails)
+	}
 }
 
 func TestPromotionConsumerRoutesUnsupportedEntityTypeToReviewRequired(t *testing.T) {
 	reconRepo := &stubPromotionRepository{claimResult: true}
-	consumer := NewPromotionConsumer(reconRepo, &stubAutoPromoGuard{}, NewProductPromotion(&stubPromotionReader{}, &recordingProductWriter{}))
+	consumer := NewPromotionConsumer(reconRepo, &stubAutoPromoGuard{}, NewProductPromotion(&stubPromotionReader{}, &stubRunRepo{}, &recordingProductWriter{}))
 
 	result := &domain.ReconciliationResult{
 		ReconciliationID: "rec_1",
@@ -288,8 +345,11 @@ func TestPromotionConsumerRoutesUnsupportedEntityTypeToReviewRequired(t *testing
 	if got := len(reconRepo.failed); got != 0 {
 		t.Fatalf("expected no failed rows in normal review-required path, got %d", got)
 	}
-	if reconRepo.reviewReasonCodes[0] != unsupportedPromotionEntityReasonCode {
-		t.Fatalf("expected reason code %s, got %s", unsupportedPromotionEntityReasonCode, reconRepo.reviewReasonCodes[0])
+	if reconRepo.reviewRequired[0].reasonCode != unsupportedPromotionEntityReasonCode {
+		t.Fatalf("expected reason code %s, got %s", unsupportedPromotionEntityReasonCode, reconRepo.reviewRequired[0].reasonCode)
+	}
+	if reconRepo.reviewRequired[0].warningDetails == nil || !strings.Contains(*reconRepo.reviewRequired[0].warningDetails, unsupportedPromotionEntityReasonCode) {
+		t.Fatalf("expected review warning details, got %#v", reconRepo.reviewRequired[0].warningDetails)
 	}
 }
 
