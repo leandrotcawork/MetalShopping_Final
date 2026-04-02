@@ -122,10 +122,11 @@
 - ADR-0041 accepted: `http.leroy_search_sellers.v1` validated with `LEROY` smoke `OK` and `http_status=200` (`run_request_id=fc383948-a124-4db1-b428-6c775eba8b8c`)
 - ADR-0043/ADR-0044 accepted: legacy catalog import pipeline executed for `tenant_default` with reports and idempotent rerun evidence
 - governance audit design spec added to consolidate documentation precedence, agent entrypoints, and SoT ownership before the next planning wave
+- master orchestration document added as the live execution index across product and transversal fronts
 
 ## Next
 
-- create the master orchestration plan on top of the accepted governance hierarchy now that the consolidation tranche is complete
+- open the next detailed front spec from `docs/MASTER_ORCHESTRATION_PLAN.md`, starting with the recommended front unless dependencies change
 - keep ADR set complete and stable
 - implement manual URL candidates listing from catalog (ADR-0045) so the panel works when signals are empty
 - execute Shopping frontend parity ADR tranche (ADR-0036..ADR-0039) before expanding Shopping UX/features
