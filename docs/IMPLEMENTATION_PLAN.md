@@ -2,6 +2,17 @@
 
 ## Goal
 
+## Governance-first execution rule
+
+Before expanding new module planning, MetalShopping must keep this sequence:
+
+1. governance consolidation
+2. master orchestration planning
+3. one module spec at a time
+4. one implementation plan at a time
+
+This prevents the project from producing deep implementation plans on top of drifting operating rules.
+
 Sequence the work so the team can move from planning to implementation without reopening base architecture decisions.
 
 Delivery mode for new modules now follows:
@@ -158,6 +169,7 @@ Phase 4 gate:
 - backend-owned web auth/session foundation for thin clients
 - identity provider bootstrap and cross-channel login architecture
 - make-it-work-first module execution (`OpenAPI -> Go handler -> generated SDK -> React page`)
+- governance documentation consolidation and master orchestration planning
 
 ## Current module order (make-it-work-first)
 

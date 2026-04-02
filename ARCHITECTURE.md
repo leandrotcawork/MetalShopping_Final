@@ -2,6 +2,19 @@
 
 ## Status
 
+## Document boundary
+
+This file owns the stable architecture thesis of MetalShopping.
+
+It does not own:
+
+- day-to-day status tracking
+- active execution order details
+- task progress or backlog state
+- agent precedence rules
+
+Those belong to `docs/PROJECT_SOT.md`, `docs/IMPLEMENTATION_PLAN.md`, and `docs/PROGRESS.md` according to the repository governance hierarchy.
+
 Esta arquitetura esta aprovada como base oficial do repositorio. O objetivo deste documento e fixar a forma da plataforma; os detalhes normativos que nao devem mais ser rediscutidos ficam congelados nos ADRs.
 
 ## North Star
