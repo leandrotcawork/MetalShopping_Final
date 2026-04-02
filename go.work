@@ -1,3 +1,6 @@
 go 1.23
 
-use ./apps/server_core
+use (
+	./apps/server_core
+	./apps/integration_worker
+)
