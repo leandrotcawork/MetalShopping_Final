@@ -27,6 +27,8 @@ If documents conflict, follow this order:
 4. `CLAUDE.md` or `CODEX.md`
 5. `docs/IMPLEMENTATION_PLAN.md`
 6. `docs/PROGRESS.md`
+7. `tasks/todo.md`
+8. `tasks/lessons.md`
 
 ## Product objective
 
