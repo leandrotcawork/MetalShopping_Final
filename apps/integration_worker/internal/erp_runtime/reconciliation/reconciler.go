@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"metalshopping/integration_worker/internal/erp_runtime/staging"
+	"metalshopping/integration_worker/internal/erp_runtime/tenantdb"
 	"metalshopping/integration_worker/internal/erp_runtime/types"
 )
 
@@ -56,7 +57,7 @@ func (r *Reconciler) Reconcile(
 	tenantID, runID string,
 	stagingRecords []*staging.StagingRecord,
 ) ([]*ReconciliationResult, error) {
-	tx, err := r.db.BeginTx(ctx, nil)
+	tx, err := tenantdb.BeginTenantTx(ctx, r.db, tenantID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +67,7 @@ func (r *Reconciler) Reconcile(
 INSERT INTO erp_reconciliation_results
   (reconciliation_id, tenant_id, run_id, staging_id, entity_type, source_id,
    action, classification, reason_code, warning_details, reconciled_at, promotion_status)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending')`
+VALUES ($1, current_tenant_id(), $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending')`
 
 	now := time.Now().UTC()
 	results := make([]*ReconciliationResult, 0, len(stagingRecords))
@@ -90,7 +91,6 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending')`
 
 		_, err := tx.ExecContext(ctx, q,
 			reconID,
-			tenantID,
 			runID,
 			s.StagingID,
 			string(s.EntityType),

@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"metalshopping/integration_worker/internal/erp_runtime/raw"
+	"metalshopping/integration_worker/internal/erp_runtime/tenantdb"
 	"metalshopping/integration_worker/internal/erp_runtime/types"
 )
 
@@ -36,7 +37,7 @@ func (n *Normalizer) Normalize(
 	savedRaw []*raw.SavedRecord,
 	_ Connector,
 ) ([]*StagingRecord, error) {
-	tx, err := n.db.BeginTx(ctx, nil)
+	tx, err := tenantdb.BeginTenantTx(ctx, n.db, tenantID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +47,7 @@ func (n *Normalizer) Normalize(
 INSERT INTO erp_staging_records
   (staging_id, tenant_id, run_id, raw_id, entity_type, source_id,
    normalized_json, validation_status, validation_errors, normalized_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
+VALUES ($1, current_tenant_id(), $2, $3, $4, $5, $6, $7, $8, $9)`
 
 	now := time.Now().UTC()
 	results := make([]*StagingRecord, 0, len(savedRaw))
@@ -76,7 +77,6 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
 
 		_, err := tx.ExecContext(ctx, q,
 			stagingID,
-			tenantID,
 			runID,
 			sr.RawID,
 			string(rec.EntityType),

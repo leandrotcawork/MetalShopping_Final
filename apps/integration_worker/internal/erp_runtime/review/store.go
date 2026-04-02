@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	reconciliation_pkg "metalshopping/integration_worker/internal/erp_runtime/reconciliation"
 	staging_pkg "metalshopping/integration_worker/internal/erp_runtime/staging"
+	"metalshopping/integration_worker/internal/erp_runtime/tenantdb"
 )
 
 // Store writes review items to erp_review_items.
@@ -52,7 +53,7 @@ func (s *Store) CreateFromReconciliation(
 
 	idx := stagingIndex(stagingRecords)
 
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, err := tenantdb.BeginTenantTx(ctx, s.db, actionable[0].TenantID, nil)
 	if err != nil {
 		return err
 	}
@@ -63,7 +64,7 @@ INSERT INTO erp_review_items
   (review_id, tenant_id, instance_id, connector_type, entity_type, source_id,
    run_id, severity, reason_code, problem_summary, raw_id, staging_id,
    reconciliation_id, recommended_action, item_status, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'open', $15)`
+VALUES ($1, current_tenant_id(), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'open', $14)`
 
 	now := time.Now().UTC()
 	for _, r := range actionable {
@@ -89,7 +90,6 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'open', $15
 
 		_, err := tx.ExecContext(ctx, q,
 			reviewID,
-			r.TenantID,
 			instanceID,
 			connectorType,
 			string(r.EntityType),

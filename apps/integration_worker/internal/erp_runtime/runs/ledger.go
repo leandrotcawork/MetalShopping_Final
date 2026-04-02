@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"strings"
+
+	"metalshopping/integration_worker/internal/erp_runtime/tenantdb"
 )
 
 // RunClaim holds the details of a claimed pending run.
@@ -68,10 +70,15 @@ FOR UPDATE SKIP LOCKED`
 	}
 	claim.EntityScope = parsePGTextArray(entityScopeRaw)
 
+	if err := tenantdb.SetTenantContext(ctx, tx, claim.TenantID); err != nil {
+		return nil, err
+	}
+
 	const updateQ = `
 UPDATE erp_sync_runs
 SET status = 'running', started_at = NOW()
-WHERE run_id = $1`
+WHERE run_id = $1
+  AND tenant_id = current_tenant_id()`
 
 	if _, err := tx.ExecContext(ctx, updateQ, claim.RunID); err != nil {
 		return nil, err
@@ -85,7 +92,8 @@ WHERE run_id = $1`
 
 // MarkCompleted finalises a run as fully successful.
 func (l *Ledger) MarkCompleted(ctx context.Context, runID string, promoted, warnings, rejected, reviews int) error {
-	const q = `
+	return l.withRunTenantTx(ctx, runID, func(tx *sql.Tx) error {
+		const q = `
 UPDATE erp_sync_runs
 SET status = 'completed',
     completed_at = NOW(),
@@ -93,14 +101,17 @@ SET status = 'completed',
     warning_count  = $3,
     rejected_count = $4,
     review_count   = $5
-WHERE run_id = $1`
-	_, err := l.db.ExecContext(ctx, q, runID, promoted, warnings, rejected, reviews)
-	return err
+WHERE run_id = $1
+  AND tenant_id = current_tenant_id()`
+		_, err := tx.ExecContext(ctx, q, runID, promoted, warnings, rejected, reviews)
+		return err
+	})
 }
 
 // MarkPartial finalises a run where some entities succeeded and some failed.
 func (l *Ledger) MarkPartial(ctx context.Context, runID, failureSummary string, promoted, warnings, rejected, reviews int) error {
-	const q = `
+	return l.withRunTenantTx(ctx, runID, func(tx *sql.Tx) error {
+		const q = `
 UPDATE erp_sync_runs
 SET status = 'partial',
     completed_at    = NOW(),
@@ -109,31 +120,66 @@ SET status = 'partial',
     warning_count   = $4,
     rejected_count  = $5,
     review_count    = $6
-WHERE run_id = $1`
-	_, err := l.db.ExecContext(ctx, q, runID, failureSummary, promoted, warnings, rejected, reviews)
-	return err
+WHERE run_id = $1
+  AND tenant_id = current_tenant_id()`
+		_, err := tx.ExecContext(ctx, q, runID, failureSummary, promoted, warnings, rejected, reviews)
+		return err
+	})
 }
 
 // MarkFailed finalises a run as fully failed.
 func (l *Ledger) MarkFailed(ctx context.Context, runID, failureSummary string) error {
-	const q = `
+	return l.withRunTenantTx(ctx, runID, func(tx *sql.Tx) error {
+		const q = `
 UPDATE erp_sync_runs
 SET status = 'failed',
     completed_at    = NOW(),
     failure_summary = $2
-WHERE run_id = $1`
-	_, err := l.db.ExecContext(ctx, q, runID, failureSummary)
-	return err
+WHERE run_id = $1
+  AND tenant_id = current_tenant_id()`
+		_, err := tx.ExecContext(ctx, q, runID, failureSummary)
+		return err
+	})
 }
 
 // SaveCursor persists the cursor state for an in-progress or completed run.
 func (l *Ledger) SaveCursor(ctx context.Context, runID string, cursorJSON string) error {
-	const q = `
+	return l.withRunTenantTx(ctx, runID, func(tx *sql.Tx) error {
+		const q = `
 UPDATE erp_sync_runs
 SET cursor_state = $2::jsonb
-WHERE run_id = $1`
-	_, err := l.db.ExecContext(ctx, q, runID, cursorJSON)
-	return err
+WHERE run_id = $1
+  AND tenant_id = current_tenant_id()`
+		_, err := tx.ExecContext(ctx, q, runID, cursorJSON)
+		return err
+	})
+}
+
+func (l *Ledger) withRunTenantTx(ctx context.Context, runID string, fn func(*sql.Tx) error) error {
+	tx, err := l.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	var tenantID string
+	if err := tx.QueryRowContext(ctx, `
+SELECT tenant_id
+FROM erp_sync_runs
+WHERE run_id = $1
+FOR UPDATE`, runID).Scan(&tenantID); err != nil {
+		return err
+	}
+
+	if err := tenantdb.SetTenantContext(ctx, tx, tenantID); err != nil {
+		return err
+	}
+
+	if err := fn(tx); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 // parsePGTextArray decodes a Postgres TEXT[] literal of the form {val1,val2,...}

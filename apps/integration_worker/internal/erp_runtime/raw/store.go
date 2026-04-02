@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"metalshopping/integration_worker/internal/erp_runtime/tenantdb"
 	"metalshopping/integration_worker/internal/erp_runtime/types"
 )
 
@@ -25,14 +26,9 @@ type SavedRecord struct {
 	Record *types.RawRecord
 }
 
-// Save inserts a batch of RawRecord rows into erp_raw_records.
-// All records belong to the same run and tenant.
-// Returns the list of persisted records with their assigned raw_ids.
-// Note: NO current_tenant_id() RLS here — worker uses a direct DB connection
-// and must set tenant_id explicitly in the INSERT.
-// This is intentional: the worker runs as a system process, not within a tenant HTTP request.
+// Save inserts a batch of RawRecord rows into erp_raw_records inside a tenant-bound transaction.
 func (s *Store) Save(ctx context.Context, tenantID, runID string, records []*types.RawRecord) ([]*SavedRecord, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, err := tenantdb.BeginTenantTx(ctx, s.db, tenantID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +38,7 @@ func (s *Store) Save(ctx context.Context, tenantID, runID string, records []*typ
 INSERT INTO erp_raw_records
   (raw_id, tenant_id, run_id, connector_type, entity_type, source_id,
    payload_json, payload_hash, source_timestamp, cursor_value, extracted_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+VALUES ($1, current_tenant_id(), $2, $3, $4, $5, $6, $7, $8, $9, $10)
 ON CONFLICT (raw_id) DO NOTHING`
 
 	extractedAt := time.Now().UTC()
@@ -51,7 +47,6 @@ ON CONFLICT (raw_id) DO NOTHING`
 		rawID := uuid.New().String()
 		_, err := tx.ExecContext(ctx, q,
 			rawID,
-			tenantID,
 			runID,
 			rec.ConnectorType,
 			string(rec.EntityType),

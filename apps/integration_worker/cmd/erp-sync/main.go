@@ -19,6 +19,7 @@ import (
 	"metalshopping/integration_worker/internal/erp_runtime/review"
 	"metalshopping/integration_worker/internal/erp_runtime/runs"
 	"metalshopping/integration_worker/internal/erp_runtime/staging"
+	"metalshopping/integration_worker/internal/erp_runtime/tenantdb"
 )
 
 func main() {
@@ -83,7 +84,7 @@ func main() {
 			claim.RunID, claim.TenantID, claim.InstanceID, claim.ConnectorType)
 
 		// Fetch connection_ref for this instance
-		connectionRef, err := getConnectionRef(ctx, db, claim.InstanceID)
+		connectionRef, err := getConnectionRef(ctx, db, claim.TenantID, claim.InstanceID)
 		if err != nil {
 			log.Printf("erp-sync: getConnectionRef error for instance %s: %v", claim.InstanceID, err)
 			if markErr := ledger.MarkFailed(ctx, claim.RunID, fmt.Sprintf("connection_ref lookup failed: %v", err)); markErr != nil {
@@ -104,11 +105,24 @@ func main() {
 }
 
 // getConnectionRef queries erp_integration_instances for the connection_ref of a given instance.
-func getConnectionRef(ctx context.Context, db *sql.DB, instanceID string) (string, error) {
-	const q = `SELECT connection_ref FROM erp_integration_instances WHERE instance_id = $1`
+func getConnectionRef(ctx context.Context, db *sql.DB, tenantID, instanceID string) (string, error) {
+	tx, err := tenantdb.BeginTenantTx(ctx, db, tenantID, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return "", err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	const q = `
+SELECT connection_ref
+FROM erp_integration_instances
+WHERE instance_id = $1
+  AND tenant_id = current_tenant_id()`
 	var ref string
-	if err := db.QueryRowContext(ctx, q, instanceID).Scan(&ref); err != nil {
+	if err := tx.QueryRowContext(ctx, q, instanceID).Scan(&ref); err != nil {
 		return "", fmt.Errorf("instance %s: %w", instanceID, err)
+	}
+	if err := tx.Commit(); err != nil {
+		return "", err
 	}
 	return ref, nil
 }
