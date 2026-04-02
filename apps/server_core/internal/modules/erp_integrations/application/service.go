@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"time"
 
 	"metalshopping/server_core/internal/modules/erp_integrations/domain"
@@ -163,18 +164,16 @@ func (s *Service) TriggerRun(ctx context.Context, cmd TriggerRunCommand) (*domai
 		return nil, fmt.Errorf("create erp sync run: %w", err)
 	}
 
-	// Publish run_requested outbox event.
-	// NOTE: this append is intentionally outside the run's persistence transaction (v1
-	// limitation — see function doc comment above).
+	// Publish run_requested outbox event (best-effort, outside the run's transaction).
+	// v1 semantics: if this append fails the run is still created and the worker can
+	// claim it directly via erp_sync_runs. A reconciliation pass can detect and replay
+	// missing events by comparing erp_sync_runs against outbox_events.
 	if s.outboxStore != nil {
 		record, err := events.NewRunRequestedOutboxRecord(run, "", now)
 		if err != nil {
-			// Non-fatal: log the failure in production; do not roll back the run.
-			_ = err
-		} else {
-			// AppendInTx requires a *sql.Tx; we use a best-effort DB transaction here.
-			// In a future iteration this should be unified with the run's transaction.
-			_ = record // outbox append deferred to relay or background worker for v1
+			log.Printf("WARN erp TriggerRun: build outbox record for run %s: %v", run.RunID, err)
+		} else if appendErr := s.outboxStore.Append(ctx, []outbox.Record{record}); appendErr != nil {
+			log.Printf("WARN erp TriggerRun: append outbox event for run %s: %v (run already created)", run.RunID, appendErr)
 		}
 	}
 
