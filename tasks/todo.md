@@ -3,18 +3,17 @@
 ## Current State
 
 - State: completed
-- Active tranche: governance documentation consolidation
-- Source spec: `docs/superpowers/specs/2026-04-01-governance-audit-design.md`
+- Active tranche: master orchestration planning
+- Source spec: `docs/superpowers/specs/2026-04-01-master-orchestration-plan-design.md`
 
 ## Completed Tasks
 
-- [x] Bootstrap repository control files (`tasks/lessons.md`, `tasks/todo.md`)
-- [x] Consolidate `docs/PROJECT_SOT.md` as the operational SoT
-- [x] Align `AGENTS.md`, `CLAUDE.md`, and `CODEX.md`
-- [x] Align `ARCHITECTURE.md`, `docs/IMPLEMENTATION_PLAN.md`, and `docs/PROGRESS.md`
-- [x] Verify documentation hierarchy and cross-file consistency
+- [x] Create `docs/MASTER_ORCHESTRATION_PLAN.md` as the live orchestration index
+- [x] Register the orchestration document in `docs/PROJECT_SOT.md`
+- [x] Align `docs/IMPLEMENTATION_PLAN.md` and `docs/PROGRESS.md` to the new orchestration state
+- [x] Verify orchestration consistency and identify the recommended next front
 
 ## Notes
 
-- `fulldocs` is the strategic input source for this governance restructuring.
-- Repository execution must follow the accepted SoTs inside this repository once consolidated.
+- The orchestration layer now sits between repository governance and front-specific spec work.
+- The next step should be one detailed front spec selected from `docs/MASTER_ORCHESTRATION_PLAN.md`.
