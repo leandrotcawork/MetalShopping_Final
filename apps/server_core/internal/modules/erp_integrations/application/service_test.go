@@ -2,13 +2,21 @@ package application_test
 
 import (
 	"context"
+	"database/sql"
+	"database/sql/driver"
 	"errors"
+	"fmt"
+	"io"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	erpPostgres "metalshopping/server_core/internal/modules/erp_integrations/adapters/postgres"
 	"metalshopping/server_core/internal/modules/erp_integrations/application"
 	"metalshopping/server_core/internal/modules/erp_integrations/domain"
 	"metalshopping/server_core/internal/modules/erp_integrations/ports"
+	"metalshopping/server_core/internal/platform/messaging/outbox"
 )
 
 // ---------------------------------------------------------------------------
@@ -83,9 +91,184 @@ func (r *stubRunRepo) List(_ context.Context, _, _ string, _, _ int) ([]*domain.
 	return r.runs, nil
 }
 
+type scriptStepKind string
+
+const (
+	stepBegin    scriptStepKind = "begin"
+	stepExec     scriptStepKind = "exec"
+	stepQuery    scriptStepKind = "query"
+	stepCommit   scriptStepKind = "commit"
+	stepRollback scriptStepKind = "rollback"
+)
+
+type scriptStep struct {
+	kind         scriptStepKind
+	query        string
+	args         []any
+	rows         [][]driver.Value
+	rowsAffected *int64
+	assert       func(*testing.T, string, []driver.NamedValue)
+}
+
+type scriptState struct {
+	t     *testing.T
+	mu    sync.Mutex
+	steps []scriptStep
+	pos   int
+}
+
+func newScriptedDB(t *testing.T, steps ...scriptStep) (*sql.DB, *scriptState) {
+	t.Helper()
+
+	state := &scriptState{t: t, steps: steps}
+	db := sql.OpenDB(&scriptConnector{state: state})
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+	t.Cleanup(func() { _ = db.Close() })
+	return db, state
+}
+
+type scriptConnector struct {
+	state *scriptState
+}
+
+func (c *scriptConnector) Connect(context.Context) (driver.Conn, error) {
+	return &scriptConn{state: c.state}, nil
+}
+
+func (c *scriptConnector) Driver() driver.Driver {
+	return scriptDriver{}
+}
+
+type scriptDriver struct{}
+
+func (scriptDriver) Open(string) (driver.Conn, error) {
+	return nil, fmt.Errorf("open not supported")
+}
+
+type scriptConn struct {
+	state *scriptState
+}
+
+func (c *scriptConn) Prepare(string) (driver.Stmt, error) {
+	return nil, fmt.Errorf("prepare not supported")
+}
+
+func (c *scriptConn) Close() error { return nil }
+
+func (c *scriptConn) Begin() (driver.Tx, error) {
+	return c.BeginTx(context.Background(), driver.TxOptions{})
+}
+
+func (c *scriptConn) Ping(context.Context) error { return nil }
+
+func (c *scriptConn) CheckNamedValue(*driver.NamedValue) error { return nil }
+
+func (c *scriptConn) BeginTx(context.Context, driver.TxOptions) (driver.Tx, error) {
+	c.state.expect(stepBegin, "", nil)
+	return &scriptTx{state: c.state}, nil
+}
+
+func (c *scriptConn) ExecContext(_ context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
+	step := c.state.expect(stepExec, query, args)
+	rowsAffected := int64(1)
+	if step.rowsAffected != nil {
+		rowsAffected = *step.rowsAffected
+	}
+	return driver.RowsAffected(rowsAffected), nil
+}
+
+func (c *scriptConn) QueryContext(_ context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
+	step := c.state.expect(stepQuery, query, args)
+	return &scriptRows{rows: step.rows}, nil
+}
+
+type scriptTx struct {
+	state *scriptState
+}
+
+func (tx *scriptTx) Commit() error {
+	tx.state.expect(stepCommit, "", nil)
+	return nil
+}
+
+func (tx *scriptTx) Rollback() error {
+	tx.state.expect(stepRollback, "", nil)
+	return nil
+}
+
+type scriptRows struct {
+	rows [][]driver.Value
+	pos  int
+}
+
+func (r *scriptRows) Columns() []string {
+	if len(r.rows) == 0 {
+		return nil
+	}
+	cols := make([]string, len(r.rows[0]))
+	for i := range cols {
+		cols[i] = fmt.Sprintf("col_%d", i)
+	}
+	return cols
+}
+
+func (r *scriptRows) Close() error { return nil }
+
+func (r *scriptRows) Next(dest []driver.Value) error {
+	if r.pos >= len(r.rows) {
+		return io.EOF
+	}
+	copy(dest, r.rows[r.pos])
+	r.pos++
+	return nil
+}
+
+func (s *scriptState) expect(kind scriptStepKind, query string, args []driver.NamedValue) scriptStep {
+	s.t.Helper()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.pos >= len(s.steps) {
+		s.t.Fatalf("unexpected %s operation with query %q", kind, query)
+	}
+
+	step := s.steps[s.pos]
+	if step.kind != kind {
+		s.t.Fatalf("step %d: expected %s, got %s", s.pos, step.kind, kind)
+	}
+	if step.query != "" && !strings.Contains(query, step.query) {
+		s.t.Fatalf("step %d: expected query to contain %q, got %q", s.pos, step.query, query)
+	}
+	if step.assert != nil {
+		step.assert(s.t, query, args)
+	} else if len(step.args) > 0 {
+		if len(args) != len(step.args) {
+			s.t.Fatalf("step %d: expected %d args, got %d", s.pos, len(step.args), len(args))
+		}
+		for i := range step.args {
+			if fmt.Sprint(args[i].Value) != fmt.Sprint(step.args[i]) {
+				s.t.Fatalf("step %d: arg %d expected %v, got %v", s.pos, i, step.args[i], args[i].Value)
+			}
+		}
+	}
+
+	s.pos++
+	return step
+}
+
+func (s *scriptState) done() {
+	s.t.Helper()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.pos != len(s.steps) {
+		s.t.Fatalf("expected %d scripted operations, consumed %d", len(s.steps), s.pos)
+	}
+}
+
 type stubReviewRepo struct {
-	items     []*domain.ReviewItem
-	getErr    error
+	items      []*domain.ReviewItem
+	getErr     error
 	resolveErr error
 }
 
@@ -281,6 +464,76 @@ func TestTriggerRun_Success(t *testing.T) {
 	if len(runRepo.runs) != 1 {
 		t.Errorf("expected 1 persisted run, got %d", len(runRepo.runs))
 	}
+}
+
+func TestTriggerRun_AppendsOutboxInSameTransaction(t *testing.T) {
+	db, state := newScriptedDB(t,
+		scriptStep{kind: stepBegin},
+		scriptStep{kind: stepExec, query: "SELECT set_config('app.tenant_id', $1, true)", args: []any{"tenant-1"}},
+		scriptStep{kind: stepExec, query: "INSERT INTO erp_sync_runs"},
+		scriptStep{
+			kind:  stepExec,
+			query: "INSERT INTO outbox_events",
+			assert: func(t *testing.T, _ string, args []driver.NamedValue) {
+				t.Helper()
+				if len(args) != 15 {
+					t.Fatalf("expected 15 outbox args, got %d", len(args))
+				}
+				if got := fmt.Sprint(args[3].Value); got != "erp_integrations.run_requested" {
+					t.Fatalf("expected run_requested event, got %s", got)
+				}
+				if got := fmt.Sprint(args[5].Value); got != "tenant-1" {
+					t.Fatalf("expected tenant-1 on outbox row, got %s", got)
+				}
+				runID := fmt.Sprint(args[2].Value)
+				wantKey := "erp_run_requested:" + runID
+				if got := fmt.Sprint(args[7].Value); got != wantKey {
+					t.Fatalf("expected idempotency key %s, got %s", wantKey, got)
+				}
+			},
+		},
+		scriptStep{kind: stepCommit},
+	)
+
+	repos := erpPostgres.NewRepos(db, outbox.NewStore(db))
+	instanceRepo := &stubInstanceRepo{
+		instances: []*domain.IntegrationInstance{
+			{
+				InstanceID:      "inst_abc",
+				TenantID:        "tenant-1",
+				ConnectorType:   domain.ConnectorTypeSankhya,
+				DisplayName:     "Test",
+				ConnectionRef:   "ref",
+				EnabledEntities: []domain.EntityType{domain.EntityTypeProducts},
+				Status:          domain.InstanceStatusActive,
+				CreatedAt:       time.Now(),
+				UpdatedAt:       time.Now(),
+			},
+		},
+	}
+	svc := application.NewService(
+		instanceRepo,
+		repos.Runs,
+		&stubReviewRepo{},
+		&stubEnabledGuard{},
+		&stubPermChecker{allowed: true},
+		nil,
+	)
+
+	run, err := svc.TriggerRun(context.Background(), application.TriggerRunCommand{
+		TenantID:    "tenant-1",
+		PrincipalID: "user-1",
+		InstanceID:  "inst_abc",
+		RunMode:     domain.RunModeBulk,
+		EntityScope: []domain.EntityType{domain.EntityTypeProducts},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if run == nil {
+		t.Fatal("expected run, got nil")
+	}
+	state.done()
 }
 
 func TestResolveReview_AlreadyResolved(t *testing.T) {

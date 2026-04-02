@@ -103,8 +103,11 @@ SET status = 'completed',
     rejected_count = $4,
     review_count   = $5
 WHERE run_id = $1
-  AND tenant_id = current_tenant_id()`
-		return execTenantUpdate(ctx, tx, runID, "mark completed", q, runID, promoted, warnings, rejected, reviews)
+  AND tenant_id = current_tenant_id()
+RETURNING run_id, tenant_id, instance_id, connector_type, run_mode, entity_scope,
+          status, started_at, completed_at, promoted_count, warning_count, rejected_count,
+          review_count, failure_summary, created_at`
+		return updateTerminalRun(ctx, tx, runID, "mark completed", q, runID, promoted, warnings, rejected, reviews)
 	})
 }
 
@@ -121,8 +124,11 @@ SET status = 'partial',
     rejected_count  = $5,
     review_count    = $6
 WHERE run_id = $1
-  AND tenant_id = current_tenant_id()`
-		return execTenantUpdate(ctx, tx, runID, "mark partial", q, runID, failureSummary, promoted, warnings, rejected, reviews)
+  AND tenant_id = current_tenant_id()
+RETURNING run_id, tenant_id, instance_id, connector_type, run_mode, entity_scope,
+          status, started_at, completed_at, promoted_count, warning_count, rejected_count,
+          review_count, failure_summary, created_at`
+		return updateTerminalRun(ctx, tx, runID, "mark partial", q, runID, failureSummary, promoted, warnings, rejected, reviews)
 	})
 }
 
@@ -135,8 +141,11 @@ SET status = 'failed',
     completed_at    = NOW(),
     failure_summary = $2
 WHERE run_id = $1
-  AND tenant_id = current_tenant_id()`
-		return execTenantUpdate(ctx, tx, runID, "mark failed", q, runID, failureSummary)
+  AND tenant_id = current_tenant_id()
+RETURNING run_id, tenant_id, instance_id, connector_type, run_mode, entity_scope,
+          status, started_at, completed_at, promoted_count, warning_count, rejected_count,
+          review_count, failure_summary, created_at`
+		return updateTerminalRun(ctx, tx, runID, "mark failed", q, runID, failureSummary)
 	})
 }
 
@@ -165,6 +174,22 @@ func execTenantUpdate(ctx context.Context, tx *sql.Tx, runID, op, query string, 
 	if rows == 0 {
 		return fmt.Errorf("%s run %s: no rows updated", op, runID)
 	}
+	return nil
+}
+
+func updateTerminalRun(ctx context.Context, tx *sql.Tx, runID, op, query string, args ...any) error {
+	run, err := scanRunSnapshot(tx.QueryRowContext(ctx, query, args...))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("%s run %s: no rows updated", op, runID)
+		}
+		return fmt.Errorf("%s run %s: %w", op, runID, err)
+	}
+
+	if err := appendRunCompletedOutbox(ctx, tx, run); err != nil {
+		return fmt.Errorf("%s run %s: append run_completed outbox: %w", op, runID, err)
+	}
+
 	return nil
 }
 

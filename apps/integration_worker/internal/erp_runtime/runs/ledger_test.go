@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"metalshopping/integration_worker/internal/erp_runtime/tenantdb"
 )
@@ -29,6 +30,7 @@ type scriptStep struct {
 	args         []any
 	rows         [][]driver.Value
 	rowsAffected *int64
+	assert       func(*testing.T, string, []driver.NamedValue)
 }
 
 type scriptState struct {
@@ -82,6 +84,8 @@ func (c *scriptConn) Begin() (driver.Tx, error) {
 }
 
 func (c *scriptConn) Ping(context.Context) error { return nil }
+
+func (c *scriptConn) CheckNamedValue(*driver.NamedValue) error { return nil }
 
 func (c *scriptConn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, error) {
 	c.state.expect(stepBegin, "", nil)
@@ -159,7 +163,9 @@ func (s *scriptState) expect(kind scriptStepKind, query string, args []driver.Na
 	if step.query != "" && !strings.Contains(query, step.query) {
 		s.t.Fatalf("step %d: expected query to contain %q, got %q", s.pos, step.query, query)
 	}
-	if len(step.args) > 0 {
+	if step.assert != nil {
+		step.assert(s.t, query, args)
+	} else if len(step.args) > 0 {
 		if len(args) != len(step.args) {
 			s.t.Fatalf("step %d: expected %d args, got %d", s.pos, len(step.args), len(args))
 		}
@@ -245,10 +251,43 @@ func TestClaimPendingRunSetsTenantContextBeforeUpdate(t *testing.T) {
 }
 
 func TestMarkCompletedUsesRunTenantContext(t *testing.T) {
+	startedAt := time.Date(2026, 4, 2, 12, 0, 0, 0, time.UTC)
+	completedAt := time.Date(2026, 4, 2, 12, 5, 0, 0, time.UTC)
+	createdAt := time.Date(2026, 4, 2, 11, 55, 0, 0, time.UTC)
+
 	db, state := newScriptedDB(t,
 		scriptStep{kind: stepBegin},
 		scriptStep{kind: stepExec, query: "SELECT set_config('app.tenant_id', $1, true)", args: []any{"tenant-1"}},
-		scriptStep{kind: stepExec, query: "SET status = 'completed'", args: []any{"run-1", 7, 1, 2, 3}},
+		scriptStep{
+			kind:  stepQuery,
+			query: "RETURNING run_id, tenant_id, instance_id",
+			args:  []any{"run-1", 7, 1, 2, 3},
+			rows: [][]driver.Value{{
+				"run-1",
+				"tenant-1",
+				"instance-1",
+				"sankhya",
+				"bulk",
+				"{products,prices}",
+				"completed",
+				startedAt,
+				completedAt,
+				int64(7),
+				int64(1),
+				int64(2),
+				int64(3),
+				nil,
+				createdAt,
+			}},
+		},
+		scriptStep{
+			kind:  stepExec,
+			query: "INSERT INTO outbox_events",
+			assert: func(t *testing.T, _ string, args []driver.NamedValue) {
+				t.Helper()
+				assertRunCompletedOutboxArgs(t, args, "run-1", "tenant-1")
+			},
+		},
 		scriptStep{kind: stepCommit},
 	)
 
@@ -286,7 +325,12 @@ func TestMarkCompletedReturnsErrorWhenNoRowsUpdated(t *testing.T) {
 	db, state := newScriptedDB(t,
 		scriptStep{kind: stepBegin},
 		scriptStep{kind: stepExec, query: "SELECT set_config('app.tenant_id', $1, true)", args: []any{"tenant-1"}},
-		scriptStep{kind: stepExec, query: "SET status = 'completed'", args: []any{"run-1", 7, 1, 2, 3}, rowsAffected: int64Ptr(0)},
+		scriptStep{
+			kind:  stepQuery,
+			query: "RETURNING run_id, tenant_id, instance_id",
+			args:  []any{"run-1", 7, 1, 2, 3},
+			rows:  nil,
+		},
 		scriptStep{kind: stepRollback},
 	)
 
@@ -326,4 +370,180 @@ func TestSaveCursorReturnsErrorForTenantMismatch(t *testing.T) {
 		t.Fatalf("expected no rows updated error, got %v", err)
 	}
 	state.done()
+}
+
+func TestMarkCompletedAppendsOutboxInSameTransaction(t *testing.T) {
+	startedAt := time.Date(2026, 4, 2, 12, 0, 0, 0, time.UTC)
+	completedAt := time.Date(2026, 4, 2, 12, 5, 0, 0, time.UTC)
+	createdAt := time.Date(2026, 4, 2, 11, 55, 0, 0, time.UTC)
+
+	db, state := newScriptedDB(t,
+		scriptStep{kind: stepBegin},
+		scriptStep{kind: stepExec, query: "SELECT set_config('app.tenant_id', $1, true)", args: []any{"tenant-1"}},
+		scriptStep{
+			kind:  stepQuery,
+			query: "RETURNING run_id, tenant_id, instance_id",
+			args:  []any{"run-1", 7, 1, 2, 3},
+			rows: [][]driver.Value{{
+				"run-1",
+				"tenant-1",
+				"instance-1",
+				"sankhya",
+				"bulk",
+				"{products,prices}",
+				"completed",
+				startedAt,
+				completedAt,
+				int64(7),
+				int64(1),
+				int64(2),
+				int64(3),
+				nil,
+				createdAt,
+			}},
+		},
+		scriptStep{
+			kind:  stepExec,
+			query: "INSERT INTO outbox_events",
+			assert: func(t *testing.T, _ string, args []driver.NamedValue) {
+				t.Helper()
+				assertRunCompletedOutboxArgs(t, args, "run-1", "tenant-1")
+			},
+		},
+		scriptStep{kind: stepCommit},
+	)
+
+	ledger := NewLedger(db)
+	tenantCtx, err := tenantdb.WithTenantID(context.Background(), "tenant-1")
+	if err != nil {
+		t.Fatalf("WithTenantID error: %v", err)
+	}
+	if err := ledger.MarkCompleted(tenantCtx, "run-1", 7, 1, 2, 3); err != nil {
+		t.Fatalf("MarkCompleted error: %v", err)
+	}
+	state.done()
+}
+
+func TestMarkPartialAppendsOutboxInSameTransaction(t *testing.T) {
+	startedAt := time.Date(2026, 4, 2, 12, 0, 0, 0, time.UTC)
+	completedAt := time.Date(2026, 4, 2, 12, 6, 0, 0, time.UTC)
+	createdAt := time.Date(2026, 4, 2, 11, 55, 0, 0, time.UTC)
+
+	db, state := newScriptedDB(t,
+		scriptStep{kind: stepBegin},
+		scriptStep{kind: stepExec, query: "SELECT set_config('app.tenant_id', $1, true)", args: []any{"tenant-1"}},
+		scriptStep{
+			kind:  stepQuery,
+			query: "RETURNING run_id, tenant_id, instance_id",
+			args:  []any{"run-1", "normalize failed", 5, 2, 1, 3},
+			rows: [][]driver.Value{{
+				"run-1",
+				"tenant-1",
+				"instance-1",
+				"sankhya",
+				"bulk",
+				"{products}",
+				"partial",
+				startedAt,
+				completedAt,
+				int64(5),
+				int64(2),
+				int64(1),
+				int64(3),
+				"normalize failed",
+				createdAt,
+			}},
+		},
+		scriptStep{
+			kind:  stepExec,
+			query: "INSERT INTO outbox_events",
+			assert: func(t *testing.T, _ string, args []driver.NamedValue) {
+				t.Helper()
+				assertRunCompletedOutboxArgs(t, args, "run-1", "tenant-1")
+			},
+		},
+		scriptStep{kind: stepCommit},
+	)
+
+	ledger := NewLedger(db)
+	tenantCtx, err := tenantdb.WithTenantID(context.Background(), "tenant-1")
+	if err != nil {
+		t.Fatalf("WithTenantID error: %v", err)
+	}
+	if err := ledger.MarkPartial(tenantCtx, "run-1", "normalize failed", 5, 2, 1, 3); err != nil {
+		t.Fatalf("MarkPartial error: %v", err)
+	}
+	state.done()
+}
+
+func TestMarkFailedAppendsOutboxInSameTransaction(t *testing.T) {
+	startedAt := time.Date(2026, 4, 2, 12, 0, 0, 0, time.UTC)
+	completedAt := time.Date(2026, 4, 2, 12, 7, 0, 0, time.UTC)
+	createdAt := time.Date(2026, 4, 2, 11, 55, 0, 0, time.UTC)
+
+	db, state := newScriptedDB(t,
+		scriptStep{kind: stepBegin},
+		scriptStep{kind: stepExec, query: "SELECT set_config('app.tenant_id', $1, true)", args: []any{"tenant-1"}},
+		scriptStep{
+			kind:  stepQuery,
+			query: "RETURNING run_id, tenant_id, instance_id",
+			args:  []any{"run-1", "connector timeout"},
+			rows: [][]driver.Value{{
+				"run-1",
+				"tenant-1",
+				"instance-1",
+				"sankhya",
+				"bulk",
+				"{products}",
+				"failed",
+				startedAt,
+				completedAt,
+				int64(0),
+				int64(0),
+				int64(0),
+				int64(0),
+				"connector timeout",
+				createdAt,
+			}},
+		},
+		scriptStep{
+			kind:  stepExec,
+			query: "INSERT INTO outbox_events",
+			assert: func(t *testing.T, _ string, args []driver.NamedValue) {
+				t.Helper()
+				assertRunCompletedOutboxArgs(t, args, "run-1", "tenant-1")
+			},
+		},
+		scriptStep{kind: stepCommit},
+	)
+
+	ledger := NewLedger(db)
+	tenantCtx, err := tenantdb.WithTenantID(context.Background(), "tenant-1")
+	if err != nil {
+		t.Fatalf("WithTenantID error: %v", err)
+	}
+	if err := ledger.MarkFailed(tenantCtx, "run-1", "connector timeout"); err != nil {
+		t.Fatalf("MarkFailed error: %v", err)
+	}
+	state.done()
+}
+
+func assertRunCompletedOutboxArgs(t *testing.T, args []driver.NamedValue, runID, tenantID string) {
+	t.Helper()
+	if len(args) != 15 {
+		t.Fatalf("expected 15 outbox args, got %d", len(args))
+	}
+	if got := fmt.Sprint(args[2].Value); got != runID {
+		t.Fatalf("expected aggregate_id %s, got %s", runID, got)
+	}
+	if got := fmt.Sprint(args[3].Value); got != "erp_integrations.run_completed" {
+		t.Fatalf("expected run_completed event, got %s", got)
+	}
+	if got := fmt.Sprint(args[5].Value); got != tenantID {
+		t.Fatalf("expected tenant %s, got %s", tenantID, got)
+	}
+	wantKey := "erp_run_completed:" + runID
+	if got := fmt.Sprint(args[7].Value); got != wantKey {
+		t.Fatalf("expected idempotency key %s, got %s", wantKey, got)
+	}
 }

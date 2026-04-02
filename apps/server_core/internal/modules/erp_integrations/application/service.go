@@ -5,11 +5,9 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"time"
 
 	"metalshopping/server_core/internal/modules/erp_integrations/domain"
-	"metalshopping/server_core/internal/modules/erp_integrations/events"
 	"metalshopping/server_core/internal/modules/erp_integrations/ports"
 	"metalshopping/server_core/internal/platform/messaging/outbox"
 )
@@ -121,11 +119,6 @@ type TriggerRunCommand struct {
 }
 
 // TriggerRun creates a new pending SyncRun for the given instance.
-//
-// Limitation (v1): the run_requested outbox event is appended after the run is
-// persisted but outside that transaction. On a crash between the two operations
-// the event will be missing; the missing event can be detected and replayed by
-// comparing erp_sync_runs with outbox_events.
 func (s *Service) TriggerRun(ctx context.Context, cmd TriggerRunCommand) (*domain.SyncRun, error) {
 	allowed, err := s.permChecker.CanManageIntegrations(ctx, cmd.TenantID, cmd.PrincipalID)
 	if err != nil {
@@ -162,19 +155,6 @@ func (s *Service) TriggerRun(ctx context.Context, cmd TriggerRunCommand) (*domai
 
 	if err := s.runRepo.Create(ctx, run); err != nil {
 		return nil, fmt.Errorf("create erp sync run: %w", err)
-	}
-
-	// Publish run_requested outbox event (best-effort, outside the run's transaction).
-	// v1 semantics: if this append fails the run is still created and the worker can
-	// claim it directly via erp_sync_runs. A reconciliation pass can detect and replay
-	// missing events by comparing erp_sync_runs against outbox_events.
-	if s.outboxStore != nil {
-		record, err := events.NewRunRequestedOutboxRecord(run, "", now)
-		if err != nil {
-			log.Printf("WARN erp TriggerRun: build outbox record for run %s: %v", run.RunID, err)
-		} else if appendErr := s.outboxStore.Append(ctx, []outbox.Record{record}); appendErr != nil {
-			log.Printf("WARN erp TriggerRun: append outbox event for run %s: %v (run already created)", run.RunID, appendErr)
-		}
 	}
 
 	return run, nil

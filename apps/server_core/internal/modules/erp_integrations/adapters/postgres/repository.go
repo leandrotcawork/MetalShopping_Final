@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"metalshopping/server_core/internal/modules/erp_integrations/domain"
+	erpevents "metalshopping/server_core/internal/modules/erp_integrations/events"
 	"metalshopping/server_core/internal/modules/erp_integrations/ports"
 	pgdb "metalshopping/server_core/internal/platform/db/postgres"
 	"metalshopping/server_core/internal/platform/messaging/outbox"
@@ -299,6 +300,16 @@ VALUES (
 		run.CreatedAt,
 	); err != nil {
 		return fmt.Errorf("insert erp sync run: %w", err)
+	}
+
+	if r.outboxStore != nil {
+		record, err := erpevents.NewRunRequestedOutboxRecord(run, "", run.CreatedAt)
+		if err != nil {
+			return fmt.Errorf("build erp run requested outbox record: %w", err)
+		}
+		if err := r.outboxStore.AppendInTx(ctx, tx, []outbox.Record{record}); err != nil {
+			return fmt.Errorf("append erp run requested outbox record: %w", err)
+		}
 	}
 
 	if err := tx.Commit(); err != nil {
