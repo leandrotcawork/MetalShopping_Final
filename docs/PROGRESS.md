@@ -155,4 +155,3 @@
 - legacy backend code is intentionally not part of the active plan right now
 - MetalDocs may inform selective reuse, but only through the migration matrix and frozen architecture rules
 - future code work should start from the frozen documents and the current foundation baseline, not from ad hoc memory
-- governance documentation consolidation is the current planning guard
