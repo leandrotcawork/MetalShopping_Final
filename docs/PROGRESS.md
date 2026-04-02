@@ -16,7 +16,7 @@
 - planning-first SoT created
 - implementation phases documented
 - ADR track started
-- AGENTS guidance being added
+- AGENTS guidance consolidated under the accepted governance hierarchy
 - contract conventions documented
 - SDK generation strategy documented
 - contract templates created
