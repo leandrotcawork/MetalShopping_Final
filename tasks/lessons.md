@@ -15,6 +15,20 @@ Correct: `ClaimForPromotion` returns an explicit boolean claim result and the co
 Rule:    Reconciliation claim APIs must make ownership visible to the caller instead of silently succeeding on conflicts.
 Layer:   Go adapter
 
+## Lesson 2 -- Failure payloads must snapshot the post-claim state
+Date: 2026-04-02 | Trigger: implementation
+Wrong:   Promotion failure warnings reused the pre-claim reconciliation struct, so the payload still said `pending` after the consumer had already claimed the row.
+Correct: Copy the reconciliation result after claim and force `promotion_status=promoting` before building failure or review payloads.
+Rule:    Any failure context emitted after a state transition must reflect the post-transition lifecycle state, not the pre-transition read model.
+Layer:   Go handler
+
+## Lesson 3 -- Replay-safe promotion must go through the catalog boundary
+Date: 2026-04-02 | Trigger: implementation
+Wrong:   ERP promotion wrote directly as if the canonical product was always absent, so a replay hit the catalog unique constraint and failed hard.
+Correct: Use a catalog-owned create-or-get path that handles `tenant_id + sku` conflicts and returns the existing canonical product ID without duplicate side effects.
+Rule:    Retry-safe promotion flows should be idempotent at the owning module boundary, not by bypassing the boundary with ad hoc SQL.
+Layer:   Go adapter
+
 ## Lesson Template
 
 ```text

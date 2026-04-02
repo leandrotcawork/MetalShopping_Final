@@ -9,7 +9,7 @@
 ## Current Task
 
 - Task: Remediation Task 5 - replace placeholder ERP promotion with real product promotion in `server_core`
-- State: in-progress
+- State: completed
 - Scope: `apps/server_core/internal/modules/erp_integrations/{application,adapters,ports}`, `apps/server_core/cmd/metalshopping-server/composition_modules.go`
 - Decision log:
   - Plan mode: yes, because this touches promotion/outbox semantics and multiple files.
@@ -23,6 +23,7 @@
 - [x] Register the orchestration document in `docs/PROJECT_SOT.md`
 - [x] Align `docs/IMPLEMENTATION_PLAN.md` and `docs/PROGRESS.md` to the new orchestration state
 - [x] Verify orchestration consistency and identify the recommended next front
+- [x] Remediation Task 5 - replace placeholder ERP promotion with real product promotion in `server_core`
 
 ## Notes
 

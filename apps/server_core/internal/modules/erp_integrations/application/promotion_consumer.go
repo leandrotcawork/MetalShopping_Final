@@ -94,11 +94,14 @@ func (c *PromotionConsumer) promoteOne(ctx context.Context, result *domain.Recon
 		return
 	}
 
+	promotionResult := *result
+	promotionResult.PromotionStatus = domain.PromotionStatusPromoting
+
 	if result.EntityType != domain.EntityTypeProducts {
-		warningDetails := buildPromotionFailureWarningDetails(result, unsupportedPromotionEntityReasonCode, "unsupported entity type", nil)
+		warningDetails := buildPromotionFailureWarningDetails(&promotionResult, unsupportedPromotionEntityReasonCode, "unsupported entity type", nil)
 		if err := c.reconRepo.MarkReviewRequired(ctx, result.TenantID, result.ReconciliationID, unsupportedPromotionEntityReasonCode, warningDetails); err != nil {
 			log.Printf("WARN erp PromotionConsumer: mark review required for reconciliation %s: %v", result.ReconciliationID, err)
-			failureDetails := buildPromotionFailureWarningDetails(result, promotionFailureReasonCode, "mark review required failed", err)
+			failureDetails := buildPromotionFailureWarningDetails(&promotionResult, promotionFailureReasonCode, "mark review required failed", err)
 			if failErr := c.reconRepo.MarkPromotionFailed(ctx, result.TenantID, result.ReconciliationID, promotionFailureReasonCode, failureDetails); failErr != nil {
 				log.Printf("WARN erp PromotionConsumer: mark promotion failed for reconciliation %s: %v", result.ReconciliationID, failErr)
 			}
@@ -124,7 +127,7 @@ func (c *PromotionConsumer) promoteOne(ctx context.Context, result *domain.Recon
 			result.EntityType,
 			err,
 		)
-		failureDetails := buildPromotionFailureWarningDetails(result, promotionFailureReasonCode, "catalog promotion failed", err)
+		failureDetails := buildPromotionFailureWarningDetails(&promotionResult, promotionFailureReasonCode, "catalog promotion failed", err)
 		if failErr := c.reconRepo.MarkPromotionFailed(ctx, result.TenantID, result.ReconciliationID, promotionFailureReasonCode, failureDetails); failErr != nil {
 			log.Printf("WARN erp PromotionConsumer: mark promotion failed for reconciliation %s: %v", result.ReconciliationID, failErr)
 		}
@@ -133,7 +136,7 @@ func (c *PromotionConsumer) promoteOne(ctx context.Context, result *domain.Recon
 
 	if err := c.reconRepo.MarkPromoted(ctx, result.TenantID, result.ReconciliationID, canonicalID); err != nil {
 		log.Printf("WARN erp PromotionConsumer: mark promoted for reconciliation %s: %v", result.ReconciliationID, err)
-		failureDetails := buildPromotionFailureWarningDetails(result, promotionFailureReasonCode, "mark promoted failed", err)
+		failureDetails := buildPromotionFailureWarningDetails(&promotionResult, promotionFailureReasonCode, "mark promoted failed", err)
 		if failErr := c.reconRepo.MarkPromotionFailed(ctx, result.TenantID, result.ReconciliationID, promotionFailureReasonCode, failureDetails); failErr != nil {
 			log.Printf("WARN erp PromotionConsumer: mark promotion failed for reconciliation %s: %v", result.ReconciliationID, failErr)
 		}

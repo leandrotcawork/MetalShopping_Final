@@ -23,13 +23,20 @@ type recordedCatalogWrite struct {
 }
 
 type recordingCatalogWriter struct {
-	call recordedCatalogWrite
-	err  error
+	call        recordedCatalogWrite
+	canonicalID string
+	err         error
 }
 
-func (w *recordingCatalogWriter) CreateProductInTx(_ context.Context, tx *sql.Tx, product catalogdomain.Product, traceID string) error {
+func (w *recordingCatalogWriter) CreateOrGetProductInTx(_ context.Context, tx *sql.Tx, product catalogdomain.Product, traceID string) (string, error) {
 	w.call = recordedCatalogWrite{traceID: traceID, product: product, tx: tx}
-	return w.err
+	if w.err != nil {
+		return "", w.err
+	}
+	if w.canonicalID != "" {
+		return w.canonicalID, nil
+	}
+	return "prd_new", nil
 }
 
 func TestProductWriterPromoteProductUsesCatalogRepositoryBoundary(t *testing.T) {
@@ -39,7 +46,7 @@ func TestProductWriterPromoteProductUsesCatalogRepositoryBoundary(t *testing.T) 
 		scriptStep{kind: stepExec, query: "INSERT INTO outbox_events"},
 		scriptStep{kind: stepCommit},
 	)
-	writer := &recordingCatalogWriter{}
+	writer := &recordingCatalogWriter{canonicalID: "prd_123"}
 	productWriter := NewProductWriter(db, outbox.NewStore(db), writer)
 
 	result := &domain.ReconciliationResult{
@@ -78,6 +85,9 @@ func TestProductWriterPromoteProductUsesCatalogRepositoryBoundary(t *testing.T) 
 	if productID == "" {
 		t.Fatal("expected product id")
 	}
+	if productID != "prd_123" {
+		t.Fatalf("expected canonical product id prd_123, got %s", productID)
+	}
 	if writer.call.tx == nil {
 		t.Fatal("expected catalog repository to receive tenant tx")
 	}
@@ -92,6 +102,51 @@ func TestProductWriterPromoteProductUsesCatalogRepositoryBoundary(t *testing.T) 
 	}
 	if len(writer.call.product.Identifiers) == 0 {
 		t.Fatal("expected catalog product identifiers to be built")
+	}
+	state.done()
+}
+
+func TestProductWriterPromoteProductReturnsExistingCanonicalProductID(t *testing.T) {
+	db, state := newScriptedDB(t,
+		scriptStep{kind: stepBegin},
+		scriptStep{kind: stepExec, query: "set_config('app.tenant_id'"},
+		scriptStep{kind: stepExec, query: "INSERT INTO outbox_events"},
+		scriptStep{kind: stepCommit},
+	)
+	writer := &recordingCatalogWriter{canonicalID: "prd_existing"}
+	productWriter := NewProductWriter(db, outbox.NewStore(db), writer)
+
+	result := &domain.ReconciliationResult{
+		ReconciliationID: "rec_1",
+		TenantID:         "tenant-1",
+		RunID:            "run_1",
+		StagingID:        "stg_1",
+		EntityType:       domain.EntityTypeProducts,
+		SourceID:         "src_1",
+		Action:           "create",
+		ReconciledAt:     time.Date(2026, 4, 2, 12, 0, 0, 0, time.UTC),
+	}
+	run := &domain.SyncRun{
+		RunID:         "run_1",
+		TenantID:      "tenant-1",
+		InstanceID:    "inst_1",
+		ConnectorType: domain.ConnectorTypeSankhya,
+	}
+	input := ports.ProductPromotionInput{
+		SKU:              "PN-001",
+		Name:             "Galvanized steel sheet",
+		Description:      "Galvanized steel sheet",
+		BrandName:        "Acme",
+		StockProfileCode: "standard",
+		Status:           "active",
+	}
+
+	productID, err := productWriter.PromoteProduct(context.Background(), "trace_1", result, run, input)
+	if err != nil {
+		t.Fatalf("PromoteProduct error: %v", err)
+	}
+	if productID != "prd_existing" {
+		t.Fatalf("expected existing canonical product id prd_existing, got %s", productID)
 	}
 	state.done()
 }

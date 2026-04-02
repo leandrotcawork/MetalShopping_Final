@@ -317,6 +317,9 @@ func TestPromotionConsumerMarksFailedOnDomainWriteFailure(t *testing.T) {
 	if reconRepo.failed[0].warningDetails == nil || !strings.Contains(*reconRepo.failed[0].warningDetails, "catalog promotion failed") {
 		t.Fatalf("expected structured warning details, got %#v", reconRepo.failed[0].warningDetails)
 	}
+	if reconRepo.failed[0].warningDetails == nil || !strings.Contains(*reconRepo.failed[0].warningDetails, `"promotion_status":"promoting"`) {
+		t.Fatalf("expected promoting lifecycle state in failure payload, got %#v", reconRepo.failed[0].warningDetails)
+	}
 }
 
 func TestPromotionConsumerRoutesUnsupportedEntityTypeToReviewRequired(t *testing.T) {
@@ -350,6 +353,9 @@ func TestPromotionConsumerRoutesUnsupportedEntityTypeToReviewRequired(t *testing
 	}
 	if reconRepo.reviewRequired[0].warningDetails == nil || !strings.Contains(*reconRepo.reviewRequired[0].warningDetails, unsupportedPromotionEntityReasonCode) {
 		t.Fatalf("expected review warning details, got %#v", reconRepo.reviewRequired[0].warningDetails)
+	}
+	if reconRepo.reviewRequired[0].warningDetails == nil || !strings.Contains(*reconRepo.reviewRequired[0].warningDetails, `"promotion_status":"promoting"`) {
+		t.Fatalf("expected promoting lifecycle state in review payload, got %#v", reconRepo.reviewRequired[0].warningDetails)
 	}
 }
 

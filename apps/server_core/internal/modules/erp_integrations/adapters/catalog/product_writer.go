@@ -18,7 +18,7 @@ import (
 )
 
 type catalogProductTxWriter interface {
-	CreateProductInTx(ctx context.Context, tx *sql.Tx, product catalogdomain.Product, traceID string) error
+	CreateOrGetProductInTx(ctx context.Context, tx *sql.Tx, product catalogdomain.Product, traceID string) (string, error)
 }
 
 type ProductWriter struct {
@@ -98,12 +98,16 @@ func (w *ProductWriter) PromoteProduct(ctx context.Context, traceID string, resu
 	if err := product.ValidateForCreate(); err != nil {
 		return "", err
 	}
-	if err := w.catalog.CreateProductInTx(ctx, tx, product, traceID); err != nil {
+	canonicalID, err := w.catalog.CreateOrGetProductInTx(ctx, tx, product, traceID)
+	if err != nil {
 		return "", fmt.Errorf("create catalog product for promotion: %w", err)
+	}
+	if canonicalID == "" {
+		return "", fmt.Errorf("create catalog product for promotion returned empty canonical id")
 	}
 
 	promoted := *result
-	promoted.CanonicalID = &productID
+	promoted.CanonicalID = &canonicalID
 	record, err := erpevents.NewEntityPromotedOutboxRecord(&promoted, run, traceID, now)
 	if err != nil {
 		return "", fmt.Errorf("build erp entity promoted outbox record: %w", err)
@@ -116,7 +120,7 @@ func (w *ProductWriter) PromoteProduct(ctx context.Context, traceID string, resu
 		return "", fmt.Errorf("commit catalog product promotion: %w", err)
 	}
 
-	return productID, nil
+	return canonicalID, nil
 }
 
 func generateProductID() string {
