@@ -211,6 +211,7 @@ The most important remaining gaps are:
 - explicit frontend quality gates and products read-surface ownership before frontend implementation spreads
 - explicit frontend migration charter freezing legacy visual reuse with modern package and API boundaries
 - explicit frontend migration playbook freezing legacy-study-first execution before surface ports continue
+- explicit master orchestration plan that maps fronts, dependencies, and recommended spec order
 - explicit decision record for the next implementation area
 - explicit web auth session model before login UI implementation
 - explicit login and identity architecture before local issuer bootstrap and login UI
@@ -251,6 +252,7 @@ The most important remaining gaps are:
 - `docs/FRONTEND_MIGRATION_CHARTER.md`
 - `docs/FRONTEND_MIGRATION_PLAYBOOK.md`
 - `docs/NEXT_EXECUTION_DECISION.md`
+- `docs/MASTER_ORCHESTRATION_PLAN.md`
 - `docs/WEB_AUTH_SESSION_IMPLEMENTATION_PLAN.md`
 - `docs/LOGIN_AND_IDENTITY_ARCHITECTURE.md`
 - `docs/LOGIN_MVP_SCOPE.md`
