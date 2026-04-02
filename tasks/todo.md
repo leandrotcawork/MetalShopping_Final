@@ -2,17 +2,17 @@
 
 ## Current State
 
-- State: in-progress
+- State: completed
 - Active tranche: governance documentation consolidation
 - Source spec: `docs/superpowers/specs/2026-04-01-governance-audit-design.md`
 
-## Active Tasks
+## Completed Tasks
 
-- [ ] Bootstrap repository control files (`tasks/lessons.md`, `tasks/todo.md`)
-- [ ] Consolidate `docs/PROJECT_SOT.md` as the operational SoT
-- [ ] Align `AGENTS.md`, `CLAUDE.md`, and `CODEX.md`
-- [ ] Align `ARCHITECTURE.md`, `docs/IMPLEMENTATION_PLAN.md`, and `docs/PROGRESS.md`
-- [ ] Verify documentation hierarchy and cross-file consistency
+- [x] Bootstrap repository control files (`tasks/lessons.md`, `tasks/todo.md`)
+- [x] Consolidate `docs/PROJECT_SOT.md` as the operational SoT
+- [x] Align `AGENTS.md`, `CLAUDE.md`, and `CODEX.md`
+- [x] Align `ARCHITECTURE.md`, `docs/IMPLEMENTATION_PLAN.md`, and `docs/PROGRESS.md`
+- [x] Verify documentation hierarchy and cross-file consistency
 
 ## Notes
 

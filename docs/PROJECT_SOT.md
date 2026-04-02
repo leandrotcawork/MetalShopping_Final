@@ -58,7 +58,9 @@ MetalShopping uses a strict documentation hierarchy so humans and AI agents do n
 4. `CLAUDE.md` and `CODEX.md`
 5. `docs/IMPLEMENTATION_PLAN.md`
 6. `docs/PROGRESS.md`
-7. focused specs and plans under `docs/superpowers/`
+7. `tasks/todo.md`
+8. `tasks/lessons.md`
+9. focused specs and plans under `docs/superpowers/`
 
 ### Strategic source during this restructuring
 
@@ -74,10 +76,13 @@ That strategic content does not override the repository at runtime automatically
 - `CLAUDE.md` and `CODEX.md`: agent-specific instructions aligned to the same project truth
 - `docs/IMPLEMENTATION_PLAN.md`: macro phase and sequence planning
 - `docs/PROGRESS.md`: factual status, next gates, and blockers
+- `tasks/todo.md`: session-control tracker for active state, current tranche, and task checkboxes; it does not override repository SoTs
+- `tasks/lessons.md`: session-control tracker for durable corrections and lessons; it does not override repository SoTs
 
 ### Conflict rule
 
 If two documents disagree, the higher-precedence document wins. If the disagreement is architectural and durable, resolve it through an ADR and then update the affected SoT documents.
+If `tasks/todo.md` or `tasks/lessons.md` conflicts with any higher-precedence repository document, the higher-precedence repository document wins.
 
 ## Frozen platform rules
 

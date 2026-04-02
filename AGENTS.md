@@ -6,13 +6,16 @@ This file is the repository-wide mandatory entrypoint for any AI agent working i
 
 ## Mandatory read order
 
+Before planning, implementation, or review, read these files in this exact order:
+
 1. Read `docs/PROJECT_SOT.md`
 2. Read `ARCHITECTURE.md`
-3. Read the agent-specific file (`CLAUDE.md` or `CODEX.md`)
-4. Read `tasks/todo.md`
-5. Read `tasks/lessons.md`
+3. Read `AGENTS.md`
+4. Read the agent-specific file (`CLAUDE.md` or `CODEX.md`)
+5. Read `tasks/todo.md`
+6. Read `tasks/lessons.md`
 
-Do not start planning, implementation, or review before completing that read order.
+Do not start planning, implementation, or review before completing that sequence.
 
 ## Documentation precedence
 

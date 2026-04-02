@@ -125,8 +125,7 @@
 
 ## Next
 
-- consolidate `PROJECT_SOT`, `AGENTS`, `CLAUDE`, `CODEX`, `ARCHITECTURE`, `IMPLEMENTATION_PLAN`, and `PROGRESS` under the accepted governance hierarchy
-- create the master orchestration plan only after the governance tranche is fully aligned
+- create the master orchestration plan on top of the accepted governance hierarchy now that the consolidation tranche is complete
 - keep ADR set complete and stable
 - implement manual URL candidates listing from catalog (ADR-0045) so the panel works when signals are empty
 - execute Shopping frontend parity ADR tranche (ADR-0036..ADR-0039) before expanding Shopping UX/features
