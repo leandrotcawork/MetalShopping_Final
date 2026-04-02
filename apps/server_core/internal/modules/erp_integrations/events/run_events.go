@@ -41,6 +41,7 @@ type runCompletedPayload struct {
 	StartedAt      *string  `json:"started_at,omitempty"`
 	CompletedAt    *string  `json:"completed_at,omitempty"`
 	FailureSummary *string  `json:"failure_summary,omitempty"`
+	CreatedAt      string   `json:"created_at"`
 }
 
 // entityPromotedPayload is the JSON payload for the entity_promoted event.
@@ -122,6 +123,7 @@ func NewRunCompletedOutboxRecord(run *domain.SyncRun, traceID string, now time.T
 		p.CompletedAt = &s
 	}
 	p.FailureSummary = run.FailureSummary
+	p.CreatedAt = run.CreatedAt.UTC().Format(time.RFC3339)
 
 	payloadJSON, err := json.Marshal(p)
 	if err != nil {

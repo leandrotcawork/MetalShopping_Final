@@ -45,6 +45,7 @@ type runCompletedPayload struct {
 	StartedAt      *string  `json:"started_at,omitempty"`
 	CompletedAt    *string  `json:"completed_at,omitempty"`
 	FailureSummary *string  `json:"failure_summary,omitempty"`
+	CreatedAt      string   `json:"created_at"`
 }
 
 type runScanner interface {
@@ -189,6 +190,7 @@ func newRunCompletedOutboxRecord(run *runSnapshot) (*outboxRecord, error) {
 		payload.CompletedAt = &value
 	}
 	payload.FailureSummary = run.FailureSummary
+	payload.CreatedAt = run.CreatedAt.UTC().Format(time.RFC3339)
 
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {

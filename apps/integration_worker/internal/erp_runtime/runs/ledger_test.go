@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -285,7 +286,7 @@ func TestMarkCompletedUsesRunTenantContext(t *testing.T) {
 			query: "INSERT INTO outbox_events",
 			assert: func(t *testing.T, _ string, args []driver.NamedValue) {
 				t.Helper()
-				assertRunCompletedOutboxArgs(t, args, "run-1", "tenant-1")
+				assertRunCompletedOutboxArgs(t, args, "run-1", "tenant-1", createdAt)
 			},
 		},
 		scriptStep{kind: stepCommit},
@@ -407,7 +408,7 @@ func TestMarkCompletedAppendsOutboxInSameTransaction(t *testing.T) {
 			query: "INSERT INTO outbox_events",
 			assert: func(t *testing.T, _ string, args []driver.NamedValue) {
 				t.Helper()
-				assertRunCompletedOutboxArgs(t, args, "run-1", "tenant-1")
+				assertRunCompletedOutboxArgs(t, args, "run-1", "tenant-1", createdAt)
 			},
 		},
 		scriptStep{kind: stepCommit},
@@ -459,7 +460,7 @@ func TestMarkPartialAppendsOutboxInSameTransaction(t *testing.T) {
 			query: "INSERT INTO outbox_events",
 			assert: func(t *testing.T, _ string, args []driver.NamedValue) {
 				t.Helper()
-				assertRunCompletedOutboxArgs(t, args, "run-1", "tenant-1")
+				assertRunCompletedOutboxArgs(t, args, "run-1", "tenant-1", createdAt)
 			},
 		},
 		scriptStep{kind: stepCommit},
@@ -511,7 +512,7 @@ func TestMarkFailedAppendsOutboxInSameTransaction(t *testing.T) {
 			query: "INSERT INTO outbox_events",
 			assert: func(t *testing.T, _ string, args []driver.NamedValue) {
 				t.Helper()
-				assertRunCompletedOutboxArgs(t, args, "run-1", "tenant-1")
+				assertRunCompletedOutboxArgs(t, args, "run-1", "tenant-1", createdAt)
 			},
 		},
 		scriptStep{kind: stepCommit},
@@ -564,7 +565,7 @@ func TestMarkCompletedIgnoresDuplicateRunCompletedOutbox(t *testing.T) {
 			rowsAffected: int64Ptr(0),
 			assert: func(t *testing.T, _ string, args []driver.NamedValue) {
 				t.Helper()
-				assertRunCompletedOutboxArgs(t, args, "run-1", "tenant-1")
+				assertRunCompletedOutboxArgs(t, args, "run-1", "tenant-1", createdAt)
 			},
 		},
 		scriptStep{kind: stepCommit},
@@ -581,7 +582,7 @@ func TestMarkCompletedIgnoresDuplicateRunCompletedOutbox(t *testing.T) {
 	state.done()
 }
 
-func assertRunCompletedOutboxArgs(t *testing.T, args []driver.NamedValue, runID, tenantID string) {
+func assertRunCompletedOutboxArgs(t *testing.T, args []driver.NamedValue, runID, tenantID string, createdAt time.Time) {
 	t.Helper()
 	if len(args) != 15 {
 		t.Fatalf("expected 15 outbox args, got %d", len(args))
@@ -598,5 +599,18 @@ func assertRunCompletedOutboxArgs(t *testing.T, args []driver.NamedValue, runID,
 	wantKey := "erp_run_completed:" + runID
 	if got := fmt.Sprint(args[7].Value); got != wantKey {
 		t.Fatalf("expected idempotency key %s, got %s", wantKey, got)
+	}
+	var payload struct {
+		CreatedAt string `json:"created_at"`
+	}
+	payloadBytes, ok := args[8].Value.([]byte)
+	if !ok {
+		t.Fatalf("expected payload_json to be []byte, got %T", args[8].Value)
+	}
+	if err := json.Unmarshal(payloadBytes, &payload); err != nil {
+		t.Fatalf("unmarshal payload_json: %v", err)
+	}
+	if got, want := payload.CreatedAt, createdAt.UTC().Format(time.RFC3339); got != want {
+		t.Fatalf("expected payload created_at %s, got %s", want, got)
 	}
 }
