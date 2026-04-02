@@ -11,10 +11,11 @@ Use this file only for recurring engineering corrections that would cause bugs, 
 ## Lesson Template
 
 ```text
-## Lesson N — <title>
+## Lesson N -- <title>
 Date: YYYY-MM-DD | Trigger: <correction | review | build failure>
 Wrong:   <exact code or decision>
 Correct: <exact code or decision>
 Rule:    <one sentence>
 Layer:   <Go adapter | handler | worker | frontend | process | docs>
 ```
+

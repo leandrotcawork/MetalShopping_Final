@@ -19,11 +19,11 @@ This work is not a generic doc cleanup. It is a governance hardening pass so fut
 The repository already has strong documentation, but the current governance layer has structural drift:
 
 - `AGENTS.md` and `CLAUDE.md` duplicate core rules
-- `CODEX.md` does not yet exist even though Codex should follow the same repository rules
+- `CODEX.md` did not exist even though Codex should follow the same repository rules
 - `docs/PROJECT_SOT.md` is the best candidate for operational SoT, but does not yet explicitly own hierarchy and precedence
 - `fulldocs` is currently the strategic source for this restructuring, but that precedence is not yet codified
 - `CLAUDE.md` references `docs/ARCHITECTURE.md`, while the architecture file currently lives at repo root as `ARCHITECTURE.md`
-- `AGENTS.md` and `CLAUDE.md` require `tasks/lessons.md` and `tasks/todo.md`, but those files are not present in the current repository state
+- `AGENTS.md` and `CLAUDE.md` require `tasks/lessons.md` and `tasks/todo.md`, but those files were not present in the repository at the start of this tranche
 
 Without resolving these issues first, every future plan risks being correct in intent but weak in execution discipline.
 
@@ -112,7 +112,9 @@ The repository should adopt this precedence:
 4. `CLAUDE.md` and `CODEX.md`
 5. `docs/IMPLEMENTATION_PLAN.md`
 6. `docs/PROGRESS.md`
-7. module specs and implementation plans under `docs/superpowers/`
+7. `tasks/todo.md`
+8. `tasks/lessons.md`
+9. module specs and implementation plans under `docs/superpowers/`
 
 For this restructuring phase, `fulldocs` is the accepted strategic input source. Once decisions are consolidated into repository docs, agents should operate from the repository SoTs, not from `fulldocs` directly.
 
@@ -155,6 +157,14 @@ For this restructuring phase, `fulldocs` is the accepted strategic input source.
 - gates, blockers, next steps
 - no strategy duplication
 
+`tasks/todo.md`
+- session-control tracker for active state, current tranche, and task checkboxes
+- does not override repository SoTs
+
+`tasks/lessons.md`
+- session-control tracker for durable corrections and lessons
+- does not override repository SoTs
+
 ### 3. Update Protocol
 
 Use this flow:
@@ -173,6 +183,7 @@ Use this flow:
 - `AGENTS.md`, `CLAUDE.md`, and `CODEX.md` must explicitly require reading `docs/PROJECT_SOT.md`
 - conflicts must resolve in favor of `docs/PROJECT_SOT.md`
 - if a rule is shared by Claude and Codex, both files must stay aligned
+- `tasks/todo.md` and `tasks/lessons.md` are lower precedence than repository SoTs
 
 ---
 
@@ -228,3 +239,4 @@ Use this flow:
 
 - This design intentionally optimizes for long-term scalability and AI execution discipline over local convenience.
 - The product objective must remain explicit across the governance layer: MetalShopping is a long-lived enterprise platform for commercial strategy, pricing, procurement, CRM, analytics, automation, and future AI-assisted operations.
+

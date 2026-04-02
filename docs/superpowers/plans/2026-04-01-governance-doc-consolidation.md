@@ -1,6 +1,6 @@
 # Governance Documentation Consolidation Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Consolidate MetalShopping's documentation governance so AI agents and humans operate from one explicit operational SoT, one stable architecture document, aligned agent entrypoints, and a clean execution/progress layer.
 
@@ -36,7 +36,7 @@
 - Create: `tasks/lessons.md`
 - Create: `tasks/todo.md`
 
-- [ ] **Step 1: Verify the `tasks/` directory is currently missing**
+- [x] **Step 1: Verify the `tasks/` directory is currently missing**
 
 Run:
 ```powershell
@@ -45,7 +45,7 @@ Test-Path tasks
 
 Expected: `False`
 
-- [ ] **Step 2: Create the `tasks/` directory**
+- [x] **Step 2: Create the `tasks/` directory**
 
 Run:
 ```powershell
@@ -54,7 +54,7 @@ New-Item -ItemType Directory -Path tasks
 
 Expected: directory creation output for `tasks`
 
-- [ ] **Step 3: Create `tasks/lessons.md` with the canonical lesson scaffold**
+- [x] **Step 3: Create `tasks/lessons.md` with the canonical lesson scaffold**
 
 Write this file content exactly:
 
@@ -72,7 +72,7 @@ Use this file only for recurring engineering corrections that would cause bugs, 
 ## Lesson Template
 
 ```text
-## Lesson N — <title>
+## Lesson N -- <title>
 Date: YYYY-MM-DD | Trigger: <correction | review | build failure>
 Wrong:   <exact code or decision>
 Correct: <exact code or decision>
@@ -81,7 +81,7 @@ Layer:   <Go adapter | handler | worker | frontend | process | docs>
 ```
 ````
 
-- [ ] **Step 4: Create `tasks/todo.md` with the governance tranche initialized**
+- [x] **Step 4: Create `tasks/todo.md` with the governance tranche initialized**
 
 Write this file content exactly:
 
@@ -90,17 +90,17 @@ Write this file content exactly:
 
 ## Current State
 
-- State: in-progress
+- State: completed
 - Active tranche: governance documentation consolidation
 - Source spec: `docs/superpowers/specs/2026-04-01-governance-audit-design.md`
 
-## Active Tasks
+## Completed Tasks
 
-- [ ] Bootstrap repository control files (`tasks/lessons.md`, `tasks/todo.md`)
-- [ ] Consolidate `docs/PROJECT_SOT.md` as the operational SoT
-- [ ] Align `AGENTS.md`, `CLAUDE.md`, and `CODEX.md`
-- [ ] Align `ARCHITECTURE.md`, `docs/IMPLEMENTATION_PLAN.md`, and `docs/PROGRESS.md`
-- [ ] Verify documentation hierarchy and cross-file consistency
+- [x] Bootstrap repository control files (`tasks/lessons.md`, `tasks/todo.md`)
+- [x] Consolidate `docs/PROJECT_SOT.md` as the operational SoT
+- [x] Align `AGENTS.md`, `CLAUDE.md`, and `CODEX.md`
+- [x] Align `ARCHITECTURE.md`, `docs/IMPLEMENTATION_PLAN.md`, and `docs/PROGRESS.md`
+- [x] Verify documentation hierarchy and cross-file consistency
 
 ## Notes
 
@@ -108,7 +108,7 @@ Write this file content exactly:
 - Repository execution must follow the accepted SoTs inside this repository once consolidated.
 ```
 
-- [ ] **Step 5: Verify both files exist and contain the expected headings**
+- [x] **Step 5: Verify both files exist and contain the expected headings**
 
 Run:
 ```powershell
@@ -119,7 +119,7 @@ Expected:
 - `tasks/lessons.md:1:# Lessons Learned`
 - `tasks/todo.md:1:# Task Tracker`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 Run:
 ```powershell
@@ -136,7 +136,7 @@ Expected: a successful commit containing only the two new `tasks/` files
 **Files:**
 - Modify: `docs/PROJECT_SOT.md`
 
-- [ ] **Step 1: Read the current `docs/PROJECT_SOT.md`**
+- [x] **Step 1: Read the current `docs/PROJECT_SOT.md`**
 
 Run:
 ```powershell
@@ -145,7 +145,7 @@ Get-Content -Raw docs/PROJECT_SOT.md
 
 Expected: the current operational SoT content, including `Purpose`, `Current state`, `Product identity`, and `Planning constraints`
 
-- [ ] **Step 2: Replace the `Purpose` section with explicit operational ownership**
+- [x] **Step 2: Replace the `Purpose` section with explicit operational ownership**
 
 Replace the current `## Purpose` section with this exact content:
 
@@ -163,7 +163,7 @@ It defines:
 - which execution model the agents and humans must follow
 ```
 
-- [ ] **Step 3: Insert the new documentation-governance section immediately after `## Platform direction`**
+- [x] **Step 3: Insert the new documentation-governance section immediately after `## Platform direction`**
 
 Insert this exact section:
 
@@ -180,7 +180,9 @@ MetalShopping uses a strict documentation hierarchy so humans and AI agents do n
 4. `CLAUDE.md` and `CODEX.md`
 5. `docs/IMPLEMENTATION_PLAN.md`
 6. `docs/PROGRESS.md`
-7. focused specs and plans under `docs/superpowers/`
+7. `tasks/todo.md`
+8. `tasks/lessons.md`
+9. focused specs and plans under `docs/superpowers/`
 
 ### Strategic source during this restructuring
 
@@ -196,13 +198,15 @@ That strategic content does not override the repository at runtime automatically
 - `CLAUDE.md` and `CODEX.md`: agent-specific instructions aligned to the same project truth
 - `docs/IMPLEMENTATION_PLAN.md`: macro phase and sequence planning
 - `docs/PROGRESS.md`: factual status, next gates, and blockers
+- `tasks/todo.md`: session-control tracker for active state, current tranche, and task checkboxes; it does not override repository SoTs
+- `tasks/lessons.md`: session-control tracker for durable corrections and lessons; it does not override repository SoTs
 
 ### Conflict rule
 
 If two documents disagree, the higher-precedence document wins. If the disagreement is architectural and durable, resolve it through an ADR and then update the affected SoT documents.
 ```
 
-- [ ] **Step 4: Insert the new update protocol section immediately after `## Planning constraints`**
+- [x] **Step 4: Insert the new update protocol section immediately after `## Planning constraints`**
 
 Insert this exact section:
 
@@ -221,7 +225,7 @@ Use this update flow to prevent drift:
 No document should duplicate another document in full. Each document should point to the canonical owner of its subject.
 ```
 
-- [ ] **Step 5: Add governance-first constraints to the existing `## Planning constraints` list**
+- [x] **Step 5: Add governance-first constraints to the existing `## Planning constraints` list**
 
 Append these exact bullets to the `## Planning constraints` section:
 
@@ -232,7 +236,7 @@ Append these exact bullets to the `## Planning constraints` section:
 - Plan the project in this order: governance -> orchestration -> one module spec -> one implementation plan
 ```
 
-- [ ] **Step 6: Verify the new SoT hierarchy and protocol are present**
+- [x] **Step 6: Verify the new SoT hierarchy and protocol are present**
 
 Run:
 ```powershell
@@ -241,7 +245,7 @@ rg --no-heading -n "Documentation hierarchy and precedence|Documentation update 
 
 Expected: four matches in `docs/PROJECT_SOT.md`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 Run:
 ```powershell
@@ -258,7 +262,7 @@ Expected: a successful commit containing only the `docs/PROJECT_SOT.md` changes
 **Files:**
 - Modify: `AGENTS.md`
 
-- [ ] **Step 1: Read the current `AGENTS.md`**
+- [x] **Step 1: Read the current `AGENTS.md`**
 
 Run:
 ```powershell
@@ -267,12 +271,12 @@ Get-Content -Raw AGENTS.md
 
 Expected: the current repository rules with duplicated session-start behavior and absolute rules
 
-- [ ] **Step 2: Replace the entire file with the new concise repository entrypoint**
+- [x] **Step 2: Replace the entire file with the new concise repository entrypoint**
 
 Write this file content exactly:
 
 ```markdown
-# AGENTS — MetalShopping
+# AGENTS -- MetalShopping
 
 ## Purpose
 
@@ -280,13 +284,16 @@ This file is the repository-wide mandatory entrypoint for any AI agent working i
 
 ## Mandatory read order
 
+Before planning, implementation, or review, read these files in this exact order:
+
 1. Read `docs/PROJECT_SOT.md`
 2. Read `ARCHITECTURE.md`
-3. Read the agent-specific file (`CLAUDE.md` or `CODEX.md`)
-4. Read `tasks/todo.md`
-5. Read `tasks/lessons.md`
+3. Read `AGENTS.md`
+4. Read the agent-specific file (`CLAUDE.md` or `CODEX.md`)
+5. Read `tasks/todo.md`
+6. Read `tasks/lessons.md`
 
-Do not start planning, implementation, or review before completing that read order.
+Do not start planning, implementation, or review before completing that sequence.
 
 ## Documentation precedence
 
@@ -298,6 +305,8 @@ If documents conflict, follow this order:
 4. `CLAUDE.md` or `CODEX.md`
 5. `docs/IMPLEMENTATION_PLAN.md`
 6. `docs/PROGRESS.md`
+7. `tasks/todo.md`
+8. `tasks/lessons.md`
 
 ## Product objective
 
@@ -351,7 +360,7 @@ Every decision must survive the question:
 | Frontend visual/component work | `$metalshopping-design-system` |
 ```
 
-- [ ] **Step 3: Verify the new mandatory read order and precedence**
+- [x] **Step 3: Verify the new mandatory read order and precedence**
 
 Run:
 ```powershell
@@ -360,7 +369,7 @@ rg --no-heading -n "Mandatory read order|Documentation precedence|docs/PROJECT_S
 
 Expected: matches for all four phrases in `AGENTS.md`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Run:
 ```powershell
@@ -378,7 +387,7 @@ Expected: a successful commit containing only the `AGENTS.md` rewrite
 - Modify: `CLAUDE.md`
 - Create: `CODEX.md`
 
-- [ ] **Step 1: Read the current `CLAUDE.md`**
+- [x] **Step 1: Read the current `CLAUDE.md`**
 
 Run:
 ```powershell
@@ -387,7 +396,7 @@ Get-Content -Raw CLAUDE.md
 
 Expected: the current long Claude-specific file, including the incorrect `docs/ARCHITECTURE.md` reference
 
-- [ ] **Step 2: Replace `CLAUDE.md` with the aligned agent entrypoint**
+- [x] **Step 2: Replace `CLAUDE.md` with the aligned agent entrypoint**
 
 Write this file content exactly:
 
@@ -403,10 +412,20 @@ Before any planning, implementation, or review:
 1. Read `docs/PROJECT_SOT.md`
 2. Read `ARCHITECTURE.md`
 3. Read `AGENTS.md`
-4. Read `tasks/todo.md`
-5. Read `tasks/lessons.md`
+4. Read this file (`CLAUDE.md`)
+5. Read `tasks/todo.md`
+6. Read `tasks/lessons.md`
 
-If documents conflict, follow `docs/PROJECT_SOT.md` first, then `ARCHITECTURE.md`, then `AGENTS.md`.
+If documents conflict, follow this order:
+
+1. `docs/PROJECT_SOT.md`
+2. `ARCHITECTURE.md`
+3. `AGENTS.md`
+4. `CLAUDE.md`
+5. `docs/IMPLEMENTATION_PLAN.md`
+6. `docs/PROGRESS.md`
+7. `tasks/todo.md`
+8. `tasks/lessons.md`
 
 ## Scope
 
@@ -452,7 +471,7 @@ go test ./apps/server_core/internal/modules/<module>/...
 ```
 ````
 
-- [ ] **Step 3: Create `CODEX.md` as the Codex-aligned twin of `CLAUDE.md`**
+- [x] **Step 3: Create `CODEX.md` as the Codex-aligned twin of `CLAUDE.md`**
 
 Write this file content exactly:
 
@@ -468,10 +487,20 @@ Before any planning, implementation, or review:
 1. Read `docs/PROJECT_SOT.md`
 2. Read `ARCHITECTURE.md`
 3. Read `AGENTS.md`
-4. Read `tasks/todo.md`
-5. Read `tasks/lessons.md`
+4. Read this file (`CODEX.md`)
+5. Read `tasks/todo.md`
+6. Read `tasks/lessons.md`
 
-If documents conflict, follow `docs/PROJECT_SOT.md` first, then `ARCHITECTURE.md`, then `AGENTS.md`.
+If documents conflict, follow this order:
+
+1. `docs/PROJECT_SOT.md`
+2. `ARCHITECTURE.md`
+3. `AGENTS.md`
+4. `CODEX.md`
+5. `docs/IMPLEMENTATION_PLAN.md`
+6. `docs/PROGRESS.md`
+7. `tasks/todo.md`
+8. `tasks/lessons.md`
 
 ## Scope
 
@@ -517,7 +546,7 @@ go test ./apps/server_core/internal/modules/<module>/...
 ```
 ````
 
-- [ ] **Step 4: Verify both files reference the correct architecture path and startup order**
+- [x] **Step 4: Verify both files reference the correct architecture path and startup order**
 
 Run:
 ```powershell
@@ -529,7 +558,7 @@ Expected:
 - `CODEX.md` contains all four phrases
 - no `docs/ARCHITECTURE.md` reference remains
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run:
 ```powershell
@@ -548,7 +577,7 @@ Expected: a successful commit containing the `CLAUDE.md` rewrite and new `CODEX.
 - Modify: `docs/IMPLEMENTATION_PLAN.md`
 - Modify: `docs/PROGRESS.md`
 
-- [ ] **Step 1: Insert the document-boundary section near the top of `ARCHITECTURE.md`**
+- [x] **Step 1: Insert the document-boundary section near the top of `ARCHITECTURE.md`**
 
 Add this exact section immediately after `## Status`:
 
@@ -564,10 +593,10 @@ It does not own:
 - task progress or backlog state
 - agent precedence rules
 
-Those belong to `docs/PROJECT_SOT.md`, `docs/IMPLEMENTATION_PLAN.md`, and `docs/PROGRESS.md` according to the repository governance hierarchy.
+Those belong to `docs/PROJECT_SOT.md` for hierarchy, `AGENTS.md` for mandatory agent entry rules, `tasks/todo.md` for active task state, `docs/IMPLEMENTATION_PLAN.md` for execution sequencing, and `docs/PROGRESS.md` for factual delivery status.
 ```
 
-- [ ] **Step 2: Update `docs/IMPLEMENTATION_PLAN.md` to include the governance-first tranche**
+- [x] **Step 2: Update `docs/IMPLEMENTATION_PLAN.md` to include the governance-first tranche**
 
 Insert this exact section immediately after `## Goal`:
 
@@ -590,7 +619,7 @@ Then append this exact bullet under `## Ongoing workstreams`:
 - governance documentation consolidation and master orchestration planning
 ```
 
-- [ ] **Step 3: Update `docs/PROGRESS.md` with the governance hardening movement**
+- [x] **Step 3: Update `docs/PROGRESS.md` with the governance hardening movement**
 
 Append this exact bullet at the end of the `## Done` list:
 
@@ -598,14 +627,13 @@ Append this exact bullet at the end of the `## Done` list:
 - governance audit design spec added to consolidate documentation precedence, agent entrypoints, and SoT ownership before the next planning wave
 ```
 
-Insert these exact bullets at the top of the `## Next` list:
+Insert this exact bullet at the top of the `## Next` list:
 
 ```markdown
-- consolidate `PROJECT_SOT`, `AGENTS`, `CLAUDE`, `CODEX`, `ARCHITECTURE`, `IMPLEMENTATION_PLAN`, and `PROGRESS` under the accepted governance hierarchy
-- create the master orchestration plan only after the governance tranche is fully aligned
+- create the master orchestration plan on top of the accepted governance hierarchy now that the consolidation tranche is complete
 ```
 
-- [ ] **Step 4: Verify architectural and execution boundaries**
+- [x] **Step 4: Verify architectural and execution boundaries**
 
 Run:
 ```powershell
@@ -617,7 +645,7 @@ Expected:
 - one match in `docs/IMPLEMENTATION_PLAN.md`
 - one match in `docs/PROGRESS.md`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run:
 ```powershell
@@ -633,7 +661,7 @@ Expected: a successful commit containing only those three document updates
 
 **Files:** verification only
 
-- [ ] **Step 1: Confirm all governance entrypoints exist**
+- [x] **Step 1: Confirm all governance entrypoints exist**
 
 Run:
 ```powershell
@@ -648,7 +676,7 @@ Test-Path tasks/todo.md
 
 Expected: seven lines of `True`
 
-- [ ] **Step 2: Verify the precedence rule appears in all required entrypoints**
+- [x] **Step 2: Verify the precedence rule appears in all required entrypoints**
 
 Run:
 ```powershell
@@ -657,7 +685,7 @@ rg --no-heading -n "docs/PROJECT_SOT.md|Documentation precedence|Mandatory start
 
 Expected: matches in all four files
 
-- [ ] **Step 3: Verify the incorrect architecture path no longer exists**
+- [x] **Step 3: Verify the incorrect architecture path no longer exists**
 
 Run:
 ```powershell
@@ -666,7 +694,7 @@ rg --no-heading -n "docs/ARCHITECTURE.md" .
 
 Expected: no matches
 
-- [ ] **Step 4: Review the final doc-only diff**
+- [x] **Step 4: Review the final doc-only diff**
 
 Run:
 ```powershell
@@ -684,7 +712,7 @@ Expected: changes only in:
 - `docs/IMPLEMENTATION_PLAN.md`
 - `docs/PROGRESS.md`
 
-- [ ] **Step 5: Final commit**
+- [x] **Step 5: Final commit**
 
 Run:
 ```powershell
@@ -705,3 +733,5 @@ Expected: either a real verification commit if extra notes were added, or an emp
 | 4 | Align `CLAUDE.md` and add `CODEX.md` |
 | 5 | Keep `ARCHITECTURE.md` architectural and align execution docs |
 | 6 | Run a consistency gate across the final governance layer |
+
+
