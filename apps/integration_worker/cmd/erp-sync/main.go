@@ -13,6 +13,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 
 	erp_runtime "metalshopping/integration_worker/internal/erp_runtime"
+	"metalshopping/integration_worker/internal/erp_runtime/connectors/sankhya"
 	"metalshopping/integration_worker/internal/erp_runtime/raw"
 	"metalshopping/integration_worker/internal/erp_runtime/reconciliation"
 	"metalshopping/integration_worker/internal/erp_runtime/review"
@@ -48,8 +49,7 @@ func main() {
 	runner := erp_runtime.NewRunner(registry, rawStore, normalizer, reconciler, reviewStore, ledger)
 
 	// 3. Register connectors
-	// Sankhya connector placeholder — wired in Task 33
-	// registry.Register(sankhya.NewConnector(...))
+	registry.Register(sankhya.New())
 	_ = runner // runner is used in the claim loop below
 
 	// 4. Signal-aware context
