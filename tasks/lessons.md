@@ -29,6 +29,13 @@ Correct: Use a catalog-owned create-or-get path that handles `tenant_id + sku` c
 Rule:    Retry-safe promotion flows should be idempotent at the owning module boundary, not by bypassing the boundary with ad hoc SQL.
 Layer:   Go adapter
 
+## Lesson 4 -- Review-required routing must be state-gated and deterministic
+Date: 2026-04-02 | Trigger: implementation
+Wrong:   `MarkReviewRequired` transitioned every matching reconciliation row and minted a random review ID, so repeated or concurrent calls could create duplicate review items.
+Correct: Guard the transition to `pending`/`promoting` rows only and derive the review ID deterministically from the tenant/reconciliation pair so retries become no-ops.
+Rule:    Manual-review routing writes must be idempotent at the repository boundary and should not depend on the caller to suppress replays.
+Layer:   Go adapter
+
 ## Lesson Template
 
 ```text

@@ -152,50 +152,58 @@ func (s *repoScriptState) done() {
 	}
 }
 
+func assertMarkReviewRequiredExec(expectedReviewID string) func(*testing.T, string, []driver.NamedValue) {
+	return func(t *testing.T, query string, args []driver.NamedValue) {
+		t.Helper()
+		if !strings.Contains(query, "UPDATE erp_reconciliation_results") {
+			t.Fatal("expected reconciliation update in review-required statement")
+		}
+		if !strings.Contains(query, "promotion_status IN ('pending', 'promoting')") {
+			t.Fatal("expected pending/promoting guard in review-required statement")
+		}
+		if len(args) != 8 {
+			t.Fatalf("expected 8 args, got %d", len(args))
+		}
+		if got := fmt.Sprint(args[0].Value); got != "ERP_PROMOTION_AUTO_DISABLED" {
+			t.Fatalf("expected auto-disabled reason code, got %s", got)
+		}
+		if got := fmt.Sprint(args[1].Value); got != `{"reason_code":"ERP_PROMOTION_AUTO_DISABLED"}` {
+			t.Fatalf("expected warning details payload, got %s", got)
+		}
+		if got := fmt.Sprint(args[2].Value); got != "rec_1" {
+			t.Fatalf("expected reconciliation id rec_1, got %s", got)
+		}
+		if got := fmt.Sprint(args[3].Value); got != expectedReviewID {
+			t.Fatalf("expected deterministic review id %s, got %s", expectedReviewID, got)
+		}
+		if got := fmt.Sprint(args[4].Value); got != "warning" {
+			t.Fatalf("expected warning severity, got %s", got)
+		}
+		if got := fmt.Sprint(args[5].Value); got != "auto-promotion is disabled for this tenant" {
+			t.Fatalf("expected review summary, got %s", got)
+		}
+		if got := fmt.Sprint(args[6].Value); got != "enable auto-promotion or route the item through manual review" {
+			t.Fatalf("expected review action, got %s", got)
+		}
+		createdAt, ok := args[7].Value.(time.Time)
+		if !ok {
+			t.Fatalf("expected created_at time, got %T", args[7].Value)
+		}
+		if createdAt.UTC().IsZero() {
+			t.Fatal("expected non-zero created_at")
+		}
+	}
+}
+
 func TestReconciliationRepoMarkReviewRequiredCreatesReviewItem(t *testing.T) {
+	expectedReviewID := generateReviewID("tenant-1", "rec_1")
 	db, state := newRepoScriptedDB(t,
 		repoScriptStep{kind: repoStepBegin},
 		repoScriptStep{kind: repoStepExec, query: "SELECT set_config('app.tenant_id', $1, true)", args: []any{"tenant-1"}},
 		repoScriptStep{
-			kind:  repoStepExec,
-			query: "INSERT INTO erp_review_items",
-			assert: func(t *testing.T, query string, args []driver.NamedValue) {
-				t.Helper()
-				if !strings.Contains(query, "UPDATE erp_reconciliation_results") {
-					t.Fatal("expected reconciliation update in review-required statement")
-				}
-				if len(args) != 8 {
-					t.Fatalf("expected 8 args, got %d", len(args))
-				}
-				if got := fmt.Sprint(args[0].Value); got != "ERP_PROMOTION_AUTO_DISABLED" {
-					t.Fatalf("expected auto-disabled reason code, got %s", got)
-				}
-				if got := fmt.Sprint(args[1].Value); got != `{"reason_code":"ERP_PROMOTION_AUTO_DISABLED"}` {
-					t.Fatalf("expected warning details payload, got %s", got)
-				}
-				if got := fmt.Sprint(args[2].Value); got != "rec_1" {
-					t.Fatalf("expected reconciliation id rec_1, got %s", got)
-				}
-				if got := fmt.Sprint(args[3].Value); !strings.HasPrefix(got, "rev_") {
-					t.Fatalf("expected generated review id, got %s", got)
-				}
-				if got := fmt.Sprint(args[4].Value); got != "warning" {
-					t.Fatalf("expected warning severity, got %s", got)
-				}
-				if got := fmt.Sprint(args[5].Value); got != "auto-promotion is disabled for this tenant" {
-					t.Fatalf("expected review summary, got %s", got)
-				}
-				if got := fmt.Sprint(args[6].Value); got != "enable auto-promotion or route the item through manual review" {
-					t.Fatalf("expected review action, got %s", got)
-				}
-				createdAt, ok := args[7].Value.(time.Time)
-				if !ok {
-					t.Fatalf("expected created_at time, got %T", args[7].Value)
-				}
-				if createdAt.UTC().IsZero() {
-					t.Fatal("expected non-zero created_at")
-				}
-			},
+			kind:   repoStepExec,
+			query:  "INSERT INTO erp_review_items",
+			assert: assertMarkReviewRequiredExec(expectedReviewID),
 		},
 		repoScriptStep{kind: repoStepCommit},
 	)
@@ -215,4 +223,66 @@ func TestReconciliationRepoMarkReviewRequiredCreatesReviewItem(t *testing.T) {
 	}
 
 	state.done()
+}
+
+func TestReconciliationRepoMarkReviewRequiredIsIdempotentOnRepeatedCalls(t *testing.T) {
+	expectedReviewID := generateReviewID("tenant-1", "rec_1")
+	db, state := newRepoScriptedDB(t,
+		repoScriptStep{kind: repoStepBegin},
+		repoScriptStep{kind: repoStepExec, query: "SELECT set_config('app.tenant_id', $1, true)", args: []any{"tenant-1"}},
+		repoScriptStep{kind: repoStepExec, query: "INSERT INTO erp_review_items", rowsAffected: int64Ptr(1), assert: assertMarkReviewRequiredExec(expectedReviewID)},
+		repoScriptStep{kind: repoStepCommit},
+		repoScriptStep{kind: repoStepBegin},
+		repoScriptStep{kind: repoStepExec, query: "SELECT set_config('app.tenant_id', $1, true)", args: []any{"tenant-1"}},
+		repoScriptStep{kind: repoStepExec, query: "INSERT INTO erp_review_items", rowsAffected: int64Ptr(0), assert: assertMarkReviewRequiredExec(expectedReviewID)},
+		repoScriptStep{kind: repoStepRollback},
+	)
+
+	repo := &ReconciliationRepo{base{db: db}}
+	warningDetails := `{"reason_code":"ERP_PROMOTION_AUTO_DISABLED"}`
+	for i := 0; i < 2; i++ {
+		if err := repo.MarkReviewRequired(
+			context.Background(),
+			"tenant-1",
+			"rec_1",
+			"ERP_PROMOTION_AUTO_DISABLED",
+			"auto-promotion is disabled for this tenant",
+			"enable auto-promotion or route the item through manual review",
+			&warningDetails,
+		); err != nil {
+			t.Fatalf("unexpected error on call %d: %v", i+1, err)
+		}
+	}
+
+	state.done()
+}
+
+func TestReconciliationRepoMarkReviewRequiredNoopsOnZeroRows(t *testing.T) {
+	expectedReviewID := generateReviewID("tenant-1", "rec_1")
+	db, state := newRepoScriptedDB(t,
+		repoScriptStep{kind: repoStepBegin},
+		repoScriptStep{kind: repoStepExec, query: "SELECT set_config('app.tenant_id', $1, true)", args: []any{"tenant-1"}},
+		repoScriptStep{kind: repoStepExec, query: "INSERT INTO erp_review_items", rowsAffected: int64Ptr(0), assert: assertMarkReviewRequiredExec(expectedReviewID)},
+		repoScriptStep{kind: repoStepRollback},
+	)
+
+	repo := &ReconciliationRepo{base{db: db}}
+	warningDetails := `{"reason_code":"ERP_PROMOTION_AUTO_DISABLED"}`
+	if err := repo.MarkReviewRequired(
+		context.Background(),
+		"tenant-1",
+		"rec_1",
+		"ERP_PROMOTION_AUTO_DISABLED",
+		"auto-promotion is disabled for this tenant",
+		"enable auto-promotion or route the item through manual review",
+		&warningDetails,
+	); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	state.done()
+}
+
+func int64Ptr(v int64) *int64 {
+	return &v
 }

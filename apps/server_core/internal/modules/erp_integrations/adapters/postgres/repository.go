@@ -2,7 +2,7 @@ package postgres
 
 import (
 	"context"
-	"crypto/rand"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
 	"errors"
@@ -798,7 +798,7 @@ func (r *ReconciliationRepo) MarkReviewRequired(ctx context.Context, tenantID, r
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	reviewID := generateReviewID()
+	reviewID := generateReviewID(tenantID, reconciliationID)
 	now := time.Now().UTC()
 	const updateSQL = `
 WITH updated AS (
@@ -811,6 +811,7 @@ WITH updated AS (
       canonical_id     = NULL
   WHERE tenant_id = current_tenant_id()
     AND reconciliation_id = $3
+    AND promotion_status IN ('pending', 'promoting')
   RETURNING run_id, staging_id, entity_type, source_id, reconciliation_id, tenant_id
 )
 INSERT INTO erp_review_items (
@@ -869,7 +870,7 @@ LEFT JOIN erp_staging_records staging
 		return fmt.Errorf("mark erp reconciliation result review required rows affected: %w", err)
 	}
 	if n == 0 {
-		return fmt.Errorf("mark erp reconciliation result review required: reconciliation %s not found", reconciliationID)
+		return nil
 	}
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit erp reconciliation mark review required: %w", err)
@@ -1065,10 +1066,7 @@ func nullableTimePtr(value *time.Time) any {
 	return value.UTC()
 }
 
-func generateReviewID() string {
-	buf := make([]byte, 8)
-	if _, err := rand.Read(buf); err != nil {
-		return "rev_fallback"
-	}
-	return "rev_" + hex.EncodeToString(buf)
+func generateReviewID(tenantID, reconciliationID string) string {
+	sum := sha256.Sum256([]byte(tenantID + ":" + reconciliationID))
+	return "rev_" + hex.EncodeToString(sum[:16])
 }
