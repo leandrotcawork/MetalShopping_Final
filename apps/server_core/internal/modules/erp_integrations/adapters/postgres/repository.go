@@ -10,28 +10,73 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"metalshopping/server_core/internal/modules/erp_integrations/domain"
+	"metalshopping/server_core/internal/modules/erp_integrations/ports"
 	pgdb "metalshopping/server_core/internal/platform/db/postgres"
 	"metalshopping/server_core/internal/platform/messaging/outbox"
 )
 
-// Repository implements InstanceRepository, RunRepository, ReviewRepository,
-// and ReconciliationReader using a Postgres backend with RLS tenant isolation.
-type Repository struct {
+// ---------------------------------------------------------------------------
+// Shared base
+// ---------------------------------------------------------------------------
+
+// base holds the shared dependencies for all per-interface repository types.
+type base struct {
 	db          *sql.DB
 	outboxStore *outbox.Store
 }
 
-// NewRepository constructs a Repository. outboxStore may be nil if outbox
+// ---------------------------------------------------------------------------
+// Concrete repository types
+// ---------------------------------------------------------------------------
+
+// InstanceRepo implements ports.InstanceRepository.
+type InstanceRepo struct{ base }
+
+// RunRepo implements ports.RunRepository.
+type RunRepo struct{ base }
+
+// ReviewRepo implements ports.ReviewRepository.
+type ReviewRepo struct{ base }
+
+// ReconciliationRepo implements ports.ReconciliationReader.
+type ReconciliationRepo struct{ base }
+
+// Compile-time interface assertions.
+var _ ports.InstanceRepository = (*InstanceRepo)(nil)
+var _ ports.RunRepository = (*RunRepo)(nil)
+var _ ports.ReviewRepository = (*ReviewRepo)(nil)
+var _ ports.ReconciliationReader = (*ReconciliationRepo)(nil)
+
+// ---------------------------------------------------------------------------
+// Repos container and constructor
+// ---------------------------------------------------------------------------
+
+// Repos bundles all four repository types returned by NewRepos.
+type Repos struct {
+	Instances       *InstanceRepo
+	Runs            *RunRepo
+	Reviews         *ReviewRepo
+	Reconciliations *ReconciliationRepo
+}
+
+// NewRepos constructs all four repository types sharing a single db connection
+// and outboxStore. outboxStore may be a no-op implementation if outbox
 // publishing is not required for this deployment.
-func NewRepository(db *sql.DB, outboxStore *outbox.Store) *Repository {
-	return &Repository{db: db, outboxStore: outboxStore}
+func NewRepos(db *sql.DB, outboxStore *outbox.Store) *Repos {
+	b := base{db: db, outboxStore: outboxStore}
+	return &Repos{
+		Instances:       &InstanceRepo{b},
+		Runs:            &RunRepo{b},
+		Reviews:         &ReviewRepo{b},
+		Reconciliations: &ReconciliationRepo{b},
+	}
 }
 
 // ---------------------------------------------------------------------------
-// InstanceRepository
+// InstanceRepo — implements ports.InstanceRepository
 // ---------------------------------------------------------------------------
 
-func (r *Repository) Create(ctx context.Context, instance *domain.IntegrationInstance) error {
+func (r *InstanceRepo) Create(ctx context.Context, instance *domain.IntegrationInstance) error {
 	tx, err := pgdb.BeginTenantTx(ctx, r.db, instance.TenantID, nil)
 	if err != nil {
 		return err
@@ -91,7 +136,7 @@ VALUES (
 	return nil
 }
 
-func (r *Repository) Get(ctx context.Context, tenantID, instanceID string) (*domain.IntegrationInstance, error) {
+func (r *InstanceRepo) Get(ctx context.Context, tenantID, instanceID string) (*domain.IntegrationInstance, error) {
 	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		return nil, err
@@ -119,7 +164,7 @@ WHERE tenant_id = current_tenant_id()
 	return item, nil
 }
 
-func (r *Repository) List(ctx context.Context, tenantID string, limit, offset int) ([]*domain.IntegrationInstance, error) {
+func (r *InstanceRepo) List(ctx context.Context, tenantID string, limit, offset int) ([]*domain.IntegrationInstance, error) {
 	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		return nil, err
@@ -157,7 +202,7 @@ LIMIT $1 OFFSET $2
 	return items, nil
 }
 
-func (r *Repository) HasActiveInstance(ctx context.Context, tenantID string) (bool, error) {
+func (r *InstanceRepo) HasActiveInstance(ctx context.Context, tenantID string) (bool, error) {
 	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		return false, err
@@ -181,10 +226,10 @@ WHERE tenant_id = current_tenant_id()
 }
 
 // ---------------------------------------------------------------------------
-// RunRepository
+// RunRepo — implements ports.RunRepository
 // ---------------------------------------------------------------------------
 
-func (r *Repository) CreateRun(ctx context.Context, run *domain.SyncRun) error {
+func (r *RunRepo) Create(ctx context.Context, run *domain.SyncRun) error {
 	tx, err := pgdb.BeginTenantTx(ctx, r.db, run.TenantID, nil)
 	if err != nil {
 		return err
@@ -262,7 +307,7 @@ VALUES (
 	return nil
 }
 
-func (r *Repository) GetRun(ctx context.Context, tenantID, runID string) (*domain.SyncRun, error) {
+func (r *RunRepo) Get(ctx context.Context, tenantID, runID string) (*domain.SyncRun, error) {
 	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		return nil, err
@@ -291,7 +336,7 @@ WHERE tenant_id = current_tenant_id()
 	return item, nil
 }
 
-func (r *Repository) ListRuns(ctx context.Context, tenantID, instanceID string, limit, offset int) ([]*domain.SyncRun, error) {
+func (r *RunRepo) List(ctx context.Context, tenantID, instanceID string, limit, offset int) ([]*domain.SyncRun, error) {
 	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		return nil, err
@@ -332,10 +377,10 @@ LIMIT $2 OFFSET $3
 }
 
 // ---------------------------------------------------------------------------
-// ReviewRepository
+// ReviewRepo — implements ports.ReviewRepository
 // ---------------------------------------------------------------------------
 
-func (r *Repository) CreateReview(ctx context.Context, item *domain.ReviewItem) error {
+func (r *ReviewRepo) Create(ctx context.Context, item *domain.ReviewItem) error {
 	tx, err := pgdb.BeginTenantTx(ctx, r.db, item.TenantID, nil)
 	if err != nil {
 		return err
@@ -384,19 +429,6 @@ VALUES (
   $17
 )
 `
-	// StagingSnapshot and ReconciliationOutput carry JSON snapshots in the domain model;
-	// the DB schema stores referential IDs in staging_id and reconciliation_id.
-	// RawPayloadRef maps to raw_id; staging_id and reconciliation_id are derived from RunID
-	// and SourceID context and stored as empty when not separately provided.
-	stagingID := ""
-	reconciliationID := ""
-	if item.StagingSnapshot != nil {
-		stagingID = *item.StagingSnapshot
-	}
-	if item.ReconciliationOutput != nil {
-		reconciliationID = *item.ReconciliationOutput
-	}
-
 	if _, err := tx.ExecContext(
 		ctx,
 		insertSQL,
@@ -410,8 +442,8 @@ VALUES (
 		item.ReasonCode,
 		item.ProblemSummary,
 		item.RawPayloadRef,
-		stagingID,
-		reconciliationID,
+		item.StagingID,
+		item.ReconciliationID,
 		item.RecommendedAction,
 		string(item.ItemStatus),
 		item.ResolvedAt,
@@ -427,7 +459,7 @@ VALUES (
 	return nil
 }
 
-func (r *Repository) GetReview(ctx context.Context, tenantID, reviewID string) (*domain.ReviewItem, error) {
+func (r *ReviewRepo) Get(ctx context.Context, tenantID, reviewID string) (*domain.ReviewItem, error) {
 	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		return nil, err
@@ -456,7 +488,7 @@ WHERE tenant_id = current_tenant_id()
 	return item, nil
 }
 
-func (r *Repository) ListReviews(ctx context.Context, tenantID string, limit, offset int) ([]*domain.ReviewItem, error) {
+func (r *ReviewRepo) List(ctx context.Context, tenantID string, limit, offset int) ([]*domain.ReviewItem, error) {
 	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		return nil, err
@@ -496,7 +528,7 @@ LIMIT $1 OFFSET $2
 	return items, nil
 }
 
-func (r *Repository) ResolveReview(ctx context.Context, tenantID, reviewID string, status domain.ReviewItemStatus, resolvedBy string, resolvedAt time.Time) error {
+func (r *ReviewRepo) Resolve(ctx context.Context, tenantID, reviewID string, status domain.ReviewItemStatus, resolvedBy string, resolvedAt time.Time) error {
 	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, nil)
 	if err != nil {
 		return err
@@ -529,10 +561,10 @@ WHERE tenant_id = current_tenant_id()
 }
 
 // ---------------------------------------------------------------------------
-// ReconciliationReader
+// ReconciliationRepo — implements ports.ReconciliationReader
 // ---------------------------------------------------------------------------
 
-func (r *Repository) ListPromotableResults(ctx context.Context, tenantID string, limit int) ([]*domain.ReconciliationResult, error) {
+func (r *ReconciliationRepo) ListPromotableResults(ctx context.Context, tenantID string, limit int) ([]*domain.ReconciliationResult, error) {
 	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		return nil, err
@@ -572,7 +604,7 @@ LIMIT $1
 	return items, nil
 }
 
-func (r *Repository) ClaimForPromotion(ctx context.Context, tenantID, reconciliationID string) error {
+func (r *ReconciliationRepo) ClaimForPromotion(ctx context.Context, tenantID, reconciliationID string) error {
 	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, nil)
 	if err != nil {
 		return err
@@ -605,7 +637,7 @@ WHERE tenant_id = current_tenant_id()
 	return nil
 }
 
-func (r *Repository) MarkPromoted(ctx context.Context, tenantID, reconciliationID, canonicalID string) error {
+func (r *ReconciliationRepo) MarkPromoted(ctx context.Context, tenantID, reconciliationID, canonicalID string) error {
 	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, nil)
 	if err != nil {
 		return err
@@ -628,7 +660,7 @@ WHERE tenant_id = current_tenant_id()
 	return nil
 }
 
-func (r *Repository) MarkPromotionFailed(ctx context.Context, tenantID, reconciliationID string) error {
+func (r *ReconciliationRepo) MarkPromotionFailed(ctx context.Context, tenantID, reconciliationID string) error {
 	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, nil)
 	if err != nil {
 		return err
@@ -748,7 +780,6 @@ func scanReviewItem(s scanner) (*domain.ReviewItem, error) {
 	var connectorType, entityType, severity, itemStatus string
 	var resolvedAt sql.NullTime
 	var resolvedBy sql.NullString
-	var stagingID, reconciliationID string
 
 	if err := s.Scan(
 		&item.ReviewID,
@@ -762,8 +793,8 @@ func scanReviewItem(s scanner) (*domain.ReviewItem, error) {
 		&item.ReasonCode,
 		&item.ProblemSummary,
 		&item.RawPayloadRef,
-		&stagingID,
-		&reconciliationID,
+		&item.StagingID,
+		&item.ReconciliationID,
 		&item.RecommendedAction,
 		&itemStatus,
 		&resolvedAt,
@@ -782,14 +813,6 @@ func scanReviewItem(s scanner) (*domain.ReviewItem, error) {
 	}
 	if resolvedBy.Valid {
 		item.ResolvedBy = &resolvedBy.String
-	}
-	// stagingID and reconciliationID are relational references; expose as JSON snapshots
-	// only when the caller enriches the result from the respective tables.
-	if stagingID != "" {
-		item.StagingSnapshot = &stagingID
-	}
-	if reconciliationID != "" {
-		item.ReconciliationOutput = &reconciliationID
 	}
 	return &item, nil
 }

@@ -254,8 +254,10 @@ type ReviewItem struct {
 	ReasonCode           string
 	ProblemSummary       string
 	RawPayloadRef        string
-	StagingSnapshot      *string // JSON string
-	ReconciliationOutput *string // JSON string
+	StagingID            string  // FK reference to erp_staging_records
+	ReconciliationID     string  // FK reference to erp_reconciliation_results
+	StagingSnapshot      *string // optional JSON enrichment (not persisted)
+	ReconciliationOutput *string // optional JSON enrichment (not persisted)
 	RecommendedAction    string
 	ItemStatus           ReviewItemStatus
 	ResolvedAt           *time.Time
