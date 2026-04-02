@@ -1,0 +1,369 @@
+openapi: 3.1.0
+info:
+  title: "ERP Integrations API"
+  version: "v1"
+  summary: "Public HTTP contract for MetalShopping ERP integration control plane"
+  description: >
+    Draft OpenAPI contract for tenant-aware ERP integration instance management,
+    sync run operations, and review queue handling.
+  x-metalshopping:
+    contract_name: "erp_integrations_v1"
+    contract_status: "draft"
+    bounded_context: "erp_integrations"
+    owner_team: "platform_integrations"
+servers:
+  - url: https://api.metalshopping.local
+paths:
+  /api/v1/erp/instances:
+    get:
+      operationId: listErpIntegrationInstances
+      summary: "List ERP integration instances for the authenticated tenant"
+      parameters:
+        - name: limit
+          in: query
+          schema: {type: integer, default: 50, maximum: 200}
+        - name: offset
+          in: query
+          schema: {type: integer, default: 0}
+      responses:
+        "200":
+          description: "Integration instances returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/erp_integration_instance_list_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Forbidden"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+    post:
+      operationId: createErpIntegrationInstance
+      summary: "Create an ERP integration instance for the authenticated tenant"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "../jsonschema/erp_create_instance_request_v1.schema.json"
+      responses:
+        "201":
+          description: "Instance created"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/erp_integration_instance_v1.schema.json"
+        "400":
+          description: "Validation failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Governance or permission failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "409":
+          description: "Single active ERP per tenant violated"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+  /api/v1/erp/instances/{instance_id}:
+    get:
+      operationId: getErpIntegrationInstance
+      summary: "Get a specific ERP integration instance"
+      parameters:
+        - name: instance_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Instance returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/erp_integration_instance_v1.schema.json"
+        "404":
+          description: "Instance not found"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Forbidden"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+  /api/v1/erp/instances/{instance_id}/runs:
+    post:
+      operationId: triggerErpSyncRun
+      summary: "Trigger a sync run for a specific integration instance"
+      parameters:
+        - name: instance_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "../jsonschema/erp_trigger_run_request_v1.schema.json"
+      responses:
+        "202":
+          description: "Run accepted"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/erp_sync_run_v1.schema.json"
+        "400":
+          description: "Validation failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Forbidden"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "404":
+          description: "Instance not found"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+    get:
+      operationId: listErpSyncRuns
+      summary: "List sync runs for a specific integration instance"
+      parameters:
+        - name: instance_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema: {type: integer, default: 50, maximum: 200}
+        - name: offset
+          in: query
+          schema: {type: integer, default: 0}
+      responses:
+        "200":
+          description: "Runs returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/erp_sync_run_list_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Forbidden"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+  /api/v1/erp/instances/{instance_id}/runs/{run_id}:
+    get:
+      operationId: getErpSyncRun
+      summary: "Get a specific sync run"
+      parameters:
+        - name: instance_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "Run returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/erp_sync_run_v1.schema.json"
+        "404":
+          description: "Run not found"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Forbidden"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+  /api/v1/erp/review-items:
+    get:
+      operationId: listErpReviewItems
+      summary: "List review items for the authenticated tenant"
+      parameters:
+        - name: limit
+          in: query
+          schema: {type: integer, default: 50, maximum: 200}
+        - name: offset
+          in: query
+          schema: {type: integer, default: 0}
+      responses:
+        "200":
+          description: "Review items returned"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/erp_review_item_list_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Forbidden"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+  /api/v1/erp/review-items/{review_id}/resolve:
+    post:
+      operationId: resolveErpReviewItem
+      summary: "Resolve a review item"
+      parameters:
+        - name: review_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "../jsonschema/erp_resolve_review_request_v1.schema.json"
+      responses:
+        "200":
+          description: "Review item resolved"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/erp_review_item_v1.schema.json"
+        "400":
+          description: "Validation failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "404":
+          description: "Review item not found"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "403":
+          description: "Forbidden"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+        "500":
+          description: "Internal server failure"
+          content:
+            application/json:
+              schema:
+                $ref: "../jsonschema/common_error_v1.schema.json"
+components:
+  schemas: {}
