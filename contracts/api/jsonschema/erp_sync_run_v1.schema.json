@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.metalshopping.local/schema/erp_integrations/sync_run/v1",
+  "title": "ErpSyncRun",
+  "type": "object",
+  "required": ["run_id","tenant_id","instance_id","connector_type","run_mode","entity_scope","status","promoted_count","warning_count","rejected_count","review_count","created_at"],
+  "properties": {
+    "run_id": {"type":"string"},
+    "tenant_id": {"type":"string"},
+    "instance_id": {"type":"string"},
+    "connector_type": {"type":"string"},
+    "run_mode": {"type":"string","enum":["bulk","incremental","manual_rerun"]},
+    "entity_scope": {"type":"array","items":{"type":"string"}},
+    "status": {"type":"string","enum":["pending","running","completed","failed","partial"]},
+    "started_at": {"type":["string","null"],"format":"date-time"},
+    "completed_at": {"type":["string","null"],"format":"date-time"},
+    "promoted_count": {"type":"integer"},
+    "warning_count": {"type":"integer"},
+    "rejected_count": {"type":"integer"},
+    "review_count": {"type":"integer"},
+    "failure_summary": {"type":["string","null"]},
+    "created_at": {"type":"string","format":"date-time"}
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.metalshopping.local/schema/erp_integrations/trigger_run_request/v1",
+  "title": "ErpTriggerRunRequest",
+  "type": "object",
+  "required": ["run_mode","entity_scope"],
+  "properties": {
+    "run_mode": {"type":"string","enum":["bulk","incremental","manual_rerun"]},
+    "entity_scope": {"type":"array","minItems":1,"items":{"type":"string","enum":["products","prices","costs","inventory","sales","purchases","customers","suppliers"]}}
+  }
+}

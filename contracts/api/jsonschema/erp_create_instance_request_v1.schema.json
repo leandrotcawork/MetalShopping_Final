@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.metalshopping.local/schema/erp_integrations/create_instance_request/v1",
+  "title": "ErpCreateInstanceRequest",
+  "type": "object",
+  "required": ["connector_type","display_name","connection_ref","enabled_entities"],
+  "properties": {
+    "connector_type": {"type":"string","enum":["sankhya"]},
+    "display_name": {"type":"string","minLength":1,"maxLength":200},
+    "connection_ref": {"type":"string","minLength":1},
+    "enabled_entities": {"type":"array","minItems":1,"items":{"type":"string","enum":["products","prices","costs","inventory","sales","purchases","customers","suppliers"]}},
+    "sync_schedule": {"type":["string","null"]}
+  }
+}

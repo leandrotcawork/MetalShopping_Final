@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.metalshopping.local/schema/erp_integrations/resolve_review_request/v1",
+  "title": "ErpResolveReviewRequest",
+  "type": "object",
+  "required": ["resolution"],
+  "properties": {
+    "resolution": {"type":"string","enum":["resolved","dismissed"]},
+    "resolution_note": {"type":"string","maxLength":1000}
+  }
+}

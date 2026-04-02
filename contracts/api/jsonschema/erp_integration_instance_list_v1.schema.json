@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.metalshopping.local/schema/erp_integrations/integration_instance_list/v1",
+  "title": "ErpIntegrationInstanceList",
+  "type": "object",
+  "required": ["items"],
+  "properties": {"items": {"type":"array","items":{"$ref":"erp_integration_instance_v1.schema.json"}}}
+}

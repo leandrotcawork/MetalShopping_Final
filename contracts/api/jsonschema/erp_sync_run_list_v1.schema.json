@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.metalshopping.local/schema/erp_integrations/sync_run_list/v1",
+  "title": "ErpSyncRunList",
+  "type": "object",
+  "required": ["items"],
+  "properties": {"items": {"type":"array","items":{"$ref":"erp_sync_run_v1.schema.json"}}}
+}
