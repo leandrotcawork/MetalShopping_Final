@@ -67,8 +67,9 @@ type ReconciliationReader interface {
 	MarkPromoted(ctx context.Context, tenantID, reconciliationID, canonicalID string) error
 	// MarkPromotionFailed records a failed promotion attempt.
 	MarkPromotionFailed(ctx context.Context, tenantID, reconciliationID, reasonCode string, warningDetails *string) error
-	// MarkReviewRequired records a non-promotable record that needs manual review.
-	MarkReviewRequired(ctx context.Context, tenantID, reconciliationID, reasonCode string, warningDetails *string) error
+	// MarkReviewRequired records a non-promotable record that needs manual review
+	// and materializes the corresponding open review item.
+	MarkReviewRequired(ctx context.Context, tenantID, reconciliationID, reasonCode, problemSummary, recommendedAction string, warningDetails *string) error
 }
 
 // StagingReader provides read access to normalized ERP staging records.

@@ -62,9 +62,11 @@ type recordedPromotion struct {
 }
 
 type recordedFailure struct {
-	reconciliationID string
-	reasonCode       string
-	warningDetails   *string
+	reconciliationID  string
+	reasonCode        string
+	problemSummary    string
+	recommendedAction string
+	warningDetails    *string
 }
 
 type stubPromotionRepository struct {
@@ -100,8 +102,14 @@ func (r *stubPromotionRepository) MarkPromotionFailed(_ context.Context, _, reco
 	return nil
 }
 
-func (r *stubPromotionRepository) MarkReviewRequired(_ context.Context, _, reconciliationID, reasonCode string, warningDetails *string) error {
-	r.reviewRequired = append(r.reviewRequired, recordedFailure{reconciliationID: reconciliationID, reasonCode: reasonCode, warningDetails: warningDetails})
+func (r *stubPromotionRepository) MarkReviewRequired(_ context.Context, _, reconciliationID, reasonCode, problemSummary, recommendedAction string, warningDetails *string) error {
+	r.reviewRequired = append(r.reviewRequired, recordedFailure{
+		reconciliationID:  reconciliationID,
+		reasonCode:        reasonCode,
+		problemSummary:    problemSummary,
+		recommendedAction: recommendedAction,
+		warningDetails:    warningDetails,
+	})
 	return nil
 }
 
@@ -246,7 +254,7 @@ func TestPromotionConsumerSkipsDuplicateClaim(t *testing.T) {
 	}
 }
 
-func TestPromotionConsumerSkipsWhenAutoPromotionDisabled(t *testing.T) {
+func TestPromotionConsumerRoutesWhenAutoPromotionDisabledToReviewRequired(t *testing.T) {
 	reconRepo := &stubPromotionRepository{claimResult: true}
 	guard := &stubAutoPromoGuard{err: domain.ErrAutoPromotionDisabled}
 	consumer := NewPromotionConsumer(reconRepo, guard, NewProductPromotion(&stubPromotionReader{}, &stubRunRepo{}, &recordingProductWriter{}))
@@ -263,6 +271,27 @@ func TestPromotionConsumerSkipsWhenAutoPromotionDisabled(t *testing.T) {
 
 	if got := len(reconRepo.claimCalls); got != 0 {
 		t.Fatalf("expected no claim when auto-promotion is disabled, got %d", got)
+	}
+	if got := len(reconRepo.reviewRequired); got != 1 {
+		t.Fatalf("expected 1 review-required row, got %d", got)
+	}
+	if got := len(reconRepo.failed); got != 0 {
+		t.Fatalf("expected no failed rows on review-required path, got %d", got)
+	}
+	if reconRepo.reviewRequired[0].reasonCode != autoPromotionDisabledReasonCode {
+		t.Fatalf("expected reason code %s, got %s", autoPromotionDisabledReasonCode, reconRepo.reviewRequired[0].reasonCode)
+	}
+	if reconRepo.reviewRequired[0].problemSummary != autoPromotionDisabledReviewSummary {
+		t.Fatalf("expected problem summary %q, got %q", autoPromotionDisabledReviewSummary, reconRepo.reviewRequired[0].problemSummary)
+	}
+	if reconRepo.reviewRequired[0].recommendedAction != autoPromotionDisabledRecommendedAction {
+		t.Fatalf("expected recommended action %q, got %q", autoPromotionDisabledRecommendedAction, reconRepo.reviewRequired[0].recommendedAction)
+	}
+	if reconRepo.reviewRequired[0].warningDetails == nil || !strings.Contains(*reconRepo.reviewRequired[0].warningDetails, autoPromotionDisabledReasonCode) {
+		t.Fatalf("expected structured review details with auto-disabled reason, got %#v", reconRepo.reviewRequired[0].warningDetails)
+	}
+	if reconRepo.reviewRequired[0].warningDetails == nil || !strings.Contains(*reconRepo.reviewRequired[0].warningDetails, `"promotion_status":"failed"`) {
+		t.Fatalf("expected failed lifecycle state in review payload, got %#v", reconRepo.reviewRequired[0].warningDetails)
 	}
 }
 
@@ -350,6 +379,12 @@ func TestPromotionConsumerRoutesUnsupportedEntityTypeToReviewRequired(t *testing
 	}
 	if reconRepo.reviewRequired[0].reasonCode != unsupportedPromotionEntityReasonCode {
 		t.Fatalf("expected reason code %s, got %s", unsupportedPromotionEntityReasonCode, reconRepo.reviewRequired[0].reasonCode)
+	}
+	if reconRepo.reviewRequired[0].problemSummary != "unsupported ERP entity type" {
+		t.Fatalf("expected problem summary for unsupported entity, got %q", reconRepo.reviewRequired[0].problemSummary)
+	}
+	if reconRepo.reviewRequired[0].recommendedAction != "review the entity mapping before rerunning promotion" {
+		t.Fatalf("expected recommended action for unsupported entity, got %q", reconRepo.reviewRequired[0].recommendedAction)
 	}
 	if reconRepo.reviewRequired[0].warningDetails == nil || !strings.Contains(*reconRepo.reviewRequired[0].warningDetails, unsupportedPromotionEntityReasonCode) {
 		t.Fatalf("expected review warning details, got %#v", reconRepo.reviewRequired[0].warningDetails)

@@ -13,6 +13,9 @@ import (
 )
 
 const promotionBatchSize = 50
+const autoPromotionDisabledReasonCode = "ERP_PROMOTION_AUTO_DISABLED"
+const autoPromotionDisabledReviewSummary = "auto-promotion is disabled for this tenant"
+const autoPromotionDisabledRecommendedAction = "enable auto-promotion or route the item through manual review"
 
 // PromotionConsumer polls erp_reconciliation_results for promotable records and
 // promotes product rows into the canonical catalog.
@@ -76,7 +79,26 @@ func (c *PromotionConsumer) promoteOne(ctx context.Context, result *domain.Recon
 	// Check whether auto-promotion is permitted for this tenant.
 	if err := c.autoPromoGuard.CheckAutoPromotion(ctx, result.TenantID); err != nil {
 		if errors.Is(err, domain.ErrAutoPromotionDisabled) {
-			// Tenant has disabled auto-promotion; leave as pending for manual resolution.
+			promotionResult := *result
+			promotionResult.PromotionStatus = domain.PromotionStatusFailed
+			warningDetails := buildPromotionFailureWarningDetails(&promotionResult, autoPromotionDisabledReasonCode, "auto-promotion disabled", nil)
+			if reviewErr := c.reconRepo.MarkReviewRequired(
+				ctx,
+				result.TenantID,
+				result.ReconciliationID,
+				autoPromotionDisabledReasonCode,
+				autoPromotionDisabledReviewSummary,
+				autoPromotionDisabledRecommendedAction,
+				warningDetails,
+			); reviewErr != nil {
+				log.Printf("WARN erp PromotionConsumer: mark review required for reconciliation %s tenant=%s reason_code=%s: %v", result.ReconciliationID, result.TenantID, autoPromotionDisabledReasonCode, reviewErr)
+				failureDetails := buildPromotionFailureWarningDetails(&promotionResult, promotionFailureReasonCode, "mark review required failed", reviewErr)
+				if failErr := c.reconRepo.MarkPromotionFailed(ctx, result.TenantID, result.ReconciliationID, promotionFailureReasonCode, failureDetails); failErr != nil {
+					log.Printf("WARN erp PromotionConsumer: mark promotion failed for reconciliation %s: %v", result.ReconciliationID, failErr)
+				}
+				return
+			}
+			log.Printf("INFO erp PromotionConsumer: routed reconciliation %s tenant=%s to review_required reason_code=%s", result.ReconciliationID, result.TenantID, autoPromotionDisabledReasonCode)
 			return
 		}
 		log.Printf("WARN erp PromotionConsumer: check auto-promotion for tenant %s: %v", result.TenantID, err)
@@ -99,8 +121,16 @@ func (c *PromotionConsumer) promoteOne(ctx context.Context, result *domain.Recon
 
 	if result.EntityType != domain.EntityTypeProducts {
 		warningDetails := buildPromotionFailureWarningDetails(&promotionResult, unsupportedPromotionEntityReasonCode, "unsupported entity type", nil)
-		if err := c.reconRepo.MarkReviewRequired(ctx, result.TenantID, result.ReconciliationID, unsupportedPromotionEntityReasonCode, warningDetails); err != nil {
-			log.Printf("WARN erp PromotionConsumer: mark review required for reconciliation %s: %v", result.ReconciliationID, err)
+		if err := c.reconRepo.MarkReviewRequired(
+			ctx,
+			result.TenantID,
+			result.ReconciliationID,
+			unsupportedPromotionEntityReasonCode,
+			"unsupported ERP entity type",
+			"review the entity mapping before rerunning promotion",
+			warningDetails,
+		); err != nil {
+			log.Printf("WARN erp PromotionConsumer: mark review required for reconciliation %s tenant=%s entity_type=%s reason_code=%s: %v", result.ReconciliationID, result.TenantID, result.EntityType, unsupportedPromotionEntityReasonCode, err)
 			failureDetails := buildPromotionFailureWarningDetails(&promotionResult, promotionFailureReasonCode, "mark review required failed", err)
 			if failErr := c.reconRepo.MarkPromotionFailed(ctx, result.TenantID, result.ReconciliationID, promotionFailureReasonCode, failureDetails); failErr != nil {
 				log.Printf("WARN erp PromotionConsumer: mark promotion failed for reconciliation %s: %v", result.ReconciliationID, failErr)

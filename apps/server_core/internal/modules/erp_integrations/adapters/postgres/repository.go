@@ -2,7 +2,9 @@ package postgres
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"time"
@@ -789,26 +791,85 @@ WHERE tenant_id = current_tenant_id()
 	return nil
 }
 
-func (r *ReconciliationRepo) MarkReviewRequired(ctx context.Context, tenantID, reconciliationID, reasonCode string, warningDetails *string) error {
+func (r *ReconciliationRepo) MarkReviewRequired(ctx context.Context, tenantID, reconciliationID, reasonCode, problemSummary, recommendedAction string, warningDetails *string) error {
 	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, nil)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = tx.Rollback() }()
 
+	reviewID := generateReviewID()
+	now := time.Now().UTC()
 	const updateSQL = `
-UPDATE erp_reconciliation_results
-SET promotion_status = 'failed',
-    classification   = 'review_required',
-    action           = 'skip',
-    reason_code      = $1,
-    warning_details  = $2,
-    canonical_id     = NULL
-WHERE tenant_id = current_tenant_id()
-  AND reconciliation_id = $3
+WITH updated AS (
+  UPDATE erp_reconciliation_results
+  SET promotion_status = 'failed',
+      classification   = 'review_required',
+      action           = 'skip',
+      reason_code      = $1,
+      warning_details  = $2,
+      canonical_id     = NULL
+  WHERE tenant_id = current_tenant_id()
+    AND reconciliation_id = $3
+  RETURNING run_id, staging_id, entity_type, source_id, reconciliation_id, tenant_id
+)
+INSERT INTO erp_review_items (
+  review_id,
+  tenant_id,
+  instance_id,
+  connector_type,
+  entity_type,
+  source_id,
+  run_id,
+  severity,
+  reason_code,
+  problem_summary,
+  raw_id,
+  staging_id,
+  reconciliation_id,
+  recommended_action,
+  item_status,
+  resolved_at,
+  resolved_by,
+  created_at
+)
+SELECT
+  $4,
+  updated.tenant_id,
+  runs.instance_id,
+  runs.connector_type,
+  updated.entity_type,
+  updated.source_id,
+  updated.run_id,
+  $5,
+  $1,
+  $6,
+  COALESCE(staging.raw_id, ''),
+  updated.staging_id,
+  updated.reconciliation_id,
+  $7,
+  'open',
+  NULL,
+  NULL,
+  $8
+FROM updated
+JOIN erp_sync_runs runs
+  ON runs.tenant_id = current_tenant_id()
+ AND runs.run_id = updated.run_id
+LEFT JOIN erp_staging_records staging
+  ON staging.tenant_id = current_tenant_id()
+ AND staging.staging_id = updated.staging_id
 `
-	if _, err := tx.ExecContext(ctx, updateSQL, reasonCode, nullableText(warningDetails), reconciliationID); err != nil {
+	result, err := tx.ExecContext(ctx, updateSQL, reasonCode, nullableText(warningDetails), reconciliationID, reviewID, string(domain.ReviewSeverityWarning), problemSummary, recommendedAction, now)
+	if err != nil {
 		return fmt.Errorf("mark erp reconciliation result review required: %w", err)
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("mark erp reconciliation result review required rows affected: %w", err)
+	}
+	if n == 0 {
+		return fmt.Errorf("mark erp reconciliation result review required: reconciliation %s not found", reconciliationID)
 	}
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit erp reconciliation mark review required: %w", err)
@@ -1002,4 +1063,12 @@ func nullableTimePtr(value *time.Time) any {
 		return nil
 	}
 	return value.UTC()
+}
+
+func generateReviewID() string {
+	buf := make([]byte, 8)
+	if _, err := rand.Read(buf); err != nil {
+		return "rev_fallback"
+	}
+	return "rev_" + hex.EncodeToString(buf)
 }
