@@ -120,6 +120,7 @@ INSERT INTO outbox_events (
   last_error
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+ON CONFLICT (idempotency_key) DO NOTHING
 `
 
 	if _, err := tx.ExecContext(

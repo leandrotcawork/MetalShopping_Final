@@ -528,6 +528,59 @@ func TestMarkFailedAppendsOutboxInSameTransaction(t *testing.T) {
 	state.done()
 }
 
+func TestMarkCompletedIgnoresDuplicateRunCompletedOutbox(t *testing.T) {
+	startedAt := time.Date(2026, 4, 2, 12, 0, 0, 0, time.UTC)
+	completedAt := time.Date(2026, 4, 2, 12, 5, 0, 0, time.UTC)
+	createdAt := time.Date(2026, 4, 2, 11, 55, 0, 0, time.UTC)
+
+	db, state := newScriptedDB(t,
+		scriptStep{kind: stepBegin},
+		scriptStep{kind: stepExec, query: "SELECT set_config('app.tenant_id', $1, true)", args: []any{"tenant-1"}},
+		scriptStep{
+			kind:  stepQuery,
+			query: "RETURNING run_id, tenant_id, instance_id",
+			args:  []any{"run-1", 7, 1, 2, 3},
+			rows: [][]driver.Value{{
+				"run-1",
+				"tenant-1",
+				"instance-1",
+				"sankhya",
+				"bulk",
+				"{products,prices}",
+				"completed",
+				startedAt,
+				completedAt,
+				int64(7),
+				int64(1),
+				int64(2),
+				int64(3),
+				nil,
+				createdAt,
+			}},
+		},
+		scriptStep{
+			kind:         stepExec,
+			query:        "ON CONFLICT (idempotency_key) DO NOTHING",
+			rowsAffected: int64Ptr(0),
+			assert: func(t *testing.T, _ string, args []driver.NamedValue) {
+				t.Helper()
+				assertRunCompletedOutboxArgs(t, args, "run-1", "tenant-1")
+			},
+		},
+		scriptStep{kind: stepCommit},
+	)
+
+	ledger := NewLedger(db)
+	tenantCtx, err := tenantdb.WithTenantID(context.Background(), "tenant-1")
+	if err != nil {
+		t.Fatalf("WithTenantID error: %v", err)
+	}
+	if err := ledger.MarkCompleted(tenantCtx, "run-1", 7, 1, 2, 3); err != nil {
+		t.Fatalf("MarkCompleted error: %v", err)
+	}
+	state.done()
+}
+
 func assertRunCompletedOutboxArgs(t *testing.T, args []driver.NamedValue, runID, tenantID string) {
 	t.Helper()
 	if len(args) != 15 {

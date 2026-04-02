@@ -9,7 +9,6 @@ import (
 
 	"metalshopping/server_core/internal/modules/erp_integrations/domain"
 	"metalshopping/server_core/internal/modules/erp_integrations/ports"
-	"metalshopping/server_core/internal/platform/messaging/outbox"
 )
 
 // Service is the application service for the erp_integrations module.
@@ -19,7 +18,6 @@ type Service struct {
 	reviewRepo   ports.ReviewRepository
 	enabledGuard ports.IntegrationEnabledGuard
 	permChecker  ports.PermissionChecker
-	outboxStore  *outbox.Store
 	now          func() time.Time
 }
 
@@ -30,7 +28,7 @@ func NewService(
 	reviewRepo ports.ReviewRepository,
 	enabledGuard ports.IntegrationEnabledGuard,
 	permChecker ports.PermissionChecker,
-	outboxStore *outbox.Store,
+	_ any,
 ) *Service {
 	return &Service{
 		instanceRepo: instanceRepo,
@@ -38,7 +36,6 @@ func NewService(
 		reviewRepo:   reviewRepo,
 		enabledGuard: enabledGuard,
 		permChecker:  permChecker,
-		outboxStore:  outboxStore,
 		now:          func() time.Time { return time.Now().UTC() },
 	}
 }
