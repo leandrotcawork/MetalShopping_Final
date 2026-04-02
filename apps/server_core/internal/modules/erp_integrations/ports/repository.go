@@ -35,6 +35,10 @@ type ReviewRepository interface {
 type ReconciliationReader interface {
 	// ListPromotableResults returns pending reconciliation results eligible for promotion.
 	ListPromotableResults(ctx context.Context, tenantID string, limit int) ([]*domain.ReconciliationResult, error)
+	// ListAllPendingPromotion returns pending reconciliation results across all tenants.
+	// This is a system-level operation used by the promotion consumer; it bypasses
+	// tenant filtering so that the consumer can process records from all tenants.
+	ListAllPendingPromotion(ctx context.Context, limit int) ([]*domain.ReconciliationResult, error)
 	// ClaimForPromotion atomically sets promotion_status = 'promoting' for a single result.
 	ClaimForPromotion(ctx context.Context, tenantID, reconciliationID string) error
 	// MarkPromoted records a successful promotion and stores the canonical entity ID.

@@ -604,6 +604,39 @@ LIMIT $1
 	return items, nil
 }
 
+func (r *ReconciliationRepo) ListAllPendingPromotion(ctx context.Context, limit int) ([]*domain.ReconciliationResult, error) {
+	// System-level query: does NOT use current_tenant_id() so that the promotion
+	// consumer can process records across all tenants in a single pass.
+	const querySQL = `
+SELECT reconciliation_id, tenant_id, run_id, staging_id, entity_type, source_id,
+       canonical_id, action, classification, reason_code, warning_details,
+       reconciled_at, promotion_status
+FROM erp_reconciliation_results
+WHERE classification IN ('promotable', 'promotable_with_warning')
+  AND promotion_status = 'pending'
+ORDER BY reconciled_at ASC
+LIMIT $1
+`
+	rows, err := r.db.QueryContext(ctx, querySQL, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list all pending erp reconciliation results: %w", err)
+	}
+	defer rows.Close()
+
+	items := make([]*domain.ReconciliationResult, 0, limit)
+	for rows.Next() {
+		item, err := scanReconciliationResult(rows)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate all pending erp reconciliation results: %w", err)
+	}
+	return items, nil
+}
+
 func (r *ReconciliationRepo) ClaimForPromotion(ctx context.Context, tenantID, reconciliationID string) error {
 	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, nil)
 	if err != nil {

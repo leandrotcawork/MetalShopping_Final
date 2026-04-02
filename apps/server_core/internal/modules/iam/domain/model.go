@@ -35,10 +35,12 @@ const (
 	PermSalesRead              Permission = "sales:read"
 	PermCRMRead                Permission = "crm:read"
 	PermCRMWrite               Permission = "crm:write"
-	PermAutomationRead         Permission = "automation:read"
-	PermAutomationManage       Permission = "automation:manage"
-	PermAnalyticsServingRead   Permission = "analytics_serving:read"
-	PermMarketIntelligenceRead Permission = "market_intelligence:read"
+	PermAutomationRead          Permission = "automation:read"
+	PermAutomationManage        Permission = "automation:manage"
+	PermAnalyticsServingRead    Permission = "analytics_serving:read"
+	PermMarketIntelligenceRead  Permission = "market_intelligence:read"
+	PermIntegrationsRead        Permission = "integrations:read"
+	PermIntegrationsWrite       Permission = "integrations:write"
 )
 
 type RoleAssignment struct {
@@ -81,6 +83,8 @@ var allowedPermissions = []Permission{
 	PermAutomationManage,
 	PermAnalyticsServingRead,
 	PermMarketIntelligenceRead,
+	PermIntegrationsRead,
+	PermIntegrationsWrite,
 }
 
 func ParseRole(raw string) (Role, error) {

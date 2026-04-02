@@ -13,6 +13,11 @@ import (
 	catalogapp "metalshopping/server_core/internal/modules/catalog/application"
 	catalogreadmodel "metalshopping/server_core/internal/modules/catalog/readmodel"
 	cataloghttp "metalshopping/server_core/internal/modules/catalog/transport/http"
+	erpiam "metalshopping/server_core/internal/modules/erp_integrations/adapters/iam"
+	erpgov "metalshopping/server_core/internal/modules/erp_integrations/adapters/governance"
+	erppg "metalshopping/server_core/internal/modules/erp_integrations/adapters/postgres"
+	erpapp "metalshopping/server_core/internal/modules/erp_integrations/application"
+	erphttp "metalshopping/server_core/internal/modules/erp_integrations/transport/http"
 	homepg "metalshopping/server_core/internal/modules/home/adapters/postgres"
 	homeapp "metalshopping/server_core/internal/modules/home/application"
 	homehttp "metalshopping/server_core/internal/modules/home/transport/http"
@@ -92,6 +97,23 @@ func composeModules(ctx context.Context, runtime runtimeComposition, governance 
 	shoppingHandler := shoppinghttp.NewHandler(shoppingService)
 	suppliersHandler := suppliershttp.NewHandler(suppliersService)
 
+	// ERP integrations module
+	erpRepos := erppg.NewRepos(runtime.db, outboxStore)
+	erpEnabledGuard := erpgov.NewIntegrationEnabledGuard(governance.featureFlags, runtime.environment)
+	erpAutoPromoGuard := erpgov.NewAutoPromotionGuard(governance.policies, runtime.environment)
+	erpPermChecker := erpiam.NewPermissionChecker(iamAuthorization)
+	erpSvc := erpapp.NewService(
+		erpRepos.Instances,
+		erpRepos.Runs,
+		erpRepos.Reviews,
+		erpEnabledGuard,
+		erpPermChecker,
+		outboxStore,
+	)
+	erpHandler := erphttp.NewHandler(erpSvc)
+	erpPromoConsumer := erpapp.NewPromotionConsumer(erpRepos.Reconciliations, erpAutoPromoGuard, outboxStore)
+	go erpPromoConsumer.Start(ctx)
+
 	return moduleComposition{
 		iamRepo:       iamRepo,
 		iamAuthorizer: iamAuthorizer,
@@ -104,6 +126,7 @@ func composeModules(ctx context.Context, runtime runtimeComposition, governance 
 			analyticsHandler.RegisterRoutes(mux)
 			shoppingHandler.RegisterRoutes(mux)
 			suppliersHandler.RegisterRoutes(mux)
+			erpHandler.RegisterRoutes(mux)
 		},
 	}
 }
