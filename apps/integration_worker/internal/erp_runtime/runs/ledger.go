@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
 )
 
 // RunClaim holds the details of a claimed pending run.
@@ -46,18 +47,18 @@ FOR UPDATE SKIP LOCKED`
 	row := tx.QueryRowContext(ctx, selectQ)
 
 	var claim RunClaim
-	// entity_scope is a TEXT[] in Postgres; scan as a string slice via pq.Array or
-	// as a raw []string — we use the pgx driver so TEXT[] scans into []string natively
-	// when using pgx. For database/sql + pgx stdlib adapter we need pgtype or a helper.
-	// We store entity_scope as TEXT[] and scan using a simple []string with pgx stdlib.
-	var entityScope []string
+	// entity_scope is TEXT[] in Postgres. The pgx/v5 stdlib adapter does not
+	// automatically decode TEXT[] into []string via database/sql Scan. Instead we
+	// scan the raw Postgres array literal (e.g. "{val1,val2}") as a plain string
+	// and decode it with parsePGTextArray.
+	var entityScopeRaw string
 	err = row.Scan(
 		&claim.RunID,
 		&claim.TenantID,
 		&claim.InstanceID,
 		&claim.ConnectorType,
 		&claim.RunMode,
-		&entityScope,
+		&entityScopeRaw,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -65,7 +66,7 @@ FOR UPDATE SKIP LOCKED`
 	if err != nil {
 		return nil, err
 	}
-	claim.EntityScope = entityScope
+	claim.EntityScope = parsePGTextArray(entityScopeRaw)
 
 	const updateQ = `
 UPDATE erp_sync_runs
@@ -133,4 +134,24 @@ SET cursor_state = $2::jsonb
 WHERE run_id = $1`
 	_, err := l.db.ExecContext(ctx, q, runID, cursorJSON)
 	return err
+}
+
+// parsePGTextArray decodes a Postgres TEXT[] literal of the form {val1,val2,...}
+// into a Go string slice. Quoted elements (e.g. {"a b","c,d"}) are handled by
+// stripping surrounding double-quotes from each element. This covers all entity
+// scope values, which are simple lowercase identifiers without embedded commas.
+func parsePGTextArray(raw string) []string {
+	raw = strings.TrimPrefix(raw, "{")
+	raw = strings.TrimSuffix(raw, "}")
+	if raw == "" {
+		return nil
+	}
+	parts := strings.Split(raw, ",")
+	result := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		p = strings.Trim(p, `"`)
+		result = append(result, p)
+	}
+	return result
 }
