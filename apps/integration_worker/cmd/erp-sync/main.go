@@ -83,11 +83,17 @@ func main() {
 		log.Printf("erp-sync: claimed run %s (tenant=%s instance=%s connector=%s)",
 			claim.RunID, claim.TenantID, claim.InstanceID, claim.ConnectorType)
 
+		tenantCtx, err := tenantdb.WithTenantID(ctx, claim.TenantID)
+		if err != nil {
+			log.Printf("erp-sync: invalid tenant context for run %s: %v", claim.RunID, err)
+			continue
+		}
+
 		// Fetch connection_ref for this instance
-		connectionRef, err := getConnectionRef(ctx, db, claim.TenantID, claim.InstanceID)
+		connectionRef, err := getConnectionRef(tenantCtx, db, claim.TenantID, claim.InstanceID)
 		if err != nil {
 			log.Printf("erp-sync: getConnectionRef error for instance %s: %v", claim.InstanceID, err)
-			if markErr := ledger.MarkFailed(ctx, claim.RunID, fmt.Sprintf("connection_ref lookup failed: %v", err)); markErr != nil {
+			if markErr := ledger.MarkFailed(tenantCtx, claim.RunID, fmt.Sprintf("connection_ref lookup failed: %v", err)); markErr != nil {
 				log.Printf("erp-sync: MarkFailed error: %v", markErr)
 			}
 			continue
@@ -95,7 +101,7 @@ func main() {
 
 		// Execute in a goroutine so the claim loop can pick up the next run immediately
 		go func(c *runs.RunClaim, ref string) {
-			if execErr := runner.Execute(ctx, c, ref); execErr != nil {
+			if execErr := runner.Execute(tenantCtx, c, ref); execErr != nil {
 				log.Printf("erp-sync: run %s failed: %v", c.RunID, execErr)
 			} else {
 				log.Printf("erp-sync: run %s completed", c.RunID)

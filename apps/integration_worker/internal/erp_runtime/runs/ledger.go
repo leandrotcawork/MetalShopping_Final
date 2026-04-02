@@ -156,24 +156,38 @@ WHERE run_id = $1
 }
 
 func (l *Ledger) withRunTenantTx(ctx context.Context, runID string, fn func(*sql.Tx) error) error {
-	tx, err := l.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback() //nolint:errcheck
+	tenantID, ok := tenantdb.TenantIDFromContext(ctx)
+	if !ok {
+		tx, err := l.db.BeginTx(ctx, nil)
+		if err != nil {
+			return err
+		}
+		defer tx.Rollback() //nolint:errcheck
 
-	var tenantID string
-	if err := tx.QueryRowContext(ctx, `
+		if err := tx.QueryRowContext(ctx, `
 SELECT tenant_id
 FROM erp_sync_runs
 WHERE run_id = $1
 FOR UPDATE`, runID).Scan(&tenantID); err != nil {
-		return err
+			return err
+		}
+
+		if err := tenantdb.SetTenantContext(ctx, tx, tenantID); err != nil {
+			return err
+		}
+
+		if err := fn(tx); err != nil {
+			return err
+		}
+
+		return tx.Commit()
 	}
 
-	if err := tenantdb.SetTenantContext(ctx, tx, tenantID); err != nil {
+	tx, err := tenantdb.BeginTenantTx(ctx, l.db, tenantID, nil)
+	if err != nil {
 		return err
 	}
+	defer tx.Rollback() //nolint:errcheck
 
 	if err := fn(tx); err != nil {
 		return err

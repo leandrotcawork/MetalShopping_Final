@@ -238,19 +238,17 @@ func TestClaimPendingRunSetsTenantContextBeforeUpdate(t *testing.T) {
 func TestMarkCompletedUsesRunTenantContext(t *testing.T) {
 	db, state := newScriptedDB(t,
 		scriptStep{kind: stepBegin},
-		scriptStep{
-			kind:  stepQuery,
-			query: "SELECT tenant_id",
-			args:  []any{"run-1"},
-			rows:  [][]driver.Value{{"tenant-1"}},
-		},
 		scriptStep{kind: stepExec, query: "SELECT set_config('app.tenant_id', $1, true)", args: []any{"tenant-1"}},
 		scriptStep{kind: stepExec, query: "SET status = 'completed'", args: []any{"run-1", 7, 1, 2, 3}},
 		scriptStep{kind: stepCommit},
 	)
 
 	ledger := NewLedger(db)
-	if err := ledger.MarkCompleted(context.Background(), "run-1", 7, 1, 2, 3); err != nil {
+	tenantCtx, err := tenantdb.WithTenantID(context.Background(), "tenant-1")
+	if err != nil {
+		t.Fatalf("WithTenantID error: %v", err)
+	}
+	if err := ledger.MarkCompleted(tenantCtx, "run-1", 7, 1, 2, 3); err != nil {
 		t.Fatalf("MarkCompleted error: %v", err)
 	}
 	state.done()
@@ -259,19 +257,17 @@ func TestMarkCompletedUsesRunTenantContext(t *testing.T) {
 func TestSaveCursorUsesRunTenantContext(t *testing.T) {
 	db, state := newScriptedDB(t,
 		scriptStep{kind: stepBegin},
-		scriptStep{
-			kind:  stepQuery,
-			query: "SELECT tenant_id",
-			args:  []any{"run-1"},
-			rows:  [][]driver.Value{{"tenant-1"}},
-		},
 		scriptStep{kind: stepExec, query: "SELECT set_config('app.tenant_id', $1, true)", args: []any{"tenant-1"}},
 		scriptStep{kind: stepExec, query: "SET cursor_state = $2::jsonb", args: []any{"run-1", `{"cursor":"abc"}`}},
 		scriptStep{kind: stepCommit},
 	)
 
 	ledger := NewLedger(db)
-	if err := ledger.SaveCursor(context.Background(), "run-1", `{"cursor":"abc"}`); err != nil {
+	tenantCtx, err := tenantdb.WithTenantID(context.Background(), "tenant-1")
+	if err != nil {
+		t.Fatalf("WithTenantID error: %v", err)
+	}
+	if err := ledger.SaveCursor(tenantCtx, "run-1", `{"cursor":"abc"}`); err != nil {
 		t.Fatalf("SaveCursor error: %v", err)
 	}
 	state.done()

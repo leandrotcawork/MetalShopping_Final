@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+type tenantIDKey struct{}
+
 type txBeginner interface {
 	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
 }
@@ -49,6 +51,21 @@ func SetTenantContext(ctx context.Context, execer execContexter, tenantID string
 	}
 
 	return nil
+}
+
+// WithTenantID stores a validated tenant id in context for downstream tenant-bound work.
+func WithTenantID(ctx context.Context, tenantID string) (context.Context, error) {
+	tenantID, err := ValidateTenantID(tenantID)
+	if err != nil {
+		return nil, err
+	}
+	return context.WithValue(ctx, tenantIDKey{}, tenantID), nil
+}
+
+// TenantIDFromContext returns the tenant id stored in context, if present.
+func TenantIDFromContext(ctx context.Context) (string, bool) {
+	tenantID, ok := ctx.Value(tenantIDKey{}).(string)
+	return tenantID, ok
 }
 
 // ValidateTenantID trims and validates a tenant identifier before it is bound
