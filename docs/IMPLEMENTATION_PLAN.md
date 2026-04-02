@@ -169,7 +169,7 @@ Phase 4 gate:
 - backend-owned web auth/session foundation for thin clients
 - identity provider bootstrap and cross-channel login architecture
 - make-it-work-first module execution (`OpenAPI -> Go handler -> generated SDK -> React page`)
-- master orchestration planning on top of the accepted governance hierarchy
+- master orchestration execution on top of the accepted governance hierarchy
 
 ## Current module order (make-it-work-first)
 
