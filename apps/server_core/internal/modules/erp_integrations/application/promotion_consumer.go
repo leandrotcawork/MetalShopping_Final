@@ -163,14 +163,7 @@ func (c *PromotionConsumer) promoteOne(ctx context.Context, result *domain.Recon
 		}
 		return
 	}
-
-	if err := c.reconRepo.MarkPromoted(ctx, result.TenantID, result.ReconciliationID, canonicalID); err != nil {
-		log.Printf("WARN erp PromotionConsumer: mark promoted for reconciliation %s: %v", result.ReconciliationID, err)
-		failureDetails := buildPromotionFailureWarningDetails(&promotionResult, promotionFailureReasonCode, "mark promoted failed", err)
-		if failErr := c.reconRepo.MarkPromotionFailed(ctx, result.TenantID, result.ReconciliationID, promotionFailureReasonCode, failureDetails); failErr != nil {
-			log.Printf("WARN erp PromotionConsumer: mark promotion failed for reconciliation %s: %v", result.ReconciliationID, failErr)
-		}
-	}
+	log.Printf("INFO erp PromotionConsumer: promoted reconciliation %s tenant=%s canonical_id=%s", result.ReconciliationID, result.TenantID, canonicalID)
 }
 
 const promotionFailureReasonCode = "ERP_PROMOTION_FAILED"

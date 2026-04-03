@@ -3,6 +3,7 @@ package review
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -73,8 +74,8 @@ func (s *Store) CreateFromReconciliation(
 INSERT INTO erp_review_items
   (review_id, tenant_id, instance_id, connector_type, entity_type, source_id,
    run_id, severity, reason_code, problem_summary, raw_id, staging_id,
-   reconciliation_id, recommended_action, item_status, created_at)
-VALUES ($1, current_tenant_id(), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'open', $14)`
+   reconciliation_id, staging_snapshot, reconciliation_output, recommended_action, item_status, created_at)
+VALUES ($1, current_tenant_id(), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb, $14::jsonb, $15, 'open', $16)`
 
 	now := time.Now().UTC()
 	for _, r := range actionable {
@@ -92,10 +93,21 @@ VALUES ($1, current_tenant_id(), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 
 			problemSummary = "Record requires manual review: " + r.ReasonCode
 		}
 
-		// Resolve raw_id from staging index
+		// Resolve raw_id and staging snapshot from staging index.
 		rawID := ""
+		var stagingSnapshot *string
+		var reconciliationOutput *string
 		if sr, ok := idx[r.StagingID]; ok {
 			rawID = sr.RawID
+			if len(sr.NormalizedJSON) > 0 {
+				value := string(sr.NormalizedJSON)
+				stagingSnapshot = &value
+			}
+		}
+
+		reconciliationOutput, err = marshalReconciliationOutput(r)
+		if err != nil {
+			return fmt.Errorf("marshal reconciliation output: %w", err)
 		}
 
 		_, err := tx.ExecContext(ctx, q,
@@ -111,6 +123,8 @@ VALUES ($1, current_tenant_id(), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 
 			rawID,
 			r.StagingID,
 			r.ReconciliationID,
+			stagingSnapshot,
+			reconciliationOutput,
 			recommendedAction,
 			now,
 		)
@@ -120,4 +134,28 @@ VALUES ($1, current_tenant_id(), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 
 	}
 
 	return tx.Commit()
+}
+
+func marshalReconciliationOutput(result *reconciliation_pkg.ReconciliationResult) (*string, error) {
+	payload := map[string]any{
+		"reconciliation_id": result.ReconciliationID,
+		"entity_type":       string(result.EntityType),
+		"source_id":         result.SourceID,
+		"action":            result.Action,
+		"classification":    string(result.Classification),
+		"reason_code":       result.ReasonCode,
+	}
+	if result.WarningDetails != nil {
+		if json.Valid([]byte(*result.WarningDetails)) {
+			payload["warning_details"] = json.RawMessage(*result.WarningDetails)
+		} else {
+			payload["warning_details_raw"] = *result.WarningDetails
+		}
+	}
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+	value := string(encoded)
+	return &value, nil
 }

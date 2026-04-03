@@ -39,6 +39,11 @@ func (l *Ledger) ClaimPendingRun(ctx context.Context) (*RunClaim, error) {
 	}
 	defer tx.Rollback() //nolint:errcheck
 
+	// Bind reserved system tenant context so claim can read pending runs across tenants under forced RLS.
+	if err := tenantdb.SetSystemTenantContext(ctx, tx); err != nil {
+		return nil, err
+	}
+
 	const selectQ = `
 SELECT run_id, tenant_id, instance_id, connector_type, run_mode, entity_scope
 FROM erp_sync_runs

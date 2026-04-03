@@ -257,8 +257,8 @@ type ReviewItem struct {
 	RawPayloadRef        string
 	StagingID            string  // FK reference to erp_staging_records
 	ReconciliationID     string  // FK reference to erp_reconciliation_results
-	StagingSnapshot      *string // optional JSON enrichment (not persisted)
-	ReconciliationOutput *string // optional JSON enrichment (not persisted)
+	StagingSnapshot      *string // optional JSON snapshot of staging payload
+	ReconciliationOutput *string // optional JSON snapshot of reconciliation result
 	RecommendedAction    string
 	ItemStatus           ReviewItemStatus
 	ResolvedAt           *time.Time

@@ -116,6 +116,26 @@ func (w *ProductWriter) PromoteProduct(ctx context.Context, traceID string, resu
 		return "", fmt.Errorf("append erp entity promoted outbox record: %w", err)
 	}
 
+	const markPromotedSQL = `
+UPDATE erp_reconciliation_results
+SET promotion_status = 'promoted',
+    canonical_id     = $1
+WHERE tenant_id = current_tenant_id()
+  AND reconciliation_id = $2
+  AND promotion_status = 'promoting'
+`
+	resultUpdate, err := tx.ExecContext(ctx, markPromotedSQL, canonicalID, result.ReconciliationID)
+	if err != nil {
+		return "", fmt.Errorf("mark erp reconciliation promoted in product promotion tx: %w", err)
+	}
+	rowsAffected, err := resultUpdate.RowsAffected()
+	if err != nil {
+		return "", fmt.Errorf("mark erp reconciliation promoted rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return "", fmt.Errorf("mark erp reconciliation promoted: no rows updated")
+	}
+
 	if err := tx.Commit(); err != nil {
 		return "", fmt.Errorf("commit catalog product promotion: %w", err)
 	}

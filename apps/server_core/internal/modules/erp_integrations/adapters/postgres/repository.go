@@ -421,6 +421,8 @@ INSERT INTO erp_review_items (
   raw_id,
   staging_id,
   reconciliation_id,
+  staging_snapshot,
+  reconciliation_output,
   recommended_action,
   item_status,
   resolved_at,
@@ -445,7 +447,9 @@ VALUES (
   $14,
   $15,
   $16,
-  $17
+  $17,
+  $18,
+  $19
 )
 `
 	if _, err := tx.ExecContext(
@@ -463,6 +467,8 @@ VALUES (
 		item.RawPayloadRef,
 		item.StagingID,
 		item.ReconciliationID,
+		nullableJSON(item.StagingSnapshot),
+		nullableJSON(item.ReconciliationOutput),
 		item.RecommendedAction,
 		string(item.ItemStatus),
 		item.ResolvedAt,
@@ -488,7 +494,8 @@ func (r *ReviewRepo) Get(ctx context.Context, tenantID, reviewID string) (*domai
 	const querySQL = `
 SELECT review_id, tenant_id, instance_id, connector_type, entity_type, source_id,
        run_id, severity, reason_code, problem_summary, raw_id, staging_id,
-       reconciliation_id, recommended_action, item_status, resolved_at, resolved_by, created_at
+       reconciliation_id, staging_snapshot, reconciliation_output, recommended_action,
+       item_status, resolved_at, resolved_by, created_at
 FROM erp_review_items
 WHERE tenant_id = current_tenant_id()
   AND review_id = $1
@@ -517,7 +524,8 @@ func (r *ReviewRepo) List(ctx context.Context, tenantID string, limit, offset in
 	const querySQL = `
 SELECT review_id, tenant_id, instance_id, connector_type, entity_type, source_id,
        run_id, severity, reason_code, problem_summary, raw_id, staging_id,
-       reconciliation_id, recommended_action, item_status, resolved_at, resolved_by, created_at
+       reconciliation_id, staging_snapshot, reconciliation_output, recommended_action,
+       item_status, resolved_at, resolved_by, created_at
 FROM erp_review_items
 WHERE tenant_id = current_tenant_id()
   AND item_status = 'open'
@@ -679,8 +687,14 @@ LIMIT $1
 }
 
 func (r *ReconciliationRepo) ListAllPendingPromotion(ctx context.Context, limit int) ([]*domain.ReconciliationResult, error) {
-	// System-level query: does NOT use current_tenant_id() so that the promotion
-	// consumer can process records across all tenants in a single pass.
+	// System-level query: bind the explicit system marker so forced RLS policies
+	// can expose rows across tenants for promotion claiming.
+	tx, err := pgdb.BeginSystemTx(ctx, r.db, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
 	const querySQL = `
 SELECT reconciliation_id, tenant_id, run_id, staging_id, entity_type, source_id,
        canonical_id, action, classification, reason_code, warning_details,
@@ -691,7 +705,7 @@ WHERE classification IN ('promotable', 'promotable_with_warning')
 ORDER BY reconciled_at ASC
 LIMIT $1
 `
-	rows, err := r.db.QueryContext(ctx, querySQL, limit)
+	rows, err := tx.QueryContext(ctx, querySQL, limit)
 	if err != nil {
 		return nil, fmt.Errorf("list all pending erp reconciliation results: %w", err)
 	}
@@ -707,6 +721,9 @@ LIMIT $1
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate all pending erp reconciliation results: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit erp reconciliation results cross-tenant list: %w", err)
 	}
 	return items, nil
 }
@@ -812,7 +829,8 @@ WITH updated AS (
   WHERE tenant_id = current_tenant_id()
     AND reconciliation_id = $3
     AND promotion_status IN ('pending', 'promoting')
-  RETURNING run_id, staging_id, entity_type, source_id, reconciliation_id, tenant_id
+  RETURNING run_id, staging_id, entity_type, source_id, reconciliation_id, tenant_id,
+            action, classification, reason_code, warning_details, promotion_status
 )
 INSERT INTO erp_review_items (
   review_id,
@@ -828,6 +846,8 @@ INSERT INTO erp_review_items (
   raw_id,
   staging_id,
   reconciliation_id,
+  staging_snapshot,
+  reconciliation_output,
   recommended_action,
   item_status,
   resolved_at,
@@ -848,6 +868,17 @@ SELECT
   COALESCE(staging.raw_id, ''),
   updated.staging_id,
   updated.reconciliation_id,
+  staging.normalized_json,
+  jsonb_build_object(
+    'reconciliation_id', updated.reconciliation_id,
+    'entity_type', updated.entity_type,
+    'source_id', updated.source_id,
+    'action', updated.action,
+    'classification', updated.classification,
+    'reason_code', updated.reason_code,
+    'warning_details', updated.warning_details,
+    'promotion_status', updated.promotion_status
+  ),
   $7,
   'open',
   NULL,
@@ -976,6 +1007,8 @@ func scanReviewItem(s scanner) (*domain.ReviewItem, error) {
 	var connectorType, entityType, severity, itemStatus string
 	var resolvedAt sql.NullTime
 	var resolvedBy sql.NullString
+	var stagingSnapshot sql.NullString
+	var reconciliationOutput sql.NullString
 
 	if err := s.Scan(
 		&item.ReviewID,
@@ -991,6 +1024,8 @@ func scanReviewItem(s scanner) (*domain.ReviewItem, error) {
 		&item.RawPayloadRef,
 		&item.StagingID,
 		&item.ReconciliationID,
+		&stagingSnapshot,
+		&reconciliationOutput,
 		&item.RecommendedAction,
 		&itemStatus,
 		&resolvedAt,
@@ -1009,6 +1044,12 @@ func scanReviewItem(s scanner) (*domain.ReviewItem, error) {
 	}
 	if resolvedBy.Valid {
 		item.ResolvedBy = &resolvedBy.String
+	}
+	if stagingSnapshot.Valid {
+		item.StagingSnapshot = &stagingSnapshot.String
+	}
+	if reconciliationOutput.Valid {
+		item.ReconciliationOutput = &reconciliationOutput.String
 	}
 	return &item, nil
 }
@@ -1053,6 +1094,13 @@ func scanReconciliationResult(s scanner) (*domain.ReconciliationResult, error) {
 // ---------------------------------------------------------------------------
 
 func nullableText(value *string) any {
+	if value == nil {
+		return nil
+	}
+	return *value
+}
+
+func nullableJSON(value *string) any {
 	if value == nil {
 		return nil
 	}

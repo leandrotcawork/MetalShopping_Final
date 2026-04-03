@@ -182,11 +182,8 @@ func TestPromotionConsumerPromotesProductSuccessfully(t *testing.T) {
 	if got := len(reconRepo.claimCalls); got != 1 {
 		t.Fatalf("expected 1 claim call, got %d", got)
 	}
-	if got := len(reconRepo.promoted); got != 1 {
-		t.Fatalf("expected 1 promoted call, got %d", got)
-	}
-	if reconRepo.promoted[0].canonicalID != "prd_123" {
-		t.Fatalf("expected canonical id prd_123, got %s", reconRepo.promoted[0].canonicalID)
+	if got := len(reconRepo.promoted); got != 0 {
+		t.Fatalf("expected no direct mark promoted calls from consumer, got %d", got)
 	}
 	if got := len(reconRepo.failed); got != 0 {
 		t.Fatalf("expected no failed rows, got %d", got)

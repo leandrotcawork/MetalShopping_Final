@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS erp_review_items (
   raw_id TEXT NOT NULL,
   staging_id TEXT NOT NULL,
   reconciliation_id TEXT NOT NULL,
+  staging_snapshot JSONB NULL,
+  reconciliation_output JSONB NULL,
   recommended_action TEXT NOT NULL,
   item_status TEXT NOT NULL DEFAULT 'open',
   resolved_at TIMESTAMPTZ NULL,

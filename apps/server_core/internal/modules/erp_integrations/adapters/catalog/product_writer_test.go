@@ -44,6 +44,7 @@ func TestProductWriterPromoteProductUsesCatalogRepositoryBoundary(t *testing.T) 
 		scriptStep{kind: stepBegin},
 		scriptStep{kind: stepExec, query: "set_config('app.tenant_id'"},
 		scriptStep{kind: stepExec, query: "INSERT INTO outbox_events"},
+		scriptStep{kind: stepExec, query: "SET promotion_status = 'promoted'"},
 		scriptStep{kind: stepCommit},
 	)
 	writer := &recordingCatalogWriter{canonicalID: "prd_123"}
@@ -111,6 +112,7 @@ func TestProductWriterPromoteProductReturnsExistingCanonicalProductID(t *testing
 		scriptStep{kind: stepBegin},
 		scriptStep{kind: stepExec, query: "set_config('app.tenant_id'"},
 		scriptStep{kind: stepExec, query: "INSERT INTO outbox_events"},
+		scriptStep{kind: stepExec, query: "SET promotion_status = 'promoted'"},
 		scriptStep{kind: stepCommit},
 	)
 	writer := &recordingCatalogWriter{canonicalID: "prd_existing"}

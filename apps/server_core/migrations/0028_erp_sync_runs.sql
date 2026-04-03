@@ -33,5 +33,5 @@ ALTER TABLE erp_sync_runs FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS erp_sync_runs_tenant_isolation ON erp_sync_runs;
 CREATE POLICY erp_sync_runs_tenant_isolation
 ON erp_sync_runs
-USING (tenant_id = current_tenant_id())
+USING (tenant_id = current_tenant_id() OR current_tenant_id() = '*')
 WITH CHECK (tenant_id = current_tenant_id());

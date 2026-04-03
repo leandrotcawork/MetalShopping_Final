@@ -229,9 +229,11 @@ func TestListInstances_Paginated(t *testing.T) {
 }
 
 func TestListReviewItems_Paginated(t *testing.T) {
+	stagingSnapshot := `{"name":"Product A"}`
+	reconciliationOutput := `{"classification":"review_required","reason_code":"ERP_PROMOTION_FAILED"}`
 	reviewRepo := &handlerStubReviewRepo{
 		items: []*domain.ReviewItem{
-			{ReviewID: "rev_1", TenantID: "tenant-1", InstanceID: "inst_a", ConnectorType: domain.ConnectorTypeSankhya, EntityType: domain.EntityTypeProducts, Severity: domain.ReviewSeverityWarning, ItemStatus: domain.ReviewItemStatusOpen, CreatedAt: time.Now()},
+			{ReviewID: "rev_1", TenantID: "tenant-1", InstanceID: "inst_a", ConnectorType: domain.ConnectorTypeSankhya, EntityType: domain.EntityTypeProducts, Severity: domain.ReviewSeverityWarning, ItemStatus: domain.ReviewItemStatusOpen, StagingSnapshot: &stagingSnapshot, ReconciliationOutput: &reconciliationOutput, CreatedAt: time.Now()},
 			{ReviewID: "rev_2", TenantID: "tenant-1", InstanceID: "inst_a", ConnectorType: domain.ConnectorTypeSankhya, EntityType: domain.EntityTypeProducts, Severity: domain.ReviewSeverityWarning, ItemStatus: domain.ReviewItemStatusOpen, CreatedAt: time.Now()},
 		},
 	}
@@ -267,6 +269,17 @@ func TestListReviewItems_Paginated(t *testing.T) {
 	}
 	if len(items) != 2 {
 		t.Errorf("expected 2 items, got %d", len(items))
+	}
+
+	first, ok := items[0].(map[string]any)
+	if !ok {
+		t.Fatal("expected first item object")
+	}
+	if _, ok := first["staging_snapshot"].(map[string]any); !ok {
+		t.Fatalf("expected staging_snapshot object, got %#v", first["staging_snapshot"])
+	}
+	if _, ok := first["reconciliation_output"].(map[string]any); !ok {
+		t.Fatalf("expected reconciliation_output object, got %#v", first["reconciliation_output"])
 	}
 }
 

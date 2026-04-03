@@ -217,6 +217,7 @@ func TestClaimPendingRunSetsTenantContextBeforeUpdate(t *testing.T) {
 			kind:  stepBegin,
 			query: "",
 		},
+		scriptStep{kind: stepExec, query: "SELECT set_config('app.tenant_id', $1, true)", args: []any{"*"}},
 		scriptStep{
 			kind:  stepQuery,
 			query: "FROM erp_sync_runs",

@@ -32,5 +32,5 @@ ALTER TABLE erp_reconciliation_results FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS erp_reconciliation_results_tenant_isolation ON erp_reconciliation_results;
 CREATE POLICY erp_reconciliation_results_tenant_isolation
 ON erp_reconciliation_results
-USING (tenant_id = current_tenant_id())
+USING (tenant_id = current_tenant_id() OR current_tenant_id() = '*')
 WITH CHECK (tenant_id = current_tenant_id());

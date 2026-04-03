@@ -18,6 +18,7 @@ type execContexter interface {
 }
 
 const setTenantConfigSQL = `SELECT set_config('app.tenant_id', $1, true)`
+const systemTenantMarker = "*"
 
 // BeginTenantTx starts a transaction and binds app.tenant_id for tenant-scoped work.
 func BeginTenantTx(ctx context.Context, db txBeginner, tenantID string, opts *sql.TxOptions) (*sql.Tx, error) {
@@ -39,6 +40,20 @@ func BeginTenantTx(ctx context.Context, db txBeginner, tenantID string, opts *sq
 	return tx, nil
 }
 
+// BeginSystemTx starts a transaction bound to the reserved system tenant marker.
+// This is only for internal cross-tenant operational workflows.
+func BeginSystemTx(ctx context.Context, db txBeginner, opts *sql.TxOptions) (*sql.Tx, error) {
+	tx, err := db.BeginTx(ctx, opts)
+	if err != nil {
+		return nil, fmt.Errorf("begin system transaction: %w", err)
+	}
+	if err := SetSystemTenantContext(ctx, tx); err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+	return tx, nil
+}
+
 // SetTenantContext binds app.tenant_id on an existing transaction or executor.
 func SetTenantContext(ctx context.Context, execer execContexter, tenantID string) error {
 	tenantID, err := ValidateTenantID(tenantID)
@@ -50,6 +65,14 @@ func SetTenantContext(ctx context.Context, execer execContexter, tenantID string
 		return fmt.Errorf("set tenant session: %w", err)
 	}
 
+	return nil
+}
+
+// SetSystemTenantContext binds the reserved system tenant marker.
+func SetSystemTenantContext(ctx context.Context, execer execContexter) error {
+	if _, err := execer.ExecContext(ctx, setTenantConfigSQL, systemTenantMarker); err != nil {
+		return fmt.Errorf("set system tenant session: %w", err)
+	}
 	return nil
 }
 
@@ -74,6 +97,9 @@ func ValidateTenantID(tenantID string) (string, error) {
 	tenantID = strings.TrimSpace(tenantID)
 	if tenantID == "" {
 		return "", fmt.Errorf("tenant id is required")
+	}
+	if tenantID == systemTenantMarker {
+		return "", fmt.Errorf("tenant id %q is reserved", systemTenantMarker)
 	}
 	return tenantID, nil
 }

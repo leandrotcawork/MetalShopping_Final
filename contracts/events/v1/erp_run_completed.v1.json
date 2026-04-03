@@ -3,7 +3,7 @@
   "version": "v1",
   "status": "draft",
   "bounded_context": "erp_integrations",
-  "producer": "apps/server_core",
+  "producer": "apps/integration_worker",
   "trigger": "An ERP sync run reaches a terminal status (completed, failed, or partial).",
   "description": "Versioned event for ERP sync run completion with summary counters.",
   "envelope": {

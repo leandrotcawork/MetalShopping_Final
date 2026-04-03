@@ -382,20 +382,22 @@ func mapRun(r *domain.SyncRun) map[string]any {
 
 func mapReviewItem(item *domain.ReviewItem) map[string]any {
 	m := map[string]any{
-		"review_id":          item.ReviewID,
-		"tenant_id":          item.TenantID,
-		"instance_id":        item.InstanceID,
-		"connector_type":     string(item.ConnectorType),
-		"entity_type":        string(item.EntityType),
-		"source_id":          item.SourceID,
-		"run_id":             item.RunID,
-		"severity":           string(item.Severity),
-		"reason_code":        item.ReasonCode,
-		"problem_summary":    item.ProblemSummary,
-		"raw_payload_ref":    item.RawPayloadRef,
-		"recommended_action": item.RecommendedAction,
-		"item_status":        string(item.ItemStatus),
-		"created_at":         item.CreatedAt.Format(time.RFC3339),
+		"review_id":             item.ReviewID,
+		"tenant_id":             item.TenantID,
+		"instance_id":           item.InstanceID,
+		"connector_type":        string(item.ConnectorType),
+		"entity_type":           string(item.EntityType),
+		"source_id":             item.SourceID,
+		"run_id":                item.RunID,
+		"severity":              string(item.Severity),
+		"reason_code":           item.ReasonCode,
+		"problem_summary":       item.ProblemSummary,
+		"raw_payload_ref":       item.RawPayloadRef,
+		"staging_snapshot":      decodeOptionalJSON(item.StagingSnapshot),
+		"reconciliation_output": decodeOptionalJSON(item.ReconciliationOutput),
+		"recommended_action":    item.RecommendedAction,
+		"item_status":           string(item.ItemStatus),
+		"created_at":            item.CreatedAt.Format(time.RFC3339),
 	}
 	if item.ResolvedAt != nil {
 		m["resolved_at"] = item.ResolvedAt.Format(time.RFC3339)
@@ -404,6 +406,17 @@ func mapReviewItem(item *domain.ReviewItem) map[string]any {
 		m["resolved_by"] = *item.ResolvedBy
 	}
 	return m
+}
+
+func decodeOptionalJSON(raw *string) any {
+	if raw == nil {
+		return nil
+	}
+	var decoded any
+	if err := json.Unmarshal([]byte(*raw), &decoded); err != nil {
+		return *raw
+	}
+	return decoded
 }
 
 // ---------------------------------------------------------------------------
