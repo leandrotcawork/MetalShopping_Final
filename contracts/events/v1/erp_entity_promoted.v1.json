@@ -1,0 +1,11 @@
+{
+  "event_name": "erp_integrations.entity_promoted",
+  "version": "v1",
+  "status": "draft",
+  "bounded_context": "erp_integrations",
+  "producer": "apps/server_core",
+  "trigger": "A staged ERP record is promoted into a canonical domain table by the server_core promotion consumer.",
+  "description": "Versioned event for a single entity promotion from ERP staging to canonical state.",
+  "envelope": {"event_id":"string","occurred_at":"timestamp","tenant_id":"string","trace_id":"string"},
+  "payload_schema_ref": "../../api/jsonschema/erp_entity_promoted_payload_v1.schema.json"
+}

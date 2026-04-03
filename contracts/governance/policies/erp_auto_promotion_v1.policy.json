@@ -1,0 +1,9 @@
+{
+  "policy_name": "erp_integrations.auto_promotion",
+  "version": "v1",
+  "status": "draft",
+  "bounded_context": "erp_integrations",
+  "scope": ["global","environment","tenant","module"],
+  "description": "Defines whether automatic promotion of ERP-staged records is allowed for the resolved runtime scope.",
+  "schema_ref": "../../api/jsonschema/governance_policy_v1.schema.json"
+}

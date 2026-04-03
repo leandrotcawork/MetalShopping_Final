@@ -15,6 +15,23 @@ func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
 }
 
+// Append opens its own database transaction and appends the given records.
+// Use AppendInTx when you already hold a transaction.
+func (s *Store) Append(ctx context.Context, records []Record) error {
+	if len(records) == 0 {
+		return nil
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin outbox append tx: %w", err)
+	}
+	if err := s.AppendInTx(ctx, tx, records); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	return tx.Commit()
+}
+
 func (s *Store) AppendInTx(ctx context.Context, tx *sql.Tx, records []Record) error {
 	if len(records) == 0 {
 		return nil

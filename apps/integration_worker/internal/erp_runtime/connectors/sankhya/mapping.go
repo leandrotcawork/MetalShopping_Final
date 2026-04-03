@@ -1,0 +1,76 @@
+package sankhya
+
+import erp_runtime "metalshopping/integration_worker/internal/erp_runtime"
+
+// FieldMapping maps a Sankhya source field to a MetalShopping canonical field name.
+type FieldMapping struct {
+	SourceField string
+	TargetField string
+	Required    bool
+}
+
+// entityMappings defines field-level mappings per entity.
+var entityMappings = map[erp_runtime.EntityType][]FieldMapping{
+	erp_runtime.EntityTypeProducts: {
+		{SourceField: "CODPROD", TargetField: "source_id", Required: true},
+		{SourceField: "DESCRPROD", TargetField: "name", Required: true},
+		{SourceField: "UNIDADE", TargetField: "unit", Required: false},
+		{SourceField: "ATIVO", TargetField: "active", Required: false},
+		{SourceField: "CODVOL", TargetField: "volume_unit", Required: false},
+	},
+	erp_runtime.EntityTypePrices: {
+		{SourceField: "NUTAB", TargetField: "source_id", Required: true},
+		{SourceField: "CODPROD", TargetField: "product_source_id", Required: true},
+		{SourceField: "VLRVENDA", TargetField: "price", Required: true},
+		{SourceField: "MOEDA", TargetField: "currency", Required: false},
+	},
+	erp_runtime.EntityTypeCosts: {
+		{SourceField: "CODPROD", TargetField: "source_id", Required: true},
+		{SourceField: "VLRCUSTO_REP", TargetField: "replacement_cost", Required: false},
+		{SourceField: "VLRCUSTOMEDIO", TargetField: "average_cost", Required: false},
+	},
+	erp_runtime.EntityTypeInventory: {
+		{SourceField: "CODPROD", TargetField: "product_source_id", Required: true},
+		{SourceField: "CODLOCAL", TargetField: "location_code", Required: true},
+		{SourceField: "ESTOQUE", TargetField: "quantity", Required: true},
+		{SourceField: "RESERVADO", TargetField: "reserved", Required: false},
+	},
+	erp_runtime.EntityTypeSales: {
+		{SourceField: "NUNOTA", TargetField: "source_id", Required: true},
+		{SourceField: "CODPARC", TargetField: "partner_source_id", Required: true},
+		{SourceField: "DTNEG", TargetField: "transaction_date", Required: true},
+		{SourceField: "VLRNOTA", TargetField: "total_amount", Required: true},
+		{SourceField: "TIPMOV", TargetField: "movement_type", Required: false},
+	},
+	erp_runtime.EntityTypePurchases: {
+		{SourceField: "NUNOTA", TargetField: "source_id", Required: true},
+		{SourceField: "CODPARC", TargetField: "partner_source_id", Required: true},
+		{SourceField: "DTNEG", TargetField: "transaction_date", Required: true},
+		{SourceField: "VLRNOTA", TargetField: "total_amount", Required: true},
+		{SourceField: "TIPMOV", TargetField: "movement_type", Required: false},
+	},
+	erp_runtime.EntityTypeCustomers: {
+		{SourceField: "CODPARC", TargetField: "source_id", Required: true},
+		{SourceField: "NOMEPARC", TargetField: "trade_name", Required: true},
+		{SourceField: "CGC_CPF", TargetField: "tax_id", Required: false},
+		{SourceField: "EMAIL", TargetField: "email", Required: false},
+		{SourceField: "CLIENTE", TargetField: "is_customer", Required: false},
+	},
+	erp_runtime.EntityTypeSuppliers: {
+		{SourceField: "CODPARC", TargetField: "source_id", Required: true},
+		{SourceField: "NOMEPARC", TargetField: "trade_name", Required: true},
+		{SourceField: "CGC_CPF", TargetField: "tax_id", Required: false},
+		{SourceField: "EMAIL", TargetField: "email", Required: false},
+		{SourceField: "FORNECEDOR", TargetField: "is_supplier", Required: false},
+	},
+}
+
+// Mapper provides field mapping metadata for Sankhya entities.
+type Mapper struct{}
+
+func newMapper() *Mapper { return &Mapper{} }
+
+// MappingsFor returns the field mappings for the given entity.
+func (m *Mapper) MappingsFor(entity erp_runtime.EntityType) []FieldMapping {
+	return entityMappings[entity]
+}

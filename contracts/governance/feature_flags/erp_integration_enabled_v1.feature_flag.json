@@ -1,0 +1,9 @@
+{
+  "flag_name": "erp_integrations.integration_enabled",
+  "version": "v1",
+  "status": "draft",
+  "bounded_context": "erp_integrations",
+  "scope": ["global","environment","tenant","feature-target"],
+  "description": "Controls whether ERP integration instance creation and sync runs are enabled for the resolved runtime scope.",
+  "schema_ref": "../../api/jsonschema/governance_feature_flag_v1.schema.json"
+}

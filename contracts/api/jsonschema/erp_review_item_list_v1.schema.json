@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.metalshopping.local/schema/erp_integrations/review_item_list/v1",
+  "title": "ErpReviewItemList",
+  "type": "object",
+  "required": ["items"],
+  "properties": {"items": {"type":"array","items":{"$ref":"erp_review_item_v1.schema.json"}}}
+}

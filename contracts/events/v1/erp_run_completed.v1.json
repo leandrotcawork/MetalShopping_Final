@@ -1,0 +1,16 @@
+{
+  "event_name": "erp_integrations.run_completed",
+  "version": "v1",
+  "status": "draft",
+  "bounded_context": "erp_integrations",
+  "producer": "apps/integration_worker",
+  "trigger": "An ERP sync run reaches a terminal status (completed, failed, or partial).",
+  "description": "Versioned event for ERP sync run completion with summary counters.",
+  "envelope": {
+    "event_id": "string",
+    "occurred_at": "timestamp",
+    "tenant_id": "string",
+    "trace_id": "string"
+  },
+  "payload_schema_ref": "../../api/jsonschema/erp_run_completed_payload_v1.schema.json"
+}

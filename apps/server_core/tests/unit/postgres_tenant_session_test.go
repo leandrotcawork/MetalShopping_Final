@@ -43,6 +43,15 @@ func TestSetTenantContextRejectsEmptyTenantID(t *testing.T) {
 	}
 }
 
+func TestSetTenantContextRejectsReservedSystemTenantID(t *testing.T) {
+	execer := &fakeExecContexter{}
+
+	err := pgdb.SetTenantContext(context.Background(), execer, "*")
+	if err == nil {
+		t.Fatal("expected reserved tenant id error")
+	}
+}
+
 func TestSetTenantContextWritesTenantSetting(t *testing.T) {
 	execer := &fakeExecContexter{}
 
@@ -64,5 +73,20 @@ func TestSetTenantContextPropagatesDatabaseError(t *testing.T) {
 	err := pgdb.SetTenantContext(context.Background(), execer, "tenant-abc")
 	if err == nil {
 		t.Fatal("expected database error")
+	}
+}
+
+func TestSetSystemTenantContextWritesReservedMarker(t *testing.T) {
+	execer := &fakeExecContexter{}
+
+	err := pgdb.SetSystemTenantContext(context.Background(), execer)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if execer.query == "" {
+		t.Fatal("expected query to be captured")
+	}
+	if len(execer.args) != 1 || execer.args[0] != "*" {
+		t.Fatalf("expected system marker arg, got %#v", execer.args)
 	}
 }

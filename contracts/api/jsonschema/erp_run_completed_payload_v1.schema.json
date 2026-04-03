@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.metalshopping.local/schema/erp_integrations/run_completed_payload/v1",
+  "title": "erp_run_completed_payload_v1",
+  "description": "Event payload for an ERP sync run terminal summary.",
+  "type": "object",
+  "additionalProperties": false,
+  "x-metalshopping": {
+    "contract_name": "erp_run_completed_payload_v1",
+    "contract_status": "draft",
+    "bounded_context": "erp_integrations",
+    "owner_team": "platform_integrations"
+  },
+  "required": [
+    "run_id",
+    "tenant_id",
+    "instance_id",
+    "connector_type",
+    "run_mode",
+    "entity_scope",
+    "status",
+    "promoted_count",
+    "warning_count",
+    "rejected_count",
+    "review_count",
+    "created_at"
+  ],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tenant_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "instance_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "connector_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "run_mode": {
+      "type": "string",
+      "enum": [
+        "bulk",
+        "incremental",
+        "manual_rerun"
+      ]
+    },
+    "entity_scope": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "failed",
+        "partial"
+      ]
+    },
+    "started_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "promoted_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "warning_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "rejected_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "review_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "failure_summary": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

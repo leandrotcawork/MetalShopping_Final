@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.metalshopping.local/schema/erp_integrations/entity_promoted_payload/v1",
+  "title": "ErpEntityPromotedPayload",
+  "type": "object",
+  "required": ["reconciliation_id","tenant_id","instance_id","connector_type","entity_type","source_id","canonical_id","action","promoted_at","run_id"],
+  "properties": {
+    "reconciliation_id": {"type":"string"},
+    "tenant_id": {"type":"string"},
+    "instance_id": {"type":"string"},
+    "connector_type": {"type":"string"},
+    "entity_type": {"type":"string"},
+    "source_id": {"type":"string"},
+    "canonical_id": {"type":"string"},
+    "action": {"type":"string","enum":["create","update"]},
+    "promoted_at": {"type":"string","format":"date-time"},
+    "run_id": {"type":"string"}
+  }
+}

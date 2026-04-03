@@ -17,6 +17,17 @@ export const schemaIds = {
   "catalog_taxonomy_node_v1.schema": "https://contracts.metalshopping.local/schema/catalog/taxonomy_node/v1",
   "common_error_v1.schema": "https://contracts.metalshopping.local/schema/common/error/v1",
   "common_health_v1.schema": "https://contracts.metalshopping.local/schema/common/health/v1",
+  "erp_create_instance_request_v1.schema": "https://contracts.metalshopping.local/schema/erp_integrations/create_instance_request/v1",
+  "erp_entity_promoted_payload_v1.schema": "https://contracts.metalshopping.local/schema/erp_integrations/entity_promoted_payload/v1",
+  "erp_integration_instance_list_v1.schema": "https://contracts.metalshopping.local/schema/erp_integrations/integration_instance_list/v1",
+  "erp_integration_instance_v1.schema": "https://contracts.metalshopping.local/schema/erp_integrations/integration_instance/v1",
+  "erp_resolve_review_request_v1.schema": "https://contracts.metalshopping.local/schema/erp_integrations/resolve_review_request/v1",
+  "erp_review_item_list_v1.schema": "https://contracts.metalshopping.local/schema/erp_integrations/review_item_list/v1",
+  "erp_review_item_v1.schema": "https://contracts.metalshopping.local/schema/erp_integrations/review_item/v1",
+  "erp_run_completed_payload_v1.schema": "https://contracts.metalshopping.local/schema/erp_integrations/run_completed_payload/v1",
+  "erp_sync_run_list_v1.schema": "https://contracts.metalshopping.local/schema/erp_integrations/sync_run_list/v1",
+  "erp_sync_run_v1.schema": "https://contracts.metalshopping.local/schema/erp_integrations/sync_run/v1",
+  "erp_trigger_run_request_v1.schema": "https://contracts.metalshopping.local/schema/erp_integrations/trigger_run_request/v1",
   "governance_feature_flag_v1.schema": "https://contracts.metalshopping.local/schema/governance/feature_flag/v1",
   "governance_policy_v1.schema": "https://contracts.metalshopping.local/schema/governance/policy/v1",
   "governance_threshold_v1.schema": "https://contracts.metalshopping.local/schema/governance/threshold/v1",
@@ -212,6 +223,119 @@ export type CommonErrorV1 = {
 
 export type CommonHealthV1 = {
   status: string;
+};
+
+export type ErpCreateInstanceRequestV1 = {
+  connector_type: "sankhya";
+  display_name: string;
+  connection_ref: string;
+  enabled_entities: Array<"products" | "prices" | "costs" | "inventory" | "sales" | "purchases" | "customers" | "suppliers">;
+  sync_schedule?: string | null;
+};
+
+export type ErpEntityPromotedPayloadV1 = {
+  reconciliation_id: string;
+  tenant_id: string;
+  instance_id: string;
+  connector_type: string;
+  entity_type: string;
+  source_id: string;
+  canonical_id: string;
+  action: "create" | "update";
+  promoted_at: string;
+  run_id: string;
+};
+
+export type ErpIntegrationInstanceListV1 = {
+  items: Array<ErpIntegrationInstanceV1>;
+};
+
+export type ErpIntegrationInstanceV1 = {
+  instance_id: string;
+  tenant_id: string;
+  connector_type: "sankhya";
+  display_name: string;
+  connection_ref: string;
+  enabled_entities: Array<"products" | "prices" | "costs" | "inventory" | "sales" | "purchases" | "customers" | "suppliers">;
+  sync_schedule?: string | null;
+  status: "active" | "paused" | "disabled";
+  created_at: string;
+  updated_at: string;
+};
+
+export type ErpResolveReviewRequestV1 = {
+  resolution: "resolved" | "dismissed";
+  resolution_note?: string;
+};
+
+export type ErpReviewItemListV1 = {
+  items: Array<ErpReviewItemV1>;
+};
+
+export type ErpReviewItemV1 = {
+  review_id: string;
+  tenant_id: string;
+  instance_id: string;
+  connector_type: string;
+  entity_type: string;
+  source_id: string;
+  run_id: string;
+  severity: "info" | "warning" | "error" | "critical";
+  reason_code: string;
+  problem_summary: string;
+  raw_payload_ref?: string;
+  staging_snapshot?: Record<string, unknown> | null;
+  reconciliation_output?: Record<string, unknown> | null;
+  recommended_action: string;
+  item_status: "open" | "resolved" | "dismissed";
+  resolved_at?: string | null;
+  resolved_by?: string | null;
+  created_at: string;
+};
+
+export type ErpRunCompletedPayloadV1 = {
+  run_id: string;
+  tenant_id: string;
+  instance_id: string;
+  connector_type: string;
+  run_mode: "bulk" | "incremental" | "manual_rerun";
+  entity_scope: Array<string>;
+  status: "completed" | "failed" | "partial";
+  started_at?: string | null;
+  completed_at?: string | null;
+  promoted_count: number;
+  warning_count: number;
+  rejected_count: number;
+  review_count: number;
+  failure_summary?: string | null;
+  created_at: string;
+};
+
+export type ErpSyncRunListV1 = {
+  items: Array<ErpSyncRunV1>;
+};
+
+export type ErpSyncRunV1 = {
+  run_id: string;
+  tenant_id: string;
+  instance_id: string;
+  connector_type: string;
+  run_mode: "bulk" | "incremental" | "manual_rerun";
+  entity_scope: Array<string>;
+  status: "pending" | "running" | "completed" | "failed" | "partial";
+  started_at?: string | null;
+  completed_at?: string | null;
+  promoted_count: number;
+  warning_count: number;
+  rejected_count: number;
+  review_count: number;
+  failure_summary?: string | null;
+  created_at: string;
+};
+
+export type ErpTriggerRunRequestV1 = {
+  run_mode: "bulk" | "incremental" | "manual_rerun";
+  entity_scope: Array<"products" | "prices" | "costs" | "inventory" | "sales" | "purchases" | "customers" | "suppliers">;
 };
 
 export type GovernanceFeatureFlagV1 = {
@@ -786,6 +910,9 @@ export type SuppliersUpsertDirectorySupplierRequestV1 = {
 
 export const eventNames = [
   "catalog.product_created",
+  "erp_integrations.entity_promoted",
+  "erp_integrations.run_completed",
+  "erp_integrations.run_requested",
   "iam.role_assigned",
   "inventory.position_updated",
   "pricing.price_set",
@@ -798,6 +925,8 @@ export const governanceKeys = [
   "auth.web_session_enabled",
   "catalog.max_description_length",
   "catalog.product_creation_enabled",
+  "erp_integrations.auto_promotion",
+  "erp_integrations.integration_enabled",
   "iam.admin_role_assignment",
   "pricing.manual_price_override"
 ] as const;

@@ -43,6 +43,7 @@ MetalShopping is not a traditional e-commerce product. It is an enterprise platf
 - Postgres as canonical state
 - Go in the core
 - Python in workers during transition
+- Go exception: `apps/integration_worker` contains the Go-based ERP sync runtime (`cmd/erp-sync`) alongside the Python shopping_price_worker — approved by ADR-0046
 - explicit contracts and governance outside app code
 - thin clients for `web`, `desktop`, and `admin_console`
 

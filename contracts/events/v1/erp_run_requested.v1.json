@@ -1,0 +1,11 @@
+{
+  "event_name": "erp_integrations.run_requested",
+  "version": "v1",
+  "status": "draft",
+  "bounded_context": "erp_integrations",
+  "producer": "apps/server_core",
+  "trigger": "A sync run is triggered by an operator or scheduled job. Published to the outbox so integration_worker can claim it.",
+  "description": "Versioned event for ERP sync run dispatch. Worker claims pending runs via SELECT ... FOR UPDATE SKIP LOCKED.",
+  "envelope": {"event_id":"string","occurred_at":"timestamp","tenant_id":"string","trace_id":"string"},
+  "payload_schema_ref": "../../api/jsonschema/erp_sync_run_v1.schema.json"
+}

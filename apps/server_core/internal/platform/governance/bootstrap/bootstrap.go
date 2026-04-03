@@ -12,6 +12,8 @@ const (
 	AuthWebSessionEnabledKey             = "auth.web_session_enabled"
 	AuthSessionIdleTimeoutMinutesKey     = "auth.session_idle_timeout_minutes"
 	AuthSessionAbsoluteTimeoutMinutesKey = "auth.session_absolute_timeout_minutes"
+	ERPIntegrationEnabledKey             = "erp_integrations.integration_enabled"
+	ERPAutoPromotionKey                  = "erp_integrations.auto_promotion"
 )
 
 func NewRegistry() *config_registry.Registry {
@@ -109,6 +111,32 @@ func NewRegistry() *config_registry.Registry {
 			config_registry.ScopeModule,
 		},
 		Description: "Defines the policy for administrative IAM role assignment decisions.",
+	})
+	registry.MustRegister(config_registry.Entry{
+		Key:            ERPIntegrationEnabledKey,
+		Kind:           config_registry.ArtifactFeatureFlag,
+		BoundedContext: "erp_integrations",
+		ValueType:      config_registry.ValueTypeBool,
+		Scopes: []config_registry.Scope{
+			config_registry.ScopeGlobal,
+			config_registry.ScopeEnvironment,
+			config_registry.ScopeTenant,
+			config_registry.ScopeFeatureTarget,
+		},
+		Description: "Enable ERP integration instance creation and sync runs.",
+	})
+	registry.MustRegister(config_registry.Entry{
+		Key:            ERPAutoPromotionKey,
+		Kind:           config_registry.ArtifactPolicy,
+		BoundedContext: "erp_integrations",
+		ValueType:      config_registry.ValueTypeJSON,
+		Scopes: []config_registry.Scope{
+			config_registry.ScopeGlobal,
+			config_registry.ScopeEnvironment,
+			config_registry.ScopeTenant,
+			config_registry.ScopeModule,
+		},
+		Description: "Defines the policy for automatic promotion of reconciled ERP records to the canonical data store.",
 	})
 	return registry
 }

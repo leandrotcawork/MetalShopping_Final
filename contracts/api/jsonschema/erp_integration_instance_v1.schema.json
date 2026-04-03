@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.metalshopping.local/schema/erp_integrations/integration_instance/v1",
+  "title": "ErpIntegrationInstance",
+  "type": "object",
+  "required": ["instance_id","tenant_id","connector_type","display_name","connection_ref","enabled_entities","status","created_at","updated_at"],
+  "properties": {
+    "instance_id": {"type":"string"},
+    "tenant_id": {"type":"string"},
+    "connector_type": {"type":"string","enum":["sankhya"]},
+    "display_name": {"type":"string"},
+    "connection_ref": {"type":"string"},
+    "enabled_entities": {"type":"array","items":{"type":"string","enum":["products","prices","costs","inventory","sales","purchases","customers","suppliers"]}},
+    "sync_schedule": {"type":["string","null"]},
+    "status": {"type":"string","enum":["active","paused","disabled"]},
+    "created_at": {"type":"string","format":"date-time"},
+    "updated_at": {"type":"string","format":"date-time"}
+  }
+}

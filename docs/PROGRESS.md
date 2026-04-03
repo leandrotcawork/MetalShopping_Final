@@ -123,10 +123,14 @@
 - ADR-0043/ADR-0044 accepted: legacy catalog import pipeline executed for `tenant_default` with reports and idempotent rerun evidence
 - governance audit design spec added to consolidate documentation precedence, agent entrypoints, and SoT ownership before the next planning wave
 - master orchestration document added as the live execution index across product and transversal fronts
+- ERP integration remediation pass completed after implementation audit: worker tenant-bound DB sessions enforced, run outbox writes made transactional on create/finalize paths, and event contract/runtime payload alignment corrected
+- ERP promotion flow now performs real canonical product promotion through a catalog-owned boundary with replay-safe behavior, provenance-complete `entity_promoted` payloads, and persisted failure context for replay
+- non-promotable ERP reconciliation paths now route into review flow (`review_required` + visible review items) with idempotent repository semantics for multi-poller retries
 
 ## Next
 
 - open the next detailed front spec from `docs/MASTER_ORCHESTRATION_PLAN.md`, starting with the recommended front unless dependencies change
+- keep ERP remediation scope explicit: only `products` has a real canonical auto-promotion path in this tranche; other entity types route to review flow until dedicated promotion paths are implemented
 - keep ADR set complete and stable
 - implement manual URL candidates listing from catalog (ADR-0045) so the panel works when signals are empty
 - execute Shopping frontend parity ADR tranche (ADR-0036..ADR-0039) before expanding Shopping UX/features
