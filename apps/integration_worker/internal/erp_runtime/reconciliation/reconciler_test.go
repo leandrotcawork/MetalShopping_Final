@@ -140,7 +140,47 @@ func (s *scriptState) expect(kind scriptStepKind, query string, args []driver.Na
 	return step
 }
 
-func TestReconcilerBlocksDuplicateEAN(t *testing.T) {
+func TestReconcilerPromotesUniqueProduct(t *testing.T) {
+	t.Parallel()
+
+	db := newScriptedDB(t,
+		scriptStep{kind: stepBegin},
+		scriptStep{kind: stepExec, query: "set_config", args: []any{"tenant-a"}},
+		scriptStep{kind: stepExec, query: "INSERT INTO erp_reconciliation_results"},
+		scriptStep{kind: stepCommit},
+	)
+
+	reconciler := NewReconciler(db)
+	now := time.Now().UTC()
+	results, err := reconciler.Reconcile(context.Background(), "tenant-a", "run-1", []*staging.StagingRecord{
+		{
+			StagingID:        "stage-1",
+			TenantID:         "tenant-a",
+			RunID:            "run-1",
+			RawID:            "raw-1",
+			EntityType:       types.EntityTypeProducts,
+			SourceID:         "SKU-1",
+			NormalizedJSON:   []byte(`{"CODPROD":"SKU-1","REFERENCIA":"7891234567890","REFFORN":"FAB-1"}`),
+			ValidationStatus: staging.ValidationStatusValid,
+			NormalizedAt:     now,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Reconcile returned error: %v", err)
+	}
+
+	if len(results) != 1 {
+		t.Fatalf("expected 1 reconciliation result, got %d", len(results))
+	}
+	if results[0].Classification != ClassificationPromotable {
+		t.Fatalf("expected promotable classification, got %s", results[0].Classification)
+	}
+	if results[0].WarningDetails != nil {
+		t.Fatalf("expected no warning details for unique product, got %s", *results[0].WarningDetails)
+	}
+}
+
+func TestReconcilerFlagsDuplicateEAN(t *testing.T) {
 	t.Parallel()
 
 	db := newScriptedDB(t,
@@ -161,7 +201,7 @@ func TestReconcilerBlocksDuplicateEAN(t *testing.T) {
 			RawID:            "raw-1",
 			EntityType:       types.EntityTypeProducts,
 			SourceID:         "SKU-1",
-			NormalizedJSON:   []byte(`{"erp_product_id":"SKU-1","ean":"7891234567890","manufacturer_reference":"FAB-1"}`),
+			NormalizedJSON:   []byte(`{"CODPROD":"SKU-1","REFERENCIA":"7891234567890","REFFORN":"FAB-1"}`),
 			ValidationStatus: staging.ValidationStatusValid,
 			NormalizedAt:     now,
 		},
@@ -172,7 +212,7 @@ func TestReconcilerBlocksDuplicateEAN(t *testing.T) {
 			RawID:            "raw-2",
 			EntityType:       types.EntityTypeProducts,
 			SourceID:         "SKU-2",
-			NormalizedJSON:   []byte(`{"erp_product_id":"SKU-2","ean":"7891234567890","manufacturer_reference":"FAB-2"}`),
+			NormalizedJSON:   []byte(`{"CODPROD":"SKU-2","REFERENCIA":"7891234567890","REFFORN":"FAB-2"}`),
 			ValidationStatus: staging.ValidationStatusValid,
 			NormalizedAt:     now,
 		},
@@ -181,9 +221,77 @@ func TestReconcilerBlocksDuplicateEAN(t *testing.T) {
 		t.Fatalf("Reconcile returned error: %v", err)
 	}
 
+	assertDuplicateResults(t, results, "ean")
+}
+
+func TestReconcilerFlagsDuplicateManufacturerReference(t *testing.T) {
+	t.Parallel()
+
+	db := newScriptedDB(t,
+		scriptStep{kind: stepBegin},
+		scriptStep{kind: stepExec, query: "set_config", args: []any{"tenant-a"}},
+		scriptStep{kind: stepExec, query: "INSERT INTO erp_reconciliation_results"},
+		scriptStep{kind: stepExec, query: "INSERT INTO erp_reconciliation_results"},
+		scriptStep{kind: stepCommit},
+	)
+
+	reconciler := NewReconciler(db)
+	now := time.Now().UTC()
+	results, err := reconciler.Reconcile(context.Background(), "tenant-a", "run-1", []*staging.StagingRecord{
+		{
+			StagingID:        "stage-1",
+			TenantID:         "tenant-a",
+			RunID:            "run-1",
+			RawID:            "raw-1",
+			EntityType:       types.EntityTypeProducts,
+			SourceID:         "SKU-1",
+			NormalizedJSON:   []byte(`{"CODPROD":"SKU-1","REFERENCIA":"7891234567890","REFFORN":"FAB-1"}`),
+			ValidationStatus: staging.ValidationStatusValid,
+			NormalizedAt:     now,
+		},
+		{
+			StagingID:        "stage-2",
+			TenantID:         "tenant-a",
+			RunID:            "run-1",
+			RawID:            "raw-2",
+			EntityType:       types.EntityTypeProducts,
+			SourceID:         "SKU-2",
+			NormalizedJSON:   []byte(`{"CODPROD":"SKU-2","REFERENCIA":"7891234567899","REFFORN":"FAB-1"}`),
+			ValidationStatus: staging.ValidationStatusValid,
+			NormalizedAt:     now,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Reconcile returned error: %v", err)
+	}
+
+	assertDuplicateResults(t, results, "manufacturer_reference")
+}
+
+func assertDuplicateResults(t *testing.T, results []*ReconciliationResult, field string) {
+	t.Helper()
+
+	if len(results) != 2 {
+		t.Fatalf("expected 2 reconciliation results, got %d", len(results))
+	}
 	for i, result := range results {
 		if result.Classification != ClassificationReviewRequired {
-			t.Fatalf("expected result %d to be review_required for duplicate EAN, got %s", i, result.Classification)
+			t.Fatalf("expected result %d to be review_required, got %s", i, result.Classification)
+		}
+		if result.ReasonCode != duplicateSecondaryIdentifierReasonCode {
+			t.Fatalf("expected duplicate reason code, got %s", result.ReasonCode)
+		}
+		if result.WarningDetails == nil {
+			t.Fatalf("expected warning details for duplicate %s", field)
+		}
+		if !strings.Contains(*result.WarningDetails, `"blocking_scope":"product_prices_inventory"`) {
+			t.Fatalf("expected blocking scope in warning details, got %s", *result.WarningDetails)
+		}
+		if !strings.Contains(*result.WarningDetails, fmt.Sprintf(`"field":"%s"`, field)) {
+			t.Fatalf("expected duplicate field %s in warning details, got %s", field, *result.WarningDetails)
+		}
+		if !strings.Contains(*result.WarningDetails, `"blocked_entities":["products","prices","inventory"]`) {
+			t.Fatalf("expected downstream block entities in warning details, got %s", *result.WarningDetails)
 		}
 	}
 }

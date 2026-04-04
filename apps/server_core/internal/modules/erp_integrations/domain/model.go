@@ -152,6 +152,29 @@ func (c ReconciliationClassification) IsValid() bool {
 		c == ClassificationRejected
 }
 
+// ReviewBlockScope identifies the canonical downstream promotion scope that a
+// review item blocks.
+type ReviewBlockScope string
+
+const (
+	ReviewBlockScopeProductPricesInventory ReviewBlockScope = "product_prices_inventory"
+
+	// ReviewReasonDuplicateSecondaryIdentifier is the canonical reason code for
+	// duplicated secondary product identifiers such as EAN or manufacturer
+	// reference.
+	ReviewReasonDuplicateSecondaryIdentifier = "ERP_PRODUCT_IDENTIFIER_CONFLICT"
+)
+
+// BlockedEntities returns the canonical entity types blocked by the scope.
+func (s ReviewBlockScope) BlockedEntities() []EntityType {
+	switch s {
+	case ReviewBlockScopeProductPricesInventory:
+		return []EntityType{EntityTypeProducts, EntityTypePrices, EntityTypeInventory}
+	default:
+		return nil
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Entity structs
 // ---------------------------------------------------------------------------
