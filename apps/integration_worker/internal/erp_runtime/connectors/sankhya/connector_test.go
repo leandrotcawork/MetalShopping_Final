@@ -12,21 +12,21 @@ func TestValidateConnectionParsesHostUserPasswordAndDefaultPort(t *testing.T) {
 	t.Parallel()
 
 	connector := New()
-	if err := connector.ValidateConnection(context.Background(), "sankhya://leandroth:Leandrocruz04@10.55.10.101?service=PROD"); err != nil {
+	if err := connector.ValidateConnection(context.Background(), "sankhya://user:pass@dummy-host.example?service=PROD"); err != nil {
 		t.Fatalf("ValidateConnection returned error: %v", err)
 	}
 
-	cfg, err := parseConnectionRef("sankhya://leandroth:Leandrocruz04@10.55.10.101?service=PROD")
+	cfg, err := parseConnectionRef("sankhya://user:pass@dummy-host.example?service=PROD")
 	if err != nil {
 		t.Fatalf("parseConnectionRef returned error: %v", err)
 	}
-	if cfg.Host != "10.55.10.101" {
-		t.Fatalf("expected host 10.55.10.101, got %q", cfg.Host)
+	if cfg.Host != "dummy-host.example" {
+		t.Fatalf("expected host dummy-host.example, got %q", cfg.Host)
 	}
 	if cfg.Port != defaultOraclePort {
 		t.Fatalf("expected default port %d, got %d", defaultOraclePort, cfg.Port)
 	}
-	if cfg.Username != "leandroth" || cfg.Password != "Leandrocruz04" {
+	if cfg.Username != "user" || cfg.Password != "pass" {
 		t.Fatalf("unexpected credentials parsed: %#v", cfg)
 	}
 	if cfg.Service != "PROD" {
@@ -51,6 +51,26 @@ func TestQueryForEntityReturnsSnapshotSQL(t *testing.T) {
 		}
 		if !strings.Contains(sql, wantFragment) {
 			t.Fatalf("queryForEntity(%s) = %q, want fragment %q", entity, sql, wantFragment)
+		}
+		switch entity {
+		case erp_runtime.EntityTypeProducts:
+			for _, wantColumn := range []string{"CODPROD", "DESCRPROD", "REFERENCIA", "REFFORN"} {
+				if !strings.Contains(sql, wantColumn) {
+					t.Fatalf("queryForEntity(%s) missing key column %q", entity, wantColumn)
+				}
+			}
+		case erp_runtime.EntityTypePrices:
+			for _, wantColumn := range []string{"NUTAB", "CODTAB", "DTVIGOR", "VLRVENDA"} {
+				if !strings.Contains(sql, wantColumn) {
+					t.Fatalf("queryForEntity(%s) missing key column %q", entity, wantColumn)
+				}
+			}
+		case erp_runtime.EntityTypeInventory:
+			for _, wantColumn := range []string{"CODPROD", "CODEMP", "CODLOCAL", "ESTOQUE", "RESERVADO"} {
+				if !strings.Contains(sql, wantColumn) {
+					t.Fatalf("queryForEntity(%s) missing key column %q", entity, wantColumn)
+				}
+			}
 		}
 	}
 }

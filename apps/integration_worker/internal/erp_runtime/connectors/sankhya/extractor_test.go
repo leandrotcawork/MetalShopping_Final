@@ -2,9 +2,6 @@ package sankhya
 
 import (
 	"context"
-	"encoding/json"
-	"os"
-	"path/filepath"
 	"testing"
 
 	erp_runtime "metalshopping/integration_worker/internal/erp_runtime"
@@ -13,15 +10,9 @@ import (
 func loadFixtureCount(t *testing.T, name string) int {
 	t.Helper()
 
-	path := filepath.Join("testdata", name)
-	data, err := os.ReadFile(path)
+	rows, err := loadFixtureRows(name)
 	if err != nil {
-		t.Fatalf("read fixture %s: %v", path, err)
-	}
-
-	var rows []map[string]any
-	if err := json.Unmarshal(data, &rows); err != nil {
-		t.Fatalf("unmarshal fixture %s: %v", path, err)
+		t.Fatalf("load fixture %s: %v", name, err)
 	}
 	return len(rows)
 }
