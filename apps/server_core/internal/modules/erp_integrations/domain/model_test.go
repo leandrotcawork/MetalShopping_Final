@@ -167,3 +167,16 @@ func TestEntityType_IsValid(t *testing.T) {
 		}
 	}
 }
+
+func TestReviewBlockScopeProductPricesInventory(t *testing.T) {
+	got := ReviewBlockScopeProductPricesInventory.BlockedEntities()
+	want := []EntityType{EntityTypeProducts, EntityTypePrices, EntityTypeInventory}
+	if len(got) != len(want) {
+		t.Fatalf("expected %d blocked entities, got %d", len(want), len(got))
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("blocked entity %d = %q, want %q", i, got[i], want[i])
+		}
+	}
+}

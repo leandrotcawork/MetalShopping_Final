@@ -16,7 +16,9 @@ import (
 	erpcatalog "metalshopping/server_core/internal/modules/erp_integrations/adapters/catalog"
 	erpgov "metalshopping/server_core/internal/modules/erp_integrations/adapters/governance"
 	erpiam "metalshopping/server_core/internal/modules/erp_integrations/adapters/iam"
+	erpinventory "metalshopping/server_core/internal/modules/erp_integrations/adapters/inventory"
 	erppg "metalshopping/server_core/internal/modules/erp_integrations/adapters/postgres"
+	erppricing "metalshopping/server_core/internal/modules/erp_integrations/adapters/pricing"
 	erpapp "metalshopping/server_core/internal/modules/erp_integrations/application"
 	erphttp "metalshopping/server_core/internal/modules/erp_integrations/transport/http"
 	homepg "metalshopping/server_core/internal/modules/home/adapters/postgres"
@@ -100,11 +102,15 @@ func composeModules(ctx context.Context, runtime runtimeComposition, governance 
 
 	// ERP integrations module
 	erpRepos := erppg.NewRepos(runtime.db, outboxStore)
+	erpPriceWriter := erppricing.NewWriter(pricingService, erpRepos.Reconciliations)
+	erpInventoryWriter := erpinventory.NewWriter(inventoryService)
 	erpEnabledGuard := erpgov.NewIntegrationEnabledGuard(governance.featureFlags, runtime.environment)
 	erpAutoPromoGuard := erpgov.NewAutoPromotionGuard(governance.policies, runtime.environment)
 	erpPermChecker := erpiam.NewPermissionChecker(iamAuthorization)
 	erpProductWriter := erpcatalog.NewProductWriter(runtime.db, outboxStore, catalogRepo)
 	erpProductPromotion := erpapp.NewProductPromotion(erpRepos.Staging, erpRepos.Runs, erpProductWriter)
+	erpPricePromotion := erpapp.NewPricePromotion(erpRepos.Staging, erpRepos.Runs, catalogRepo, erpPriceWriter)
+	erpInventoryPromotion := erpapp.NewInventoryPromotion(erpRepos.Staging, erpRepos.Runs, catalogRepo, erpInventoryWriter)
 	erpSvc := erpapp.NewService(
 		erpRepos.Instances,
 		erpRepos.Runs,
@@ -114,7 +120,7 @@ func composeModules(ctx context.Context, runtime runtimeComposition, governance 
 		outboxStore,
 	)
 	erpHandler := erphttp.NewHandler(erpSvc)
-	erpPromoConsumer := erpapp.NewPromotionConsumer(erpRepos.Reconciliations, erpAutoPromoGuard, erpProductPromotion)
+	erpPromoConsumer := erpapp.NewPromotionConsumer(erpRepos.Reconciliations, erpAutoPromoGuard, erpProductPromotion, erpPricePromotion, erpInventoryPromotion)
 	go erpPromoConsumer.Start(ctx)
 
 	return moduleComposition{

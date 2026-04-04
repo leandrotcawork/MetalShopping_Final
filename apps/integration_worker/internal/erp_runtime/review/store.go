@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -81,17 +82,7 @@ VALUES ($1, current_tenant_id(), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 
 	for _, r := range actionable {
 		reviewID := uuid.New().String()
 
-		var severity, recommendedAction, problemSummary string
-		switch r.Classification {
-		case reconciliation_pkg.ClassificationRejected:
-			severity = "error"
-			recommendedAction = "fix in source ERP and reprocess"
-			problemSummary = "Record rejected during reconciliation: " + r.ReasonCode
-		case reconciliation_pkg.ClassificationReviewRequired:
-			severity = "warning"
-			recommendedAction = "review in MetalShopping"
-			problemSummary = "Record requires manual review: " + r.ReasonCode
-		}
+		severity, recommendedAction, problemSummary := reviewContextForResult(r)
 
 		// Resolve raw_id and staging snapshot from staging index.
 		rawID := ""
@@ -158,4 +149,115 @@ func marshalReconciliationOutput(result *reconciliation_pkg.ReconciliationResult
 	}
 	value := string(encoded)
 	return &value, nil
+}
+
+type duplicateReviewWarningDetails struct {
+	BlockingScope   string                    `json:"blocking_scope"`
+	BlockedEntities []string                  `json:"blocked_entities"`
+	Conflicts       []duplicateReviewConflict `json:"conflicts"`
+}
+
+type duplicateReviewConflict struct {
+	Field string `json:"field"`
+	Value string `json:"value"`
+}
+
+func reviewContextForResult(result *reconciliation_pkg.ReconciliationResult) (severity, recommendedAction, problemSummary string) {
+	switch result.Classification {
+	case reconciliation_pkg.ClassificationRejected:
+		return "error", "fix in source ERP and reprocess", "Record rejected during reconciliation: " + result.ReasonCode
+	case reconciliation_pkg.ClassificationReviewRequired:
+		if details, ok := parseDuplicateReviewWarningDetails(result.WarningDetails); ok {
+			return "warning", "review duplicate secondary identifiers in the source ERP and reprocess", duplicateProblemSummary(details)
+		}
+		return "warning", "review in MetalShopping", "Record requires manual review: " + result.ReasonCode
+	default:
+		return "info", "review in MetalShopping", "Record requires manual review: " + result.ReasonCode
+	}
+}
+
+func parseDuplicateReviewWarningDetails(raw *string) (duplicateReviewWarningDetails, bool) {
+	if raw == nil || strings.TrimSpace(*raw) == "" {
+		return duplicateReviewWarningDetails{}, false
+	}
+
+	var details duplicateReviewWarningDetails
+	if err := json.Unmarshal([]byte(*raw), &details); err != nil {
+		return duplicateReviewWarningDetails{}, false
+	}
+	if len(details.Conflicts) == 0 || strings.TrimSpace(details.BlockingScope) == "" {
+		return duplicateReviewWarningDetails{}, false
+	}
+	return details, true
+}
+
+func duplicateProblemSummary(details duplicateReviewWarningDetails) string {
+	blockedTargets := "products, prices, and inventory"
+	if len(details.BlockedEntities) > 0 {
+		blockedTargets = joinWithOxfordComma(details.BlockedEntities)
+	}
+
+	switch len(details.Conflicts) {
+	case 0:
+		return "Duplicate secondary identifiers block " + blockedTargets + " promotion"
+	case 1:
+		conflict := details.Conflicts[0]
+		field := duplicateFieldLabel(conflict.Field)
+		if strings.TrimSpace(conflict.Value) != "" {
+			return fmt.Sprintf("Duplicate %s value %q blocks %s promotion", field, conflict.Value, blockedTargets)
+		}
+		return fmt.Sprintf("Duplicate %s blocks %s promotion", field, blockedTargets)
+	default:
+		fields := make([]string, 0, len(details.Conflicts))
+		seen := map[string]struct{}{}
+		for _, conflict := range details.Conflicts {
+			label := duplicateFieldLabel(conflict.Field)
+			if _, ok := seen[label]; ok {
+				continue
+			}
+			seen[label] = struct{}{}
+			fields = append(fields, label)
+		}
+		if len(fields) == 0 {
+			return "Duplicate secondary identifiers block " + blockedTargets + " promotion"
+		}
+		if len(fields) == 1 {
+			return fmt.Sprintf("Duplicate %s values block %s promotion", fields[0], blockedTargets)
+		}
+		return fmt.Sprintf("Duplicate %s and %s values block %s promotion", fields[0], fields[1], blockedTargets)
+	}
+}
+
+func duplicateFieldLabel(field string) string {
+	switch strings.ToLower(strings.TrimSpace(field)) {
+	case "ean":
+		return "EAN"
+	case "manufacturer_reference":
+		return "manufacturer reference"
+	default:
+		if trimmed := strings.TrimSpace(field); trimmed != "" {
+			return trimmed
+		}
+		return "secondary identifier"
+	}
+}
+
+func joinWithOxfordComma(values []string) string {
+	parts := make([]string, 0, len(values))
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed != "" {
+			parts = append(parts, trimmed)
+		}
+	}
+	switch len(parts) {
+	case 0:
+		return "product, prices, and inventory"
+	case 1:
+		return parts[0]
+	case 2:
+		return parts[0] + " and " + parts[1]
+	default:
+		return strings.Join(parts[:len(parts)-1], ", ") + ", and " + parts[len(parts)-1]
+	}
 }

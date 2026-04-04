@@ -1,0 +1,26 @@
+[
+  {
+    "CODPROD": "10001",
+    "DESCRPROD": "Fita de Aco 19mm x 0,50mm",
+    "MARCA": "MetalMax",
+    "REFERENCIA": "7891000100018",
+    "REFFORN": "MM-FT-019-050",
+    "ATIVO": "S",
+    "CODVOL": "RL",
+    "CODGRUPOPROD": "11000000",
+    "AD_STATUS": "ATIVO",
+    "AD_COMPETITIVO": "N"
+  },
+  {
+    "CODPROD": "10002",
+    "DESCRPROD": "Arame Galvanizado 1,24mm",
+    "MARCA": "MetalMax",
+    "REFERENCIA": "7891000100025",
+    "REFFORN": "MM-AR-124",
+    "ATIVO": "S",
+    "CODVOL": "KG",
+    "CODGRUPOPROD": "12000000",
+    "AD_STATUS": "ATIVO",
+    "AD_COMPETITIVO": "S"
+  }
+]

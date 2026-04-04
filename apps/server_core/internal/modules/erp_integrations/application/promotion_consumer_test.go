@@ -73,6 +73,8 @@ type stubPromotionRepository struct {
 	claimResult bool
 	claimErr    error
 
+	listAllPending []*domain.ReconciliationResult
+
 	claimCalls     []string
 	promoted       []recordedPromotion
 	failed         []recordedFailure
@@ -84,7 +86,7 @@ func (r *stubPromotionRepository) ListPromotableResults(context.Context, string,
 }
 
 func (r *stubPromotionRepository) ListAllPendingPromotion(context.Context, int) ([]*domain.ReconciliationResult, error) {
-	return nil, nil
+	return r.listAllPending, nil
 }
 
 func (r *stubPromotionRepository) ClaimForPromotion(_ context.Context, _, reconciliationID string) (bool, error) {
@@ -136,6 +138,40 @@ func (w *recordingProductWriter) PromoteProduct(_ context.Context, traceID strin
 	return "prd_test", nil
 }
 
+type recordingPricePromoter struct {
+	calls       []string
+	canonicalID string
+	err         error
+}
+
+func (r *recordingPricePromoter) PromotePrice(_ context.Context, result *domain.ReconciliationResult) (string, error) {
+	r.calls = append(r.calls, result.ReconciliationID)
+	if r.err != nil {
+		return "", r.err
+	}
+	if r.canonicalID != "" {
+		return r.canonicalID, nil
+	}
+	return "prc_test", nil
+}
+
+type recordingInventoryPromoter struct {
+	calls       []string
+	canonicalID string
+	err         error
+}
+
+func (r *recordingInventoryPromoter) PromoteInventory(_ context.Context, result *domain.ReconciliationResult) (string, error) {
+	r.calls = append(r.calls, result.ReconciliationID)
+	if r.err != nil {
+		return "", r.err
+	}
+	if r.canonicalID != "" {
+		return r.canonicalID, nil
+	}
+	return "pos_test", nil
+}
+
 func TestPromotionConsumerPromotesProductSuccessfully(t *testing.T) {
 	reconRepo := &stubPromotionRepository{claimResult: true}
 	stagingRepo := &stubPromotionReader{
@@ -164,7 +200,7 @@ func TestPromotionConsumerPromotesProductSuccessfully(t *testing.T) {
 		},
 	}
 	writer := &recordingProductWriter{canonicalID: "prd_123"}
-	consumer := NewPromotionConsumer(reconRepo, &stubAutoPromoGuard{}, NewProductPromotion(stagingRepo, runRepo, writer))
+	consumer := NewPromotionConsumer(reconRepo, &stubAutoPromoGuard{}, NewProductPromotion(stagingRepo, runRepo, writer), nil, nil)
 
 	result := &domain.ReconciliationResult{
 		ReconciliationID: "rec_1",
@@ -225,7 +261,7 @@ func TestPromotionConsumerPromotesProductSuccessfully(t *testing.T) {
 
 func TestPromotionConsumerSkipsDuplicateClaim(t *testing.T) {
 	reconRepo := &stubPromotionRepository{claimResult: false}
-	consumer := NewPromotionConsumer(reconRepo, &stubAutoPromoGuard{}, NewProductPromotion(&stubPromotionReader{}, &stubRunRepo{}, &recordingProductWriter{}))
+	consumer := NewPromotionConsumer(reconRepo, &stubAutoPromoGuard{}, NewProductPromotion(&stubPromotionReader{}, &stubRunRepo{}, &recordingProductWriter{}), nil, nil)
 
 	result := &domain.ReconciliationResult{
 		ReconciliationID: "rec_1",
@@ -254,7 +290,7 @@ func TestPromotionConsumerSkipsDuplicateClaim(t *testing.T) {
 func TestPromotionConsumerRoutesWhenAutoPromotionDisabledToReviewRequired(t *testing.T) {
 	reconRepo := &stubPromotionRepository{claimResult: true}
 	guard := &stubAutoPromoGuard{err: domain.ErrAutoPromotionDisabled}
-	consumer := NewPromotionConsumer(reconRepo, guard, NewProductPromotion(&stubPromotionReader{}, &stubRunRepo{}, &recordingProductWriter{}))
+	consumer := NewPromotionConsumer(reconRepo, guard, NewProductPromotion(&stubPromotionReader{}, &stubRunRepo{}, &recordingProductWriter{}), nil, nil)
 
 	result := &domain.ReconciliationResult{
 		ReconciliationID: "rec_1",
@@ -316,7 +352,7 @@ func TestPromotionConsumerMarksFailedOnDomainWriteFailure(t *testing.T) {
 		},
 	}
 	writer := &recordingProductWriter{err: errors.New("catalog write failed")}
-	consumer := NewPromotionConsumer(reconRepo, &stubAutoPromoGuard{}, NewProductPromotion(stagingRepo, runRepo, writer))
+	consumer := NewPromotionConsumer(reconRepo, &stubAutoPromoGuard{}, NewProductPromotion(stagingRepo, runRepo, writer), nil, nil)
 
 	result := &domain.ReconciliationResult{
 		ReconciliationID: "rec_1",
@@ -350,13 +386,13 @@ func TestPromotionConsumerMarksFailedOnDomainWriteFailure(t *testing.T) {
 
 func TestPromotionConsumerRoutesUnsupportedEntityTypeToReviewRequired(t *testing.T) {
 	reconRepo := &stubPromotionRepository{claimResult: true}
-	consumer := NewPromotionConsumer(reconRepo, &stubAutoPromoGuard{}, NewProductPromotion(&stubPromotionReader{}, &stubRunRepo{}, &recordingProductWriter{}))
+	consumer := NewPromotionConsumer(reconRepo, &stubAutoPromoGuard{}, NewProductPromotion(&stubPromotionReader{}, &stubRunRepo{}, &recordingProductWriter{}), nil, nil)
 
 	result := &domain.ReconciliationResult{
 		ReconciliationID: "rec_1",
 		TenantID:         "tenant-1",
 		StagingID:        "stg_1",
-		EntityType:       domain.EntityTypePrices,
+		EntityType:       domain.EntityTypeCosts,
 		PromotionStatus:  domain.PromotionStatusPending,
 	}
 
@@ -402,5 +438,170 @@ func TestBuildProductPromotionInputRejectsInvalidStatus(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "invalid product status") {
 		t.Fatalf("expected invalid status error, got %v", err)
+	}
+}
+
+func TestPromotionConsumerPromotesProductsBeforePricesAndInventory(t *testing.T) {
+	reconRepo := &stubPromotionRepository{claimResult: true}
+	stagingRepo := &stubPromotionReader{
+		staging: map[string]*domain.StagingRecord{
+			"stg_product": {
+				StagingID:        "stg_product",
+				TenantID:         "tenant-1",
+				RunID:            "run_1",
+				RawID:            "raw_product",
+				EntityType:       domain.EntityTypeProducts,
+				SourceID:         "SKU-1",
+				NormalizedJSON:   []byte(`{"pn_interno":"SKU-1","descricao":"Steel","ativo":true}`),
+				ValidationStatus: "valid",
+				NormalizedAt:     time.Date(2026, 4, 2, 12, 0, 0, 0, time.UTC),
+			},
+		},
+	}
+	runRepo := &stubRunRepo{
+		runs: map[string]*domain.SyncRun{
+			"run_1": {
+				RunID:         "run_1",
+				TenantID:      "tenant-1",
+				InstanceID:    "inst_1",
+				ConnectorType: domain.ConnectorTypeSankhya,
+			},
+		},
+	}
+	productWriter := &recordingProductWriter{canonicalID: "prd_1"}
+	pricePromoter := &recordingPricePromoter{canonicalID: "prc_1"}
+	inventoryPromoter := &recordingInventoryPromoter{canonicalID: "pos_1"}
+	consumer := NewPromotionConsumer(
+		reconRepo,
+		&stubAutoPromoGuard{},
+		NewProductPromotion(stagingRepo, runRepo, productWriter),
+		pricePromoter,
+		inventoryPromoter,
+	)
+	reconRepo.listAllPending = []*domain.ReconciliationResult{
+		{
+			ReconciliationID: "rec_inventory",
+			TenantID:         "tenant-1",
+			RunID:            "run_1",
+			StagingID:        "stg_inventory",
+			EntityType:       domain.EntityTypeInventory,
+			SourceID:         "10001:1:10101",
+			ReconciledAt:     time.Date(2026, 4, 2, 12, 0, 2, 0, time.UTC),
+			PromotionStatus:  domain.PromotionStatusPending,
+		},
+		{
+			ReconciliationID: "rec_price",
+			TenantID:         "tenant-1",
+			RunID:            "run_1",
+			StagingID:        "stg_price",
+			EntityType:       domain.EntityTypePrices,
+			SourceID:         "5001:10001:0",
+			ReconciledAt:     time.Date(2026, 4, 2, 12, 0, 1, 0, time.UTC),
+			PromotionStatus:  domain.PromotionStatusPending,
+		},
+		{
+			ReconciliationID: "rec_product",
+			TenantID:         "tenant-1",
+			RunID:            "run_1",
+			StagingID:        "stg_product",
+			EntityType:       domain.EntityTypeProducts,
+			SourceID:         "SKU-1",
+			ReconciledAt:     time.Date(2026, 4, 2, 12, 0, 0, 0, time.UTC),
+			PromotionStatus:  domain.PromotionStatusPending,
+		},
+	}
+
+	consumer.runPromotion(context.Background())
+
+	if got := strings.Join(reconRepo.claimCalls, ","); got != "rec_product,rec_price,rec_inventory" {
+		t.Fatalf("expected product-first claim order, got %q", got)
+	}
+	if len(reconRepo.reviewRequired) != 0 {
+		t.Fatalf("expected no review-required rows, got %d", len(reconRepo.reviewRequired))
+	}
+	if len(reconRepo.failed) != 0 {
+		t.Fatalf("expected no failed rows, got %d", len(reconRepo.failed))
+	}
+	if productWriter.traceID == "" {
+		t.Fatal("expected product promotion to run")
+	}
+}
+
+func TestPromotionConsumerRoutesBlockedPriceAndInventoryToReviewRequired(t *testing.T) {
+	reconRepo := &stubPromotionRepository{claimResult: true}
+	stagingRepo := &stubPromotionReader{
+		staging: map[string]*domain.StagingRecord{
+			"stg_product": {
+				StagingID:        "stg_product",
+				TenantID:         "tenant-1",
+				RunID:            "run_1",
+				RawID:            "raw_product",
+				EntityType:       domain.EntityTypeProducts,
+				SourceID:         "SKU-1",
+				NormalizedJSON:   []byte(`{"pn_interno":"SKU-1","descricao":"Steel","ativo":true}`),
+				ValidationStatus: "valid",
+				NormalizedAt:     time.Date(2026, 4, 2, 12, 0, 0, 0, time.UTC),
+			},
+		},
+	}
+	runRepo := &stubRunRepo{
+		runs: map[string]*domain.SyncRun{
+			"run_1": {
+				RunID:         "run_1",
+				TenantID:      "tenant-1",
+				InstanceID:    "inst_1",
+				ConnectorType: domain.ConnectorTypeSankhya,
+			},
+		},
+	}
+	consumer := NewPromotionConsumer(
+		reconRepo,
+		&stubAutoPromoGuard{},
+		NewProductPromotion(stagingRepo, runRepo, &recordingProductWriter{canonicalID: "prd_1"}),
+		&recordingPricePromoter{err: ErrRelatedProductNotPromoted},
+		&recordingInventoryPromoter{err: ErrRelatedProductNotPromoted},
+	)
+	reconRepo.listAllPending = []*domain.ReconciliationResult{
+		{
+			ReconciliationID: "rec_product",
+			TenantID:         "tenant-1",
+			RunID:            "run_1",
+			StagingID:        "stg_product",
+			EntityType:       domain.EntityTypeProducts,
+			SourceID:         "SKU-1",
+			ReconciledAt:     time.Date(2026, 4, 2, 12, 0, 0, 0, time.UTC),
+			PromotionStatus:  domain.PromotionStatusPending,
+		},
+		{
+			ReconciliationID: "rec_price",
+			TenantID:         "tenant-1",
+			RunID:            "run_1",
+			StagingID:        "stg_price",
+			EntityType:       domain.EntityTypePrices,
+			SourceID:         "5001:10001:0",
+			ReconciledAt:     time.Date(2026, 4, 2, 12, 0, 1, 0, time.UTC),
+			PromotionStatus:  domain.PromotionStatusPending,
+		},
+		{
+			ReconciliationID: "rec_inventory",
+			TenantID:         "tenant-1",
+			RunID:            "run_1",
+			StagingID:        "stg_inventory",
+			EntityType:       domain.EntityTypeInventory,
+			SourceID:         "10001:1:10101",
+			ReconciledAt:     time.Date(2026, 4, 2, 12, 0, 2, 0, time.UTC),
+			PromotionStatus:  domain.PromotionStatusPending,
+		},
+	}
+
+	consumer.runPromotion(context.Background())
+
+	if got := len(reconRepo.reviewRequired); got != 2 {
+		t.Fatalf("expected 2 review-required rows, got %d", got)
+	}
+	for _, review := range reconRepo.reviewRequired {
+		if review.reasonCode != promotionBlockedByProductReasonCode {
+			t.Fatalf("expected review reason %s, got %s", promotionBlockedByProductReasonCode, review.reasonCode)
+		}
 	}
 }
