@@ -92,8 +92,6 @@ func composeModules(ctx context.Context, runtime runtimeComposition, governance 
 	pricingManualOverrideGuard := pricinggov.NewManualOverrideGuard(governance.policies, runtime.environment)
 	pricingService := pricingapp.NewService(pricingRepo, pricingManualOverrideGuard)
 	pricingHandler := pricinghttp.NewHandler(pricingService, iamAuthorization)
-	erpPriceWriter := erppricing.NewWriter(pricingService, erpRepos.Reconciliations)
-	erpInventoryWriter := erpinventory.NewWriter(inventoryService)
 	homeService := homeapp.NewService(homeSummaryReader)
 	homeHandler := homehttp.NewHandler(homeService)
 	analyticsService := analyticsapp.NewService(analyticsHomeReader)
@@ -104,6 +102,8 @@ func composeModules(ctx context.Context, runtime runtimeComposition, governance 
 
 	// ERP integrations module
 	erpRepos := erppg.NewRepos(runtime.db, outboxStore)
+	erpPriceWriter := erppricing.NewWriter(pricingService, erpRepos.Reconciliations)
+	erpInventoryWriter := erpinventory.NewWriter(inventoryService)
 	erpEnabledGuard := erpgov.NewIntegrationEnabledGuard(governance.featureFlags, runtime.environment)
 	erpAutoPromoGuard := erpgov.NewAutoPromotionGuard(governance.policies, runtime.environment)
 	erpPermChecker := erpiam.NewPermissionChecker(iamAuthorization)

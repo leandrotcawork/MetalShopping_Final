@@ -8,6 +8,7 @@ import (
 
 	"metalshopping/server_core/internal/modules/catalog/domain"
 	catalogevents "metalshopping/server_core/internal/modules/catalog/events"
+	pgdb "metalshopping/server_core/internal/platform/db/postgres"
 	"metalshopping/server_core/internal/platform/messaging/outbox"
 )
 
