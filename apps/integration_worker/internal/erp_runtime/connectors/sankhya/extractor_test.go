@@ -36,7 +36,8 @@ func TestExtractorProductsSnapshotFixture(t *testing.T) {
 
 	extractor := newExtractor()
 	got, err := extractor.Extract(context.Background(), erp_runtime.ExtractRequest{
-		Entity: erp_runtime.EntityTypeProducts,
+		Entity:        erp_runtime.EntityTypeProducts,
+		ConnectionRef: "fixture://products",
 	})
 	if err != nil {
 		t.Fatalf("Extract returned error: %v", err)
@@ -44,5 +45,14 @@ func TestExtractorProductsSnapshotFixture(t *testing.T) {
 
 	if len(got.Records) != expectedRows {
 		t.Fatalf("expected %d product records from fixture shape, got %d", expectedRows, len(got.Records))
+	}
+	if got.Records[0].ConnectorType != ConnectorType {
+		t.Fatalf("expected connector type %q, got %q", ConnectorType, got.Records[0].ConnectorType)
+	}
+	if got.Records[0].SourceID == "" {
+		t.Fatal("expected the first extracted record to carry a source ID")
+	}
+	if len(got.Records[0].PayloadJSON) == 0 {
+		t.Fatal("expected extracted payload JSON to be non-empty")
 	}
 }

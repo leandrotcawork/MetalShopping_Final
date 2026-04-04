@@ -12,17 +12,24 @@ type FieldMapping struct {
 // entityMappings defines field-level mappings per entity.
 var entityMappings = map[erp_runtime.EntityType][]FieldMapping{
 	erp_runtime.EntityTypeProducts: {
-		{SourceField: "CODPROD", TargetField: "source_id", Required: true},
+		{SourceField: "CODPROD", TargetField: "erp_product_id", Required: true},
 		{SourceField: "DESCRPROD", TargetField: "name", Required: true},
-		{SourceField: "UNIDADE", TargetField: "unit", Required: false},
-		{SourceField: "ATIVO", TargetField: "active", Required: false},
-		{SourceField: "CODVOL", TargetField: "volume_unit", Required: false},
+		{SourceField: "MARCA", TargetField: "brand_name", Required: false},
+		{SourceField: "REFERENCIA", TargetField: "ean", Required: false},
+		{SourceField: "REFFORN", TargetField: "manufacturer_reference", Required: false},
+		{SourceField: "ATIVO", TargetField: "source_status", Required: false},
+		{SourceField: "CODVOL", TargetField: "unit", Required: false},
+		{SourceField: "CODGRUPOPROD", TargetField: "taxonomy_source_code", Required: false},
+		{SourceField: "AD_STATUS", TargetField: "canonical_status_hint", Required: false},
+		{SourceField: "AD_COMPETITIVO", TargetField: "competitive_flag", Required: false},
 	},
 	erp_runtime.EntityTypePrices: {
-		{SourceField: "NUTAB", TargetField: "source_id", Required: true},
+		{SourceField: "NUTAB", TargetField: "source_table_id", Required: true},
+		{SourceField: "CODTAB", TargetField: "source_table_code", Required: true},
+		{SourceField: "NOMETAB", TargetField: "source_table_name", Required: false},
+		{SourceField: "DTVIGOR", TargetField: "effective_at", Required: false},
 		{SourceField: "CODPROD", TargetField: "product_source_id", Required: true},
-		{SourceField: "VLRVENDA", TargetField: "price", Required: true},
-		{SourceField: "MOEDA", TargetField: "currency", Required: false},
+		{SourceField: "VLRVENDA", TargetField: "sale_price", Required: true},
 	},
 	erp_runtime.EntityTypeCosts: {
 		{SourceField: "CODPROD", TargetField: "source_id", Required: true},
@@ -31,9 +38,11 @@ var entityMappings = map[erp_runtime.EntityType][]FieldMapping{
 	},
 	erp_runtime.EntityTypeInventory: {
 		{SourceField: "CODPROD", TargetField: "product_source_id", Required: true},
+		{SourceField: "CODEMP", TargetField: "company_code", Required: true},
 		{SourceField: "CODLOCAL", TargetField: "location_code", Required: true},
-		{SourceField: "ESTOQUE", TargetField: "quantity", Required: true},
-		{SourceField: "RESERVADO", TargetField: "reserved", Required: false},
+		{SourceField: "ESTOQUE", TargetField: "raw_quantity", Required: true},
+		{SourceField: "RESERVADO", TargetField: "reserved_quantity", Required: false},
+		{SourceField: "RAW_AVAILABLE_POSITION", TargetField: "raw_available_position", Required: false},
 	},
 	erp_runtime.EntityTypeSales: {
 		{SourceField: "NUNOTA", TargetField: "source_id", Required: true},
