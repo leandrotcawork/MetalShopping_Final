@@ -72,6 +72,12 @@ type ReconciliationReader interface {
 	MarkReviewRequired(ctx context.Context, tenantID, reconciliationID, reasonCode, problemSummary, recommendedAction string, warningDetails *string) error
 }
 
+// PriceContextResolver maps an ERP source price-table identity to a canonical
+// MetalShopping price context code.
+type PriceContextResolver interface {
+	ResolvePriceContextCode(ctx context.Context, tenantID, sourceSystem, sourceTableCode string) (string, bool, error)
+}
+
 // StagingReader provides read access to normalized ERP staging records.
 type StagingReader interface {
 	GetStagingRecord(ctx context.Context, tenantID, stagingID string) (*domain.StagingRecord, error)

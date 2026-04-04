@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"metalshopping/server_core/internal/modules/inventory/domain"
@@ -29,16 +30,21 @@ func (r *Repository) CreateProductPosition(ctx context.Context, position domain.
 	}
 	defer func() { _ = tx.Rollback() }()
 
+	position.SourceCompanyCode = strings.TrimSpace(position.SourceCompanyCode)
+	position.SourceLocationCode = strings.TrimSpace(position.SourceLocationCode)
+
 	const currentOpenSQL = `
-SELECT position_id, tenant_id, product_id, on_hand_quantity, last_purchase_at, last_sale_at, position_status, effective_from, effective_to, origin_type, COALESCE(origin_ref, ''), reason_code, updated_by, created_at, updated_at
+SELECT position_id, tenant_id, product_id, source_company_code, source_location_code, on_hand_quantity, last_purchase_at, last_sale_at, position_status, effective_from, effective_to, origin_type, COALESCE(origin_ref, ''), reason_code, updated_by, created_at, updated_at
 FROM inventory_product_positions
 WHERE tenant_id = current_tenant_id()
   AND product_id = $1
+  AND source_company_code = $2
+  AND source_location_code = $3
   AND effective_to IS NULL
 ORDER BY effective_from DESC, created_at DESC
 LIMIT 1
 `
-	currentRow := tx.QueryRowContext(ctx, currentOpenSQL, position.ProductID)
+	currentRow := tx.QueryRowContext(ctx, currentOpenSQL, position.ProductID, position.SourceCompanyCode, position.SourceLocationCode)
 	currentOpen, err := scanProductPosition(currentRow)
 	switch {
 	case err == nil:
@@ -59,9 +65,11 @@ SET effective_to = $2,
     updated_at = $3
 WHERE tenant_id = current_tenant_id()
   AND product_id = $1
+  AND source_company_code = $4
+  AND source_location_code = $5
   AND effective_to IS NULL
 `
-	if _, err := tx.ExecContext(ctx, closeOpenWindowSQL, position.ProductID, position.EffectiveFrom, position.UpdatedAt); err != nil {
+	if _, err := tx.ExecContext(ctx, closeOpenWindowSQL, position.ProductID, position.EffectiveFrom, position.UpdatedAt, position.SourceCompanyCode, position.SourceLocationCode); err != nil {
 		return domain.ProductPosition{}, false, fmt.Errorf("close inventory open window: %w", err)
 	}
 
@@ -70,6 +78,8 @@ INSERT INTO inventory_product_positions (
   position_id,
   tenant_id,
   product_id,
+  source_company_code,
+  source_location_code,
   on_hand_quantity,
   last_purchase_at,
   last_sale_at,
@@ -98,7 +108,9 @@ VALUES (
   $11,
   $12,
   $13,
-  $14
+  $14,
+  $15,
+  $16
 )
 `
 	if _, err := tx.ExecContext(
@@ -106,6 +118,8 @@ VALUES (
 		insertSQL,
 		position.PositionID,
 		position.ProductID,
+		position.SourceCompanyCode,
+		position.SourceLocationCode,
 		position.OnHandQuantity,
 		nullableTime(position.LastPurchaseAt),
 		nullableTime(position.LastSaleAt),
@@ -146,12 +160,14 @@ func (r *Repository) ListProductPositions(ctx context.Context, tenantID, product
 	defer func() { _ = tx.Rollback() }()
 
 	const querySQL = `
-SELECT position_id, tenant_id, product_id, on_hand_quantity, last_purchase_at, last_sale_at, position_status, effective_from, effective_to, origin_type, COALESCE(origin_ref, ''), reason_code, updated_by, created_at, updated_at
+SELECT position_id, tenant_id, product_id, source_company_code, source_location_code, on_hand_quantity, last_purchase_at, last_sale_at, position_status, effective_from, effective_to, origin_type, COALESCE(origin_ref, ''), reason_code, updated_by, created_at, updated_at
 FROM inventory_product_positions
 WHERE product_id = $1
+  AND source_company_code = $2
+  AND source_location_code = $3
 ORDER BY effective_from DESC, created_at DESC
 `
-	rows, err := tx.QueryContext(ctx, querySQL, productID)
+	rows, err := tx.QueryContext(ctx, querySQL, productID, "", "")
 	if err != nil {
 		return nil, fmt.Errorf("query inventory product positions: %w", err)
 	}
@@ -182,15 +198,17 @@ func (r *Repository) GetCurrentProductPosition(ctx context.Context, tenantID, pr
 	defer func() { _ = tx.Rollback() }()
 
 	const querySQL = `
-SELECT position_id, tenant_id, product_id, on_hand_quantity, last_purchase_at, last_sale_at, position_status, effective_from, effective_to, origin_type, COALESCE(origin_ref, ''), reason_code, updated_by, created_at, updated_at
+SELECT position_id, tenant_id, product_id, source_company_code, source_location_code, on_hand_quantity, last_purchase_at, last_sale_at, position_status, effective_from, effective_to, origin_type, COALESCE(origin_ref, ''), reason_code, updated_by, created_at, updated_at
 FROM inventory_product_positions
 WHERE product_id = $1
+  AND source_company_code = $2
+  AND source_location_code = $3
   AND effective_from <= NOW()
   AND (effective_to IS NULL OR effective_to > NOW())
 ORDER BY effective_from DESC, created_at DESC
 LIMIT 1
 `
-	row := tx.QueryRowContext(ctx, querySQL, productID)
+	row := tx.QueryRowContext(ctx, querySQL, productID, "", "")
 	item, err := scanProductPosition(row)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -219,6 +237,8 @@ func scanProductPosition(s scanner) (domain.ProductPosition, error) {
 		&item.PositionID,
 		&item.TenantID,
 		&item.ProductID,
+		&item.SourceCompanyCode,
+		&item.SourceLocationCode,
 		&item.OnHandQuantity,
 		&lastPurchase,
 		&lastSale,

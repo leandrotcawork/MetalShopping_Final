@@ -79,6 +79,9 @@ func TestInventoryServiceSetsProductPosition(t *testing.T) {
 	if repo.traceID != "trace-inventory-set" {
 		t.Fatalf("expected trace id propagation, got %q", repo.traceID)
 	}
+	if repo.created.SourceCompanyCode != "" || repo.created.SourceLocationCode != "" {
+		t.Fatalf("expected empty source dimensions by default, got %q/%q", repo.created.SourceCompanyCode, repo.created.SourceLocationCode)
+	}
 }
 
 func TestInventoryServiceNoOpsWhenOperationalStateDidNotChange(t *testing.T) {
@@ -122,5 +125,27 @@ func TestInventoryServiceNoOpsWhenOperationalStateDidNotChange(t *testing.T) {
 	}
 	if position.PositionID != "pos_current" {
 		t.Fatalf("expected current position to be returned, got %q", position.PositionID)
+	}
+}
+
+func TestInventoryServiceDefaultsSourceDimensionsWhenOmitted(t *testing.T) {
+	repo := &fakeInventoryRepository{applied: true}
+	service := application.NewService(repo)
+
+	_, _, err := service.SetProductPosition(context.Background(), application.SetProductPositionCommand{
+		TenantID:       "tenant-1",
+		ProductID:      "prd_1",
+		OnHandQuantity: 42,
+		PositionStatus: "active",
+		EffectiveFrom:  time.Date(2026, 3, 17, 12, 0, 0, 0, time.UTC),
+		OriginType:     "import",
+		ReasonCode:     "initial",
+		UpdatedBy:      "inventory-sync",
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if repo.created.SourceCompanyCode != "" || repo.created.SourceLocationCode != "" {
+		t.Fatalf("expected empty source dimensions, got %q/%q", repo.created.SourceCompanyCode, repo.created.SourceLocationCode)
 	}
 }

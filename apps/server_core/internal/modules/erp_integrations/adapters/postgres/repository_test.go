@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
+	"io"
 	"strings"
 	"sync"
 	"testing"
@@ -16,6 +17,7 @@ type repoScriptStepKind string
 const (
 	repoStepBegin    repoScriptStepKind = "begin"
 	repoStepExec     repoScriptStepKind = "exec"
+	repoStepQuery    repoScriptStepKind = "query"
 	repoStepCommit   repoScriptStepKind = "commit"
 	repoStepRollback repoScriptStepKind = "rollback"
 )
@@ -24,6 +26,8 @@ type repoScriptStep struct {
 	kind         repoScriptStepKind
 	query        string
 	args         []any
+	columns      []string
+	rows         [][]driver.Value
 	rowsAffected *int64
 	assert       func(*testing.T, string, []driver.NamedValue)
 }
@@ -94,6 +98,41 @@ func (c *repoScriptConn) ExecContext(_ context.Context, query string, args []dri
 		rowsAffected = *step.rowsAffected
 	}
 	return driver.RowsAffected(rowsAffected), nil
+}
+
+func (c *repoScriptConn) QueryContext(_ context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
+	step := c.state.expect(repoStepQuery, query, args)
+	return &repoScriptRows{columns: step.columns, rows: step.rows}, nil
+}
+
+type repoScriptRows struct {
+	columns []string
+	rows    [][]driver.Value
+	index   int
+}
+
+func (r *repoScriptRows) Columns() []string {
+	return r.columns
+}
+
+func (r *repoScriptRows) Close() error {
+	return nil
+}
+
+func (r *repoScriptRows) Next(dest []driver.Value) error {
+	if r.index >= len(r.rows) {
+		return io.EOF
+	}
+	row := r.rows[r.index]
+	for i := range dest {
+		if i < len(row) {
+			dest[i] = row[i]
+			continue
+		}
+		dest[i] = nil
+	}
+	r.index++
+	return nil
 }
 
 type repoScriptTx struct {
@@ -278,6 +317,52 @@ func TestReconciliationRepoMarkReviewRequiredNoopsOnZeroRows(t *testing.T) {
 		&warningDetails,
 	); err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+
+	state.done()
+}
+
+func TestReconciliationRepoResolvePriceContextCodeReturnsCanonicalContext(t *testing.T) {
+	db, state := newRepoScriptedDB(t,
+		repoScriptStep{kind: repoStepBegin},
+		repoScriptStep{kind: repoStepExec, query: "SELECT set_config('app.tenant_id', $1, true)", args: []any{"tenant-1"}},
+		repoScriptStep{kind: repoStepQuery, query: "FROM erp_source_price_context_mappings", args: []any{"sankhya", "17"}, columns: []string{"canonical_context_code"}, rows: [][]driver.Value{{"PROMOTION"}}},
+		repoScriptStep{kind: repoStepCommit},
+	)
+
+	repo := &ReconciliationRepo{base{db: db}}
+	got, found, err := repo.ResolvePriceContextCode(context.Background(), "tenant-1", "sankhya", "17")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !found {
+		t.Fatal("expected mapping to be found")
+	}
+	if got != "promotion" {
+		t.Fatalf("expected normalized canonical context promotion, got %q", got)
+	}
+
+	state.done()
+}
+
+func TestReconciliationRepoResolvePriceContextCodeReturnsNotFoundWithoutError(t *testing.T) {
+	db, state := newRepoScriptedDB(t,
+		repoScriptStep{kind: repoStepBegin},
+		repoScriptStep{kind: repoStepExec, query: "SELECT set_config('app.tenant_id', $1, true)", args: []any{"tenant-1"}},
+		repoScriptStep{kind: repoStepQuery, query: "FROM erp_source_price_context_mappings", args: []any{"sankhya", "99"}, columns: []string{"canonical_context_code"}, rows: nil},
+		repoScriptStep{kind: repoStepCommit},
+	)
+
+	repo := &ReconciliationRepo{base{db: db}}
+	got, found, err := repo.ResolvePriceContextCode(context.Background(), "tenant-1", "sankhya", "99")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if found {
+		t.Fatal("expected mapping lookup to miss")
+	}
+	if got != "" {
+		t.Fatalf("expected empty canonical context on miss, got %q", got)
 	}
 
 	state.done()

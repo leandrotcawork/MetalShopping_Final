@@ -29,16 +29,20 @@ func (r *Repository) CreateProductPrice(ctx context.Context, price domain.Produc
 	}
 	defer func() { _ = tx.Rollback() }()
 
+	priceContextCode := domain.NormalizePriceContextCode(price.PriceContextCode)
+	price.PriceContextCode = priceContextCode
+
 	const currentOpenSQL = `
-SELECT price_id, tenant_id, product_id, currency_code, price_amount, replacement_cost_amount, average_cost_amount, pricing_status, effective_from, effective_to, origin_type, COALESCE(origin_ref, ''), reason_code, updated_by, created_at, updated_at
+SELECT price_id, tenant_id, product_id, price_context_code, currency_code, price_amount, replacement_cost_amount, average_cost_amount, pricing_status, effective_from, effective_to, origin_type, COALESCE(origin_ref, ''), reason_code, updated_by, created_at, updated_at
 FROM pricing_product_prices
 WHERE tenant_id = current_tenant_id()
   AND product_id = $1
+  AND price_context_code = $2
   AND effective_to IS NULL
 ORDER BY effective_from DESC, created_at DESC
 LIMIT 1
 `
-	currentRow := tx.QueryRowContext(ctx, currentOpenSQL, price.ProductID)
+	currentRow := tx.QueryRowContext(ctx, currentOpenSQL, price.ProductID, priceContextCode)
 	currentOpen, err := scanProductPrice(currentRow)
 	switch {
 	case err == nil:
@@ -59,9 +63,10 @@ SET effective_to = $2,
     updated_at = $3
 WHERE tenant_id = current_tenant_id()
   AND product_id = $1
+  AND price_context_code = $4
   AND effective_to IS NULL
 `
-	if _, err := tx.ExecContext(ctx, closeOpenWindowSQL, price.ProductID, price.EffectiveFrom, price.UpdatedAt); err != nil {
+	if _, err := tx.ExecContext(ctx, closeOpenWindowSQL, price.ProductID, price.EffectiveFrom, price.UpdatedAt, priceContextCode); err != nil {
 		return domain.ProductPrice{}, false, fmt.Errorf("close pricing open window: %w", err)
 	}
 
@@ -70,6 +75,7 @@ INSERT INTO pricing_product_prices (
   price_id,
   tenant_id,
   product_id,
+  price_context_code,
   currency_code,
   price_amount,
   replacement_cost_amount,
@@ -100,7 +106,8 @@ VALUES (
   $12,
   $13,
   $14,
-  $15
+  $15,
+  $16
 )
 `
 	if _, err := tx.ExecContext(
@@ -108,6 +115,7 @@ VALUES (
 		insertSQL,
 		price.PriceID,
 		price.ProductID,
+		priceContextCode,
 		price.CurrencyCode,
 		price.PriceAmount,
 		price.ReplacementCostAmount,
@@ -149,12 +157,13 @@ func (r *Repository) ListProductPrices(ctx context.Context, tenantID, productID 
 	defer func() { _ = tx.Rollback() }()
 
 	const querySQL = `
-SELECT price_id, tenant_id, product_id, currency_code, price_amount, replacement_cost_amount, average_cost_amount, pricing_status, effective_from, effective_to, origin_type, COALESCE(origin_ref, ''), reason_code, updated_by, created_at, updated_at
+SELECT price_id, tenant_id, product_id, price_context_code, currency_code, price_amount, replacement_cost_amount, average_cost_amount, pricing_status, effective_from, effective_to, origin_type, COALESCE(origin_ref, ''), reason_code, updated_by, created_at, updated_at
 FROM pricing_product_prices
 WHERE product_id = $1
+  AND price_context_code = $2
 ORDER BY effective_from DESC, created_at DESC
 `
-	rows, err := tx.QueryContext(ctx, querySQL, productID)
+	rows, err := tx.QueryContext(ctx, querySQL, productID, domain.DefaultPriceContextCode)
 	if err != nil {
 		return nil, fmt.Errorf("query pricing product prices: %w", err)
 	}
@@ -185,15 +194,16 @@ func (r *Repository) GetCurrentProductPrice(ctx context.Context, tenantID, produ
 	defer func() { _ = tx.Rollback() }()
 
 	const querySQL = `
-SELECT price_id, tenant_id, product_id, currency_code, price_amount, replacement_cost_amount, average_cost_amount, pricing_status, effective_from, effective_to, origin_type, COALESCE(origin_ref, ''), reason_code, updated_by, created_at, updated_at
+SELECT price_id, tenant_id, product_id, price_context_code, currency_code, price_amount, replacement_cost_amount, average_cost_amount, pricing_status, effective_from, effective_to, origin_type, COALESCE(origin_ref, ''), reason_code, updated_by, created_at, updated_at
 FROM pricing_product_prices
 WHERE product_id = $1
+  AND price_context_code = $2
   AND effective_from <= NOW()
   AND (effective_to IS NULL OR effective_to > NOW())
 ORDER BY effective_from DESC, created_at DESC
 LIMIT 1
 `
-	row := tx.QueryRowContext(ctx, querySQL, productID)
+	row := tx.QueryRowContext(ctx, querySQL, productID, domain.DefaultPriceContextCode)
 	item, err := scanProductPrice(row)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -221,6 +231,7 @@ func scanProductPrice(s scanner) (domain.ProductPrice, error) {
 		&item.PriceID,
 		&item.TenantID,
 		&item.ProductID,
+		&item.PriceContextCode,
 		&item.CurrencyCode,
 		&item.PriceAmount,
 		&item.ReplacementCostAmount,

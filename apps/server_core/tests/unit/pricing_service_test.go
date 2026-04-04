@@ -63,6 +63,7 @@ func TestPricingServiceSetsProductPrice(t *testing.T) {
 		TenantID:              "tenant-1",
 		TraceID:               "trace-pricing-set",
 		ProductID:             "prd_1",
+		PriceContextCode:      "promo",
 		CurrencyCode:          "brl",
 		PriceAmount:           120,
 		ReplacementCostAmount: 90,
@@ -90,6 +91,9 @@ func TestPricingServiceSetsProductPrice(t *testing.T) {
 	}
 	if repo.created.CurrencyCode != "BRL" {
 		t.Fatalf("expected normalized currency BRL, got %q", repo.created.CurrencyCode)
+	}
+	if repo.created.PriceContextCode != "promo" {
+		t.Fatalf("expected preserved price context promo, got %q", repo.created.PriceContextCode)
 	}
 	if repo.traceID != "trace-pricing-set" {
 		t.Fatalf("expected trace id propagation, got %q", repo.traceID)
@@ -138,6 +142,30 @@ func TestPricingServiceNoOpsWhenCommercialStateDidNotChange(t *testing.T) {
 	}
 	if price.PriceID != "prc_current" {
 		t.Fatalf("expected current price to be returned, got %q", price.PriceID)
+	}
+}
+
+func TestPricingServiceDefaultsPriceContextCodeWhenOmitted(t *testing.T) {
+	repo := &fakePricingRepository{applied: true}
+	service := application.NewService(repo, &fakeManualOverrideGuard{})
+
+	_, _, err := service.SetProductPrice(context.Background(), application.SetProductPriceCommand{
+		TenantID:              "tenant-1",
+		ProductID:             "prd_1",
+		CurrencyCode:          "BRL",
+		PriceAmount:           120,
+		ReplacementCostAmount: 80,
+		PricingStatus:         "active",
+		EffectiveFrom:         time.Date(2026, 3, 17, 12, 0, 0, 0, time.UTC),
+		OriginType:            "manual",
+		ReasonCode:            "initial",
+		UpdatedBy:             "admin-local",
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if repo.created.PriceContextCode != domain.DefaultPriceContextCode {
+		t.Fatalf("expected default price context, got %q", repo.created.PriceContextCode)
 	}
 }
 

@@ -15,6 +15,7 @@ type SetProductPriceCommand struct {
 	TenantID              string
 	TraceID               string
 	ProductID             string
+	PriceContextCode      string
 	CurrencyCode          string
 	PriceAmount           float64
 	ReplacementCostAmount float64
@@ -64,6 +65,7 @@ func (s *Service) SetProductPrice(ctx context.Context, cmd SetProductPriceComman
 		PriceID:               generatePriceID(),
 		TenantID:              strings.TrimSpace(cmd.TenantID),
 		ProductID:             strings.TrimSpace(cmd.ProductID),
+		PriceContextCode:      domain.NormalizePriceContextCode(cmd.PriceContextCode),
 		CurrencyCode:          strings.ToUpper(strings.TrimSpace(cmd.CurrencyCode)),
 		PriceAmount:           cmd.PriceAmount,
 		ReplacementCostAmount: cmd.ReplacementCostAmount,
