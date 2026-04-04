@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sort"
 	"time"
 
 	"metalshopping/server_core/internal/modules/erp_integrations/domain"
@@ -18,25 +19,43 @@ const autoPromotionDisabledReviewSummary = "auto-promotion is disabled for this 
 const autoPromotionDisabledRecommendedAction = "enable auto-promotion or route the item through manual review"
 
 // PromotionConsumer polls erp_reconciliation_results for promotable records and
-// promotes product rows into the canonical catalog.
+// promotes product, price, and inventory rows in canonical order.
 type PromotionConsumer struct {
-	reconRepo        ports.ReconciliationReader
-	autoPromoGuard   ports.AutoPromotionGuard
-	productPromotion *ProductPromotion
-	interval         time.Duration
+	reconRepo          ports.ReconciliationReader
+	autoPromoGuard     ports.AutoPromotionGuard
+	productPromotion   productPromoter
+	pricePromotion     pricePromoter
+	inventoryPromotion inventoryPromoter
+	interval           time.Duration
+}
+
+type productPromoter interface {
+	PromoteProduct(ctx context.Context, result *domain.ReconciliationResult) (string, error)
+}
+
+type pricePromoter interface {
+	PromotePrice(ctx context.Context, result *domain.ReconciliationResult) (string, error)
+}
+
+type inventoryPromoter interface {
+	PromoteInventory(ctx context.Context, result *domain.ReconciliationResult) (string, error)
 }
 
 // NewPromotionConsumer constructs a PromotionConsumer.
 func NewPromotionConsumer(
 	reconRepo ports.ReconciliationReader,
 	autoPromoGuard ports.AutoPromotionGuard,
-	productPromotion *ProductPromotion,
+	productPromotion productPromoter,
+	pricePromotion pricePromoter,
+	inventoryPromotion inventoryPromoter,
 ) *PromotionConsumer {
 	return &PromotionConsumer{
-		reconRepo:        reconRepo,
-		autoPromoGuard:   autoPromoGuard,
-		productPromotion: productPromotion,
-		interval:         5 * time.Second,
+		reconRepo:          reconRepo,
+		autoPromoGuard:     autoPromoGuard,
+		productPromotion:   productPromotion,
+		pricePromotion:     pricePromotion,
+		inventoryPromotion: inventoryPromotion,
+		interval:           5 * time.Second,
 	}
 }
 
@@ -61,6 +80,17 @@ func (c *PromotionConsumer) runPromotion(ctx context.Context) {
 		log.Printf("WARN erp PromotionConsumer: list pending promotion: %v", err)
 		return
 	}
+
+	sort.SliceStable(results, func(i, j int) bool {
+		pi, pj := promotionPriority(results[i].EntityType), promotionPriority(results[j].EntityType)
+		if pi != pj {
+			return pi < pj
+		}
+		if !results[i].ReconciledAt.Equal(results[j].ReconciledAt) {
+			return results[i].ReconciledAt.Before(results[j].ReconciledAt)
+		}
+		return results[i].ReconciliationID < results[j].ReconciliationID
+	})
 
 	for _, result := range results {
 		if ctx.Err() != nil {
@@ -119,7 +149,29 @@ func (c *PromotionConsumer) promoteOne(ctx context.Context, result *domain.Recon
 	promotionResult := *result
 	promotionResult.PromotionStatus = domain.PromotionStatusPromoting
 
-	if result.EntityType != domain.EntityTypeProducts {
+	switch result.EntityType {
+	case domain.EntityTypeProducts:
+		canonicalID, err := c.productPromotion.PromoteProduct(ctx, result)
+		if err != nil {
+			c.handlePromotionFailure(ctx, result, &promotionResult, err, "catalog promotion failed")
+			return
+		}
+		log.Printf("INFO erp PromotionConsumer: promoted reconciliation %s tenant=%s canonical_id=%s", result.ReconciliationID, result.TenantID, canonicalID)
+	case domain.EntityTypePrices:
+		canonicalID, err := c.pricePromotion.PromotePrice(ctx, result)
+		if err != nil {
+			c.handlePromotionFailure(ctx, result, &promotionResult, err, "price promotion failed")
+			return
+		}
+		log.Printf("INFO erp PromotionConsumer: promoted reconciliation %s tenant=%s canonical_id=%s", result.ReconciliationID, result.TenantID, canonicalID)
+	case domain.EntityTypeInventory:
+		canonicalID, err := c.inventoryPromotion.PromoteInventory(ctx, result)
+		if err != nil {
+			c.handlePromotionFailure(ctx, result, &promotionResult, err, "inventory promotion failed")
+			return
+		}
+		log.Printf("INFO erp PromotionConsumer: promoted reconciliation %s tenant=%s canonical_id=%s", result.ReconciliationID, result.TenantID, canonicalID)
+	default:
 		warningDetails := buildPromotionFailureWarningDetails(&promotionResult, unsupportedPromotionEntityReasonCode, "unsupported entity type", nil)
 		if err := c.reconRepo.MarkReviewRequired(
 			ctx,
@@ -145,28 +197,76 @@ func (c *PromotionConsumer) promoteOne(ctx context.Context, result *domain.Recon
 		)
 		return
 	}
-
-	canonicalID, err := c.productPromotion.PromoteProduct(ctx, result)
-	if err != nil {
-		log.Printf(
-			"WARN erp PromotionConsumer: promote product reconciliation %s tenant=%s staging_id=%s source_id=%s entity_type=%s: %v",
-			result.ReconciliationID,
-			result.TenantID,
-			result.StagingID,
-			result.SourceID,
-			result.EntityType,
-			err,
-		)
-		failureDetails := buildPromotionFailureWarningDetails(&promotionResult, promotionFailureReasonCode, "catalog promotion failed", err)
-		if failErr := c.reconRepo.MarkPromotionFailed(ctx, result.TenantID, result.ReconciliationID, promotionFailureReasonCode, failureDetails); failErr != nil {
-			log.Printf("WARN erp PromotionConsumer: mark promotion failed for reconciliation %s: %v", result.ReconciliationID, failErr)
-		}
-		return
-	}
-	log.Printf("INFO erp PromotionConsumer: promoted reconciliation %s tenant=%s canonical_id=%s", result.ReconciliationID, result.TenantID, canonicalID)
 }
 
 const promotionFailureReasonCode = "ERP_PROMOTION_FAILED"
+const promotionBlockedByProductReasonCode = "ERP_RELATED_PRODUCT_NOT_PROMOTED"
+
+func promotionPriority(entityType domain.EntityType) int {
+	switch entityType {
+	case domain.EntityTypeProducts:
+		return 0
+	case domain.EntityTypePrices:
+		return 1
+	case domain.EntityTypeInventory:
+		return 2
+	default:
+		return 3
+	}
+}
+
+func (c *PromotionConsumer) handlePromotionFailure(ctx context.Context, result, promotionResult *domain.ReconciliationResult, err error, failureStep string) {
+	reviewCode := promotionFailureReasonCode
+	reviewSummary := "promotion failed"
+	reviewAction := "inspect the source record and retry the promotion"
+
+	switch {
+	case errors.Is(err, ErrRelatedProductNotPromoted):
+		reviewCode = promotionBlockedByProductReasonCode
+		reviewSummary = relatedProductBlockedSummary
+		reviewAction = relatedProductBlockedAction
+	case errors.Is(err, ErrPriceContextMappingNotFound):
+		reviewCode = priceContextMappingMissingReasonCode
+		reviewSummary = priceContextMappingMissingSummary
+		reviewAction = priceContextMappingMissingAction
+	}
+
+	warningDetails := buildPromotionFailureWarningDetails(promotionResult, reviewCode, failureStep, err)
+	if reviewCode != promotionFailureReasonCode {
+		if reviewErr := c.reconRepo.MarkReviewRequired(
+			ctx,
+			result.TenantID,
+			result.ReconciliationID,
+			reviewCode,
+			reviewSummary,
+			reviewAction,
+			warningDetails,
+		); reviewErr != nil {
+			log.Printf("WARN erp PromotionConsumer: mark review required for reconciliation %s tenant=%s reason_code=%s: %v", result.ReconciliationID, result.TenantID, reviewCode, reviewErr)
+			failureDetails := buildPromotionFailureWarningDetails(promotionResult, promotionFailureReasonCode, "mark review required failed", reviewErr)
+			if failErr := c.reconRepo.MarkPromotionFailed(ctx, result.TenantID, result.ReconciliationID, promotionFailureReasonCode, failureDetails); failErr != nil {
+				log.Printf("WARN erp PromotionConsumer: mark promotion failed for reconciliation %s: %v", result.ReconciliationID, failErr)
+			}
+			return
+		}
+		log.Printf("INFO erp PromotionConsumer: routed reconciliation %s tenant=%s to review_required reason_code=%s", result.ReconciliationID, result.TenantID, reviewCode)
+		return
+	}
+
+	log.Printf(
+		"WARN erp PromotionConsumer: promote reconciliation %s tenant=%s staging_id=%s source_id=%s entity_type=%s: %v",
+		result.ReconciliationID,
+		result.TenantID,
+		result.StagingID,
+		result.SourceID,
+		result.EntityType,
+		err,
+	)
+	failureDetails := buildPromotionFailureWarningDetails(promotionResult, promotionFailureReasonCode, failureStep, err)
+	if failErr := c.reconRepo.MarkPromotionFailed(ctx, result.TenantID, result.ReconciliationID, promotionFailureReasonCode, failureDetails); failErr != nil {
+		log.Printf("WARN erp PromotionConsumer: mark promotion failed for reconciliation %s: %v", result.ReconciliationID, failErr)
+	}
+}
 
 func buildPromotionFailureWarningDetails(result *domain.ReconciliationResult, reasonCode, failureStep string, cause error) *string {
 	if result == nil {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"metalshopping/server_core/internal/modules/erp_integrations/domain"
 	"metalshopping/server_core/internal/modules/erp_integrations/ports"
@@ -272,4 +273,74 @@ func decodeScalarString(raw json.RawMessage) (string, bool) {
 	default:
 		return strings.TrimSpace(fmt.Sprint(typed)), true
 	}
+}
+
+func readFloatField(payload map[string]json.RawMessage, key string) float64 {
+	raw, ok := payload[key]
+	if !ok {
+		return 0
+	}
+	var value any
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return 0
+	}
+	switch typed := value.(type) {
+	case float64:
+		return typed
+	case string:
+		parsed, err := parseFloatString(typed)
+		if err != nil {
+			return 0
+		}
+		return parsed
+	case bool:
+		if typed {
+			return 1
+		}
+		return 0
+	default:
+		return 0
+	}
+}
+
+func readTimeField(payload map[string]json.RawMessage, key string) (*time.Time, bool) {
+	raw, ok := payload[key]
+	if !ok {
+		return nil, false
+	}
+	value, ok := decodeScalarString(raw)
+	if !ok {
+		return nil, false
+	}
+	parsed, err := parseFlexibleTime(value)
+	if err != nil {
+		return nil, false
+	}
+	return &parsed, true
+}
+
+func parseFloatString(value string) (float64, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return 0, fmt.Errorf("empty float value")
+	}
+	var parsed float64
+	if _, err := fmt.Sscan(value, &parsed); err != nil {
+		return 0, err
+	}
+	return parsed, nil
+}
+
+func parseFlexibleTime(value string) (time.Time, error) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return time.Time{}, fmt.Errorf("empty time value")
+	}
+	if parsed, err := time.Parse(time.RFC3339, trimmed); err == nil {
+		return parsed.UTC(), nil
+	}
+	if parsed, err := time.Parse("2006-01-02", trimmed); err == nil {
+		return parsed.UTC(), nil
+	}
+	return time.Time{}, fmt.Errorf("unsupported time format %q", value)
 }

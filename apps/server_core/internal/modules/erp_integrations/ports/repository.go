@@ -2,6 +2,7 @@ package ports
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"metalshopping/server_core/internal/modules/erp_integrations/domain"
@@ -27,6 +28,45 @@ type ProductPromotionInput struct {
 	PrimaryTaxonomyNodeID string
 	Status                string
 	Identifiers           []ProductPromotionIdentifierInput
+}
+
+// PricePromotionInput captures a canonical price payload derived from ERP
+// staging data and a resolved canonical product.
+type PricePromotionInput struct {
+	ProductID             string
+	SourceSystem          string
+	SourceTableID         string
+	SourceTableCode       string
+	SourceTableName       string
+	CurrencyCode          string
+	PriceAmount           float64
+	ReplacementCostAmount float64
+	AverageCostAmount     *float64
+	PricingStatus         string
+	EffectiveFrom         time.Time
+	EffectiveTo           *time.Time
+	OriginType            string
+	OriginRef             string
+	ReasonCode            string
+	UpdatedBy             string
+}
+
+// InventoryPromotionInput captures a canonical inventory payload derived from
+// ERP staging data and a resolved canonical product.
+type InventoryPromotionInput struct {
+	ProductID          string
+	SourceCompanyCode  string
+	SourceLocationCode string
+	OnHandQuantity     float64
+	LastPurchaseAt     *time.Time
+	LastSaleAt         *time.Time
+	PositionStatus     string
+	EffectiveFrom      time.Time
+	EffectiveTo        *time.Time
+	OriginType         string
+	OriginRef          string
+	ReasonCode         string
+	UpdatedBy          string
 }
 
 // InstanceRepository manages persistence for ERP integration instances.
@@ -87,6 +127,27 @@ type StagingReader interface {
 type ProductWriter interface {
 	PromoteProduct(ctx context.Context, traceID string, result *domain.ReconciliationResult, run *domain.SyncRun, input ProductPromotionInput) (string, error)
 }
+
+// PriceWriter performs the canonical pricing write for promoted ERP prices.
+type PriceWriter interface {
+	PromotePrice(ctx context.Context, traceID string, result *domain.ReconciliationResult, run *domain.SyncRun, input PricePromotionInput) (string, error)
+}
+
+// InventoryWriter performs the canonical inventory write for promoted ERP
+// inventory positions.
+type InventoryWriter interface {
+	PromoteInventory(ctx context.Context, traceID string, result *domain.ReconciliationResult, run *domain.SyncRun, input InventoryPromotionInput) (string, error)
+}
+
+// ProductLookup resolves a canonical product ID from an ERP-native product
+// identifier, typically the source SKU / product code.
+type ProductLookup interface {
+	FindProductIDBySKU(ctx context.Context, tenantID, sku string) (string, bool, error)
+}
+
+// ErrPriceContextMappingNotFound indicates that a source price table has not
+// been mapped to a canonical MetalShopping price context.
+var ErrPriceContextMappingNotFound = errors.New("price context mapping not found")
 
 // PermissionChecker verifies tenant-scoped access rights.
 type PermissionChecker interface {

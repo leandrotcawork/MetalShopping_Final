@@ -149,3 +149,35 @@ LIMIT 1
 	}
 	return productID, nil
 }
+
+// FindProductIDBySKU resolves a canonical product ID by its SKU / source ERP
+// product code.
+func (r *Repository) FindProductIDBySKU(ctx context.Context, tenantID, sku string) (string, bool, error) {
+	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return "", false, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	const querySQL = `
+SELECT product_id
+FROM catalog_products
+WHERE tenant_id = current_tenant_id()
+  AND sku = $1
+LIMIT 1
+`
+	var productID string
+	if err := tx.QueryRowContext(ctx, querySQL, sku).Scan(&productID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			if err := tx.Commit(); err != nil {
+				return "", false, fmt.Errorf("commit catalog product sku lookup: %w", err)
+			}
+			return "", false, nil
+		}
+		return "", false, fmt.Errorf("lookup catalog product by sku: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return "", false, fmt.Errorf("commit catalog product sku lookup: %w", err)
+	}
+	return productID, true, nil
+}
