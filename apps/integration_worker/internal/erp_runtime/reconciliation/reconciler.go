@@ -190,8 +190,8 @@ func collectDuplicateSecondaryIdentifierFindings(stagingRecords []*staging.Stagi
 			continue
 		}
 
-		if value := readFirstStringField(payload, "ean", "REFERENCIA"); value != "" {
-			key := normalizeIdentifierValue(value)
+		if value := readEANField(payload, "ean", "REFERENCIA"); value != "" {
+			key := normalizeEANIdentifierValue(value)
 			grouped["ean"][key] = append(grouped["ean"][key], identifierOccurrence{
 				stagingID: record.StagingID,
 				sourceID:  record.SourceID,
@@ -291,6 +291,17 @@ func readFirstStringField(payload map[string]any, keys ...string) string {
 	return ""
 }
 
+func readEANField(payload map[string]any, keys ...string) string {
+	for _, key := range keys {
+		if value, ok := payload[key]; ok {
+			if text := toEANString(value); text != "" {
+				return text
+			}
+		}
+	}
+	return ""
+}
+
 func toStringValue(value any) string {
 	switch typed := value.(type) {
 	case string:
@@ -311,8 +322,27 @@ func toStringValue(value any) string {
 	}
 }
 
+func toEANString(value any) string {
+	switch typed := value.(type) {
+	case string:
+		return strings.TrimSpace(typed)
+	case []byte:
+		return strings.TrimSpace(string(typed))
+	case fmt.Stringer:
+		return strings.TrimSpace(typed.String())
+	case nil:
+		return ""
+	default:
+		return strings.TrimSpace(fmt.Sprint(typed))
+	}
+}
+
 func normalizeIdentifierValue(value string) string {
 	return strings.ToLower(strings.TrimSpace(value))
+}
+
+func normalizeEANIdentifierValue(value string) string {
+	return strings.TrimSpace(value)
 }
 
 func extractOccurrenceStagingIDs(occurrences []identifierOccurrence) []string {

@@ -201,7 +201,7 @@ func TestReconcilerFlagsDuplicateEAN(t *testing.T) {
 			RawID:            "raw-1",
 			EntityType:       types.EntityTypeProducts,
 			SourceID:         "SKU-1",
-			NormalizedJSON:   []byte(`{"CODPROD":"SKU-1","REFERENCIA":"7891234567890","REFFORN":"FAB-1"}`),
+			NormalizedJSON:   []byte(`{"CODPROD":"SKU-1","REFERENCIA":"0123456789012","REFFORN":"FAB-1"}`),
 			ValidationStatus: staging.ValidationStatusValid,
 			NormalizedAt:     now,
 		},
@@ -212,7 +212,7 @@ func TestReconcilerFlagsDuplicateEAN(t *testing.T) {
 			RawID:            "raw-2",
 			EntityType:       types.EntityTypeProducts,
 			SourceID:         "SKU-2",
-			NormalizedJSON:   []byte(`{"CODPROD":"SKU-2","REFERENCIA":"7891234567890","REFFORN":"FAB-2"}`),
+			NormalizedJSON:   []byte(`{"CODPROD":"SKU-2","REFERENCIA":"0123456789012","REFFORN":"FAB-2"}`),
 			ValidationStatus: staging.ValidationStatusValid,
 			NormalizedAt:     now,
 		},
@@ -222,6 +222,60 @@ func TestReconcilerFlagsDuplicateEAN(t *testing.T) {
 	}
 
 	assertDuplicateResults(t, results, "ean")
+}
+
+func TestReconcilerDoesNotPadOrStripMixedEANRepresentations(t *testing.T) {
+	t.Parallel()
+
+	db := newScriptedDB(t,
+		scriptStep{kind: stepBegin},
+		scriptStep{kind: stepExec, query: "set_config", args: []any{"tenant-a"}},
+		scriptStep{kind: stepExec, query: "INSERT INTO erp_reconciliation_results"},
+		scriptStep{kind: stepExec, query: "INSERT INTO erp_reconciliation_results"},
+		scriptStep{kind: stepCommit},
+	)
+
+	reconciler := NewReconciler(db)
+	now := time.Now().UTC()
+	results, err := reconciler.Reconcile(context.Background(), "tenant-a", "run-1", []*staging.StagingRecord{
+		{
+			StagingID:        "stage-1",
+			TenantID:         "tenant-a",
+			RunID:            "run-1",
+			RawID:            "raw-1",
+			EntityType:       types.EntityTypeProducts,
+			SourceID:         "SKU-1",
+			NormalizedJSON:   []byte(`{"CODPROD":"SKU-1","REFERENCIA":"0123456789012","REFFORN":"FAB-1"}`),
+			ValidationStatus: staging.ValidationStatusValid,
+			NormalizedAt:     now,
+		},
+		{
+			StagingID:        "stage-2",
+			TenantID:         "tenant-a",
+			RunID:            "run-1",
+			RawID:            "raw-2",
+			EntityType:       types.EntityTypeProducts,
+			SourceID:         "SKU-2",
+			NormalizedJSON:   []byte(`{"CODPROD":"SKU-2","REFERENCIA":123456789012,"REFFORN":"FAB-2"}`),
+			ValidationStatus: staging.ValidationStatusValid,
+			NormalizedAt:     now,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Reconcile returned error: %v", err)
+	}
+
+	if len(results) != 2 {
+		t.Fatalf("expected 2 reconciliation results, got %d", len(results))
+	}
+	for i, result := range results {
+		if result.Classification != ClassificationPromotable {
+			t.Fatalf("expected result %d to remain promotable, got %s", i, result.Classification)
+		}
+		if result.WarningDetails != nil {
+			t.Fatalf("expected no warning details for mixed EAN representations, got %s", *result.WarningDetails)
+		}
+	}
 }
 
 func TestReconcilerFlagsDuplicateManufacturerReference(t *testing.T) {
