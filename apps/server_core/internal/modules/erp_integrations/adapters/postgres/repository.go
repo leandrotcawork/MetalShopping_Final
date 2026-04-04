@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -53,6 +54,7 @@ var _ ports.RunRepository = (*RunRepo)(nil)
 var _ ports.ReviewRepository = (*ReviewRepo)(nil)
 var _ ports.StagingReader = (*StagingRepo)(nil)
 var _ ports.ReconciliationReader = (*ReconciliationRepo)(nil)
+var _ ports.PriceContextResolver = (*ReconciliationRepo)(nil)
 
 // ---------------------------------------------------------------------------
 // Repos container and constructor
@@ -907,6 +909,39 @@ LEFT JOIN erp_staging_records staging
 		return fmt.Errorf("commit erp reconciliation mark review required: %w", err)
 	}
 	return nil
+}
+
+func (r *ReconciliationRepo) ResolvePriceContextCode(ctx context.Context, tenantID, sourceSystem, sourceTableCode string) (string, bool, error) {
+	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return "", false, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	const querySQL = `
+SELECT canonical_context_code
+FROM erp_source_price_context_mappings
+WHERE tenant_id = current_tenant_id()
+  AND source_system = $1
+  AND source_table_code = $2
+  AND is_active = true
+ORDER BY updated_at DESC, created_at DESC
+LIMIT 1
+`
+	var canonicalContext string
+	if err := tx.QueryRowContext(ctx, querySQL, strings.TrimSpace(sourceSystem), strings.TrimSpace(sourceTableCode)).Scan(&canonicalContext); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			if err := tx.Commit(); err != nil {
+				return "", false, fmt.Errorf("commit erp price context mapping lookup: %w", err)
+			}
+			return "", false, nil
+		}
+		return "", false, fmt.Errorf("resolve erp price context mapping: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return "", false, fmt.Errorf("commit erp price context mapping lookup: %w", err)
+	}
+	return strings.ToLower(strings.TrimSpace(canonicalContext)), true, nil
 }
 
 // ---------------------------------------------------------------------------

@@ -24,10 +24,13 @@ const (
 	OriginTypeImport OriginType = "import"
 )
 
+const DefaultPriceContextCode = "default"
+
 type ProductPrice struct {
 	PriceID               string
 	TenantID              string
 	ProductID             string
+	PriceContextCode      string
 	CurrencyCode          string
 	PriceAmount           float64
 	ReplacementCostAmount float64
@@ -91,6 +94,14 @@ func (p ProductPrice) ValidateForWrite() error {
 	return nil
 }
 
+func NormalizePriceContextCode(value string) string {
+	normalized := strings.ToLower(strings.TrimSpace(value))
+	if normalized == "" {
+		return DefaultPriceContextCode
+	}
+	return normalized
+}
+
 func (s PricingStatus) IsValid() bool {
 	return s == PricingStatusDraft || s == PricingStatusActive || s == PricingStatusInactive
 }
@@ -102,6 +113,7 @@ func (o OriginType) IsValid() bool {
 func (p ProductPrice) HasSameCommercialState(other ProductPrice) bool {
 	return strings.EqualFold(strings.TrimSpace(p.TenantID), strings.TrimSpace(other.TenantID)) &&
 		strings.EqualFold(strings.TrimSpace(p.ProductID), strings.TrimSpace(other.ProductID)) &&
+		NormalizePriceContextCode(p.PriceContextCode) == NormalizePriceContextCode(other.PriceContextCode) &&
 		strings.EqualFold(strings.TrimSpace(p.CurrencyCode), strings.TrimSpace(other.CurrencyCode)) &&
 		sameRoundedNumber(p.PriceAmount, other.PriceAmount) &&
 		sameRoundedNumber(p.ReplacementCostAmount, other.ReplacementCostAmount) &&

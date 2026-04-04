@@ -24,21 +24,23 @@ const (
 )
 
 type ProductPosition struct {
-	PositionID     string
-	TenantID       string
-	ProductID      string
-	OnHandQuantity float64
-	LastPurchaseAt *time.Time
-	LastSaleAt     *time.Time
-	PositionStatus PositionStatus
-	EffectiveFrom  time.Time
-	EffectiveTo    *time.Time
-	OriginType     OriginType
-	OriginRef      string
-	ReasonCode     string
-	UpdatedBy      string
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	PositionID         string
+	TenantID           string
+	ProductID          string
+	SourceCompanyCode  string
+	SourceLocationCode string
+	OnHandQuantity     float64
+	LastPurchaseAt     *time.Time
+	LastSaleAt         *time.Time
+	PositionStatus     PositionStatus
+	EffectiveFrom      time.Time
+	EffectiveTo        *time.Time
+	OriginType         OriginType
+	OriginRef          string
+	ReasonCode         string
+	UpdatedBy          string
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 var productIDPattern = regexp.MustCompile(`^prd_[a-z0-9]+$`)
@@ -55,9 +57,6 @@ func (p ProductPosition) ValidateForWrite() error {
 	}
 	if !productIDPattern.MatchString(strings.ToLower(strings.TrimSpace(p.ProductID))) {
 		return fmt.Errorf("%w: %s", ErrProductIDRequired, p.ProductID)
-	}
-	if p.OnHandQuantity < 0 {
-		return ErrOnHandQuantityInvalid
 	}
 	if !p.PositionStatus.IsValid() {
 		return ErrInvalidPositionStatus
@@ -91,6 +90,8 @@ func (o OriginType) IsValid() bool {
 func (p ProductPosition) HasSameOperationalState(other ProductPosition) bool {
 	return strings.EqualFold(strings.TrimSpace(p.TenantID), strings.TrimSpace(other.TenantID)) &&
 		strings.EqualFold(strings.TrimSpace(p.ProductID), strings.TrimSpace(other.ProductID)) &&
+		strings.EqualFold(strings.TrimSpace(p.SourceCompanyCode), strings.TrimSpace(other.SourceCompanyCode)) &&
+		strings.EqualFold(strings.TrimSpace(p.SourceLocationCode), strings.TrimSpace(other.SourceLocationCode)) &&
 		sameRoundedNumber(p.OnHandQuantity, other.OnHandQuantity) &&
 		sameOptionalTime(p.LastPurchaseAt, other.LastPurchaseAt) &&
 		sameOptionalTime(p.LastSaleAt, other.LastSaleAt) &&

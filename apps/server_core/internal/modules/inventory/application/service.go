@@ -12,19 +12,21 @@ import (
 )
 
 type SetProductPositionCommand struct {
-	TenantID       string
-	TraceID        string
-	ProductID      string
-	OnHandQuantity float64
-	LastPurchaseAt *time.Time
-	LastSaleAt     *time.Time
-	PositionStatus string
-	EffectiveFrom  time.Time
-	EffectiveTo    *time.Time
-	OriginType     string
-	OriginRef      string
-	ReasonCode     string
-	UpdatedBy      string
+	TenantID           string
+	TraceID            string
+	ProductID          string
+	SourceCompanyCode  string
+	SourceLocationCode string
+	OnHandQuantity     float64
+	LastPurchaseAt     *time.Time
+	LastSaleAt         *time.Time
+	PositionStatus     string
+	EffectiveFrom      time.Time
+	EffectiveTo        *time.Time
+	OriginType         string
+	OriginRef          string
+	ReasonCode         string
+	UpdatedBy          string
 }
 
 type Service struct {
@@ -52,21 +54,23 @@ func (s *Service) SetProductPosition(ctx context.Context, cmd SetProductPosition
 
 	now := s.now()
 	position := domain.ProductPosition{
-		PositionID:     generatePositionID(),
-		TenantID:       strings.TrimSpace(cmd.TenantID),
-		ProductID:      strings.TrimSpace(cmd.ProductID),
-		OnHandQuantity: cmd.OnHandQuantity,
-		LastPurchaseAt: normalizeTimePointer(cmd.LastPurchaseAt),
-		LastSaleAt:     normalizeTimePointer(cmd.LastSaleAt),
-		PositionStatus: status,
-		EffectiveFrom:  cmd.EffectiveFrom.UTC(),
-		EffectiveTo:    normalizeTimePointer(cmd.EffectiveTo),
-		OriginType:     originType,
-		OriginRef:      strings.TrimSpace(cmd.OriginRef),
-		ReasonCode:     strings.TrimSpace(cmd.ReasonCode),
-		UpdatedBy:      strings.TrimSpace(cmd.UpdatedBy),
-		CreatedAt:      now,
-		UpdatedAt:      now,
+		PositionID:         generatePositionID(),
+		TenantID:           strings.TrimSpace(cmd.TenantID),
+		ProductID:          strings.TrimSpace(cmd.ProductID),
+		SourceCompanyCode:  strings.TrimSpace(cmd.SourceCompanyCode),
+		SourceLocationCode: strings.TrimSpace(cmd.SourceLocationCode),
+		OnHandQuantity:     cmd.OnHandQuantity,
+		LastPurchaseAt:     normalizeTimePointer(cmd.LastPurchaseAt),
+		LastSaleAt:         normalizeTimePointer(cmd.LastSaleAt),
+		PositionStatus:     status,
+		EffectiveFrom:      cmd.EffectiveFrom.UTC(),
+		EffectiveTo:        normalizeTimePointer(cmd.EffectiveTo),
+		OriginType:         originType,
+		OriginRef:          strings.TrimSpace(cmd.OriginRef),
+		ReasonCode:         strings.TrimSpace(cmd.ReasonCode),
+		UpdatedBy:          strings.TrimSpace(cmd.UpdatedBy),
+		CreatedAt:          now,
+		UpdatedAt:          now,
 	}
 	if err := position.ValidateForWrite(); err != nil {
 		return domain.ProductPosition{}, false, err
