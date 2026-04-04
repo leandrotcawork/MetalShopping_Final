@@ -1,0 +1,18 @@
+[
+  {
+    "NUTAB": "5001",
+    "CODTAB": "0",
+    "NOMETAB": "Tabela Base",
+    "DTVIGOR": "2026-04-01",
+    "CODPROD": "10001",
+    "VLRVENDA": 89.9
+  },
+  {
+    "NUTAB": "5002",
+    "CODTAB": "17",
+    "NOMETAB": "Promocao Abril",
+    "DTVIGOR": "2026-04-01",
+    "CODPROD": "10001",
+    "VLRVENDA": 84.5
+  }
+]

@@ -1,0 +1,16 @@
+[
+  {
+    "CODPROD": "10001",
+    "CODEMP": "1",
+    "CODLOCAL": "10101",
+    "ESTOQUE": 25,
+    "RESERVADO": 3
+  },
+  {
+    "CODPROD": "10002",
+    "CODEMP": "1",
+    "CODLOCAL": "10101",
+    "ESTOQUE": -4,
+    "RESERVADO": 0
+  }
+]

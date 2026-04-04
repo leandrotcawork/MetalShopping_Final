@@ -1,0 +1,48 @@
+package sankhya
+
+import (
+	"context"
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"testing"
+
+	erp_runtime "metalshopping/integration_worker/internal/erp_runtime"
+)
+
+func loadFixtureCount(t *testing.T, name string) int {
+	t.Helper()
+
+	path := filepath.Join("testdata", name)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read fixture %s: %v", path, err)
+	}
+
+	var rows []map[string]any
+	if err := json.Unmarshal(data, &rows); err != nil {
+		t.Fatalf("unmarshal fixture %s: %v", path, err)
+	}
+	return len(rows)
+}
+
+func TestExtractorProductsSnapshotFixture(t *testing.T) {
+	t.Parallel()
+
+	expectedRows := loadFixtureCount(t, "products_fixture.json")
+	if expectedRows == 0 {
+		t.Fatal("expected products fixture to contain at least one discovered row")
+	}
+
+	extractor := newExtractor()
+	got, err := extractor.Extract(context.Background(), erp_runtime.ExtractRequest{
+		Entity: erp_runtime.EntityTypeProducts,
+	})
+	if err != nil {
+		t.Fatalf("Extract returned error: %v", err)
+	}
+
+	if len(got.Records) != expectedRows {
+		t.Fatalf("expected %d product records from fixture shape, got %d", expectedRows, len(got.Records))
+	}
+}
