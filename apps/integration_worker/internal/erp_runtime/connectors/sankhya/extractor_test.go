@@ -47,3 +47,31 @@ func TestExtractorProductsSnapshotFixture(t *testing.T) {
 		t.Fatal("expected extracted payload JSON to be non-empty")
 	}
 }
+
+func TestExtractorPricesSnapshotAllowsNullDTVIGOR(t *testing.T) {
+	t.Parallel()
+
+	expectedRows := loadFixtureCount(t, "prices_fixture.json")
+	if expectedRows < 3 {
+		t.Fatalf("expected prices fixture to contain the null DTVIGOR row, got %d rows", expectedRows)
+	}
+
+	extractor := newExtractor()
+	got, err := extractor.Extract(context.Background(), erp_runtime.ExtractRequest{
+		Entity:        erp_runtime.EntityTypePrices,
+		ConnectionRef: "fixture://prices",
+	})
+	if err != nil {
+		t.Fatalf("Extract returned error: %v", err)
+	}
+
+	if len(got.Records) != expectedRows {
+		t.Fatalf("expected %d price records from fixture shape, got %d", expectedRows, len(got.Records))
+	}
+	if got.Records[2].SourceID != "5003:10002:99" {
+		t.Fatalf("expected fallback price source id 5003:10002:99, got %q", got.Records[2].SourceID)
+	}
+	if len(got.Records[2].PayloadJSON) == 0 {
+		t.Fatal("expected null DTVIGOR price payload to be non-empty")
+	}
+}

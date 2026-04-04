@@ -14,5 +14,13 @@
     "DTVIGOR": "2026-04-01",
     "CODPROD": "10001",
     "VLRVENDA": 84.5
+  },
+  {
+    "NUTAB": "5003",
+    "CODTAB": "99",
+    "NOMETAB": "Tabela Sem Vigor",
+    "DTVIGOR": null,
+    "CODPROD": "10002",
+    "VLRVENDA": 91.25
   }
 ]

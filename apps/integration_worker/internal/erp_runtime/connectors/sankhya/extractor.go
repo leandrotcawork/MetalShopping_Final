@@ -34,7 +34,7 @@ var entityConfigs = map[erp_runtime.EntityType]entityConfig{
 		serviceName:  "SankhyaW-INF-Preco",
 		query:        pricesSnapshotQuery,
 		fixtureFile:  "prices_fixture.json",
-		sourceIDKeys: []string{"NUTAB", "CODPROD", "DTVIGOR"},
+		sourceIDKeys: []string{"NUTAB", "CODPROD", "CODTAB"},
 	},
 	erp_runtime.EntityTypeInventory: {
 		serviceName:  "SankhyaW-INF-Estoque",
