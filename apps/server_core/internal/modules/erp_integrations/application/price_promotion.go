@@ -81,9 +81,10 @@ func (p *PricePromotion) PromotePrice(ctx context.Context, result *domain.Reconc
 	}
 
 	traceID := promotionTraceID(result)
+	sourceSystem := sourceSystemForRun(run)
 	return p.writer.PromotePrice(ctx, traceID, result, run, ports.PricePromotionInput{
 		ProductID:             productID,
-		SourceSystem:          "sankhya",
+		SourceSystem:          sourceSystem,
 		SourceTableID:         input.SourceTableID,
 		SourceTableCode:       input.SourceTableCode,
 		SourceTableName:       input.SourceTableName,
@@ -142,9 +143,12 @@ func buildPricePromotionInput(staging *domain.StagingRecord) (pricePromotionStag
 		effectiveFrom = &fallback
 	}
 
-	priceAmount := readFloatField(payload, "sale_price")
-	if priceAmount == 0 {
-		priceAmount = readFloatField(payload, "VLRVENDA")
+	priceAmount, ok := readFloatFieldValue(payload, "sale_price")
+	if !ok {
+		priceAmount, ok = readFloatFieldValue(payload, "VLRVENDA")
+		if !ok {
+			priceAmount = 0
+		}
 	}
 
 	return pricePromotionStagingInput{
@@ -174,6 +178,48 @@ func readOptionalFloatField(payload map[string]json.RawMessage, key string) *flo
 	if strings.EqualFold(string(raw), "null") {
 		return nil
 	}
-	value := readFloatField(payload, key)
+	value, ok := readFloatFieldValue(payload, key)
+	if !ok {
+		return nil
+	}
 	return &value
+}
+
+func readFloatFieldValue(payload map[string]json.RawMessage, key string) (float64, bool) {
+	raw, ok := payload[key]
+	if !ok {
+		return 0, false
+	}
+	var value any
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return 0, false
+	}
+	switch typed := value.(type) {
+	case float64:
+		return typed, true
+	case string:
+		parsed, err := parseFloatString(typed)
+		if err != nil {
+			return 0, false
+		}
+		return parsed, true
+	case bool:
+		if typed {
+			return 1, true
+		}
+		return 0, true
+	default:
+		return 0, false
+	}
+}
+
+func sourceSystemForRun(run *domain.SyncRun) string {
+	if run == nil {
+		return "sankhya"
+	}
+	sourceSystem := strings.TrimSpace(string(run.ConnectorType))
+	if sourceSystem == "" {
+		return "sankhya"
+	}
+	return sourceSystem
 }

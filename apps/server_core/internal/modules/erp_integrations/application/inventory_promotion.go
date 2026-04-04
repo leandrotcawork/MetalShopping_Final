@@ -135,9 +135,12 @@ func buildInventoryPromotionInput(staging *domain.StagingRecord) (inventoryPromo
 		effectiveFrom = parsed.UTC()
 	}
 
-	onHandQuantity := readFloatField(payload, "raw_quantity")
-	if onHandQuantity == 0 {
-		onHandQuantity = readFloatField(payload, "ESTOQUE")
+	onHandQuantity, ok := readFloatFieldValue(payload, "raw_quantity")
+	if !ok {
+		onHandQuantity, ok = readFloatFieldValue(payload, "ESTOQUE")
+		if !ok {
+			onHandQuantity = 0
+		}
 	}
 
 	lastPurchaseAt, _ := readTimeField(payload, "last_purchase_at")
