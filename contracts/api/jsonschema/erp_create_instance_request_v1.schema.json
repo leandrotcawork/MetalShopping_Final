@@ -10,6 +10,10 @@
     "connection": {
       "type":"object",
       "required": ["kind","host","port","username","password_secret_ref"],
+      "oneOf": [
+        {"required": ["service_name"], "not": {"required": ["sid"]}},
+        {"required": ["sid"], "not": {"required": ["service_name"]}}
+      ],
       "properties": {
         "kind": {"type":"string","enum":["oracle"]},
         "host": {"type":"string","minLength":1},

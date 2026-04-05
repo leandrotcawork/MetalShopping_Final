@@ -10,5 +10,5 @@ ALTER TABLE erp_integration_instances
   ADD COLUMN fetch_batch_size INT NULL,
   ADD COLUMN entity_batch_size INT NULL;
 
-ALTER TABLE erp_integration_instances
-  DROP COLUMN connection_ref;
+-- Preserve the legacy opaque connection_ref until a safe backfill exists for
+-- historical rows. New writes already use the structured Oracle config.
