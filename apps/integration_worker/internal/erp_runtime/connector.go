@@ -13,6 +13,7 @@ type EntityCapability = types.EntityCapability
 type RawRecord = types.RawRecord
 type ExtractionResult = types.ExtractionResult
 type ErrorClass = types.ErrorClass
+type ExtractConnection = types.ExtractConnection
 type ExtractRequest = types.ExtractRequest
 
 // Entity type constants.
@@ -44,7 +45,7 @@ const (
 
 // Connector is the interface all ERP connectors must implement.
 type Connector interface {
-	// Type returns the connector type identifier (e.g., "sankhya")
+	// Type returns the connector type identifier (e.g., "sankhya").
 	Type() string
 	// Capabilities returns the entities this connector supports
 	Capabilities() []EntityCapability
