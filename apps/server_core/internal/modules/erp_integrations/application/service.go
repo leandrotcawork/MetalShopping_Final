@@ -50,7 +50,7 @@ type CreateInstanceCommand struct {
 	PrincipalID     string
 	ConnectorType   domain.ConnectorType
 	DisplayName     string
-	ConnectionRef   string
+	Connection      domain.InstanceConnectionConfig
 	EnabledEntities []domain.EntityType
 	SyncSchedule    *string
 }
@@ -83,7 +83,7 @@ func (s *Service) CreateInstance(ctx context.Context, cmd CreateInstanceCommand)
 		TenantID:        cmd.TenantID,
 		ConnectorType:   cmd.ConnectorType,
 		DisplayName:     cmd.DisplayName,
-		ConnectionRef:   cmd.ConnectionRef,
+		Connection:      cmd.Connection,
 		EnabledEntities: cmd.EnabledEntities,
 		SyncSchedule:    cmd.SyncSchedule,
 		Status:          domain.InstanceStatusActive,

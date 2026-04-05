@@ -3,13 +3,28 @@
   "$id": "https://contracts.metalshopping.local/schema/erp_integrations/integration_instance/v1",
   "title": "ErpIntegrationInstance",
   "type": "object",
-  "required": ["instance_id","tenant_id","connector_type","display_name","connection_ref","enabled_entities","status","created_at","updated_at"],
+  "required": ["instance_id","tenant_id","connector_type","display_name","connection","enabled_entities","status","created_at","updated_at"],
   "properties": {
     "instance_id": {"type":"string"},
     "tenant_id": {"type":"string"},
     "connector_type": {"type":"string","enum":["sankhya"]},
     "display_name": {"type":"string"},
-    "connection_ref": {"type":"string"},
+    "connection": {
+      "type":"object",
+      "required": ["kind","host","port","username","password_secret_ref"],
+      "properties": {
+        "kind": {"type":"string","enum":["oracle"]},
+        "host": {"type":"string","minLength":1},
+        "port": {"type":"integer","minimum":1},
+        "service_name": {"type":"string","minLength":1},
+        "sid": {"type":"string","minLength":1},
+        "username": {"type":"string","minLength":1},
+        "password_secret_ref": {"type":"string","minLength":1},
+        "connect_timeout_seconds": {"type":"integer","minimum":1},
+        "fetch_batch_size": {"type":"integer","minimum":1},
+        "entity_batch_size": {"type":"integer","minimum":1}
+      }
+    },
     "enabled_entities": {"type":"array","items":{"type":"string","enum":["products","prices","costs","inventory","sales","purchases","customers","suppliers"]}},
     "sync_schedule": {"type":["string","null"]},
     "status": {"type":"string","enum":["active","paused","disabled"]},

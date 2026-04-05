@@ -105,7 +105,16 @@ INSERT INTO erp_integration_instances (
   tenant_id,
   connector_type,
   display_name,
-  connection_ref,
+  connection_kind,
+  db_host,
+  db_port,
+  db_service_name,
+  db_sid,
+  db_username,
+  db_password_secret_ref,
+  connect_timeout_seconds,
+  fetch_batch_size,
+  entity_batch_size,
   enabled_entities,
   sync_schedule,
   status,
@@ -122,7 +131,16 @@ VALUES (
   $6,
   $7,
   $8,
-  $9
+  $9,
+  $10,
+  $11,
+  $12,
+  $13,
+  $14,
+  $15,
+  $16,
+  $17,
+  $18
 )
 `
 	if _, err := tx.ExecContext(
@@ -131,7 +149,16 @@ VALUES (
 		instance.InstanceID,
 		string(instance.ConnectorType),
 		instance.DisplayName,
-		instance.ConnectionRef,
+		string(instance.Connection.Kind),
+		instance.Connection.Host,
+		instance.Connection.Port,
+		nullableText(instance.Connection.ServiceName),
+		nullableText(instance.Connection.SID),
+		instance.Connection.Username,
+		instance.Connection.PasswordSecretRef,
+		nullableInt(instance.Connection.ConnectTimeoutSec),
+		nullableInt(instance.Connection.FetchBatchSize),
+		nullableInt(instance.Connection.EntityBatchSize),
 		pgtype.FlatArray[string](enabledEntities),
 		nullableText(instance.SyncSchedule),
 		string(instance.Status),
@@ -155,8 +182,10 @@ func (r *InstanceRepo) Get(ctx context.Context, tenantID, instanceID string) (*d
 	defer func() { _ = tx.Rollback() }()
 
 	const querySQL = `
-SELECT instance_id, tenant_id, connector_type, display_name, connection_ref,
-       enabled_entities, sync_schedule, status, created_at, updated_at
+SELECT instance_id, tenant_id, connector_type, display_name, connection_kind,
+       db_host, db_port, db_service_name, db_sid, db_username,
+       db_password_secret_ref, connect_timeout_seconds, fetch_batch_size,
+       entity_batch_size, enabled_entities, sync_schedule, status, created_at, updated_at
 FROM erp_integration_instances
 WHERE tenant_id = current_tenant_id()
   AND instance_id = $1
@@ -183,8 +212,10 @@ func (r *InstanceRepo) List(ctx context.Context, tenantID string, limit, offset 
 	defer func() { _ = tx.Rollback() }()
 
 	const querySQL = `
-SELECT instance_id, tenant_id, connector_type, display_name, connection_ref,
-       enabled_entities, sync_schedule, status, created_at, updated_at
+SELECT instance_id, tenant_id, connector_type, display_name, connection_kind,
+       db_host, db_port, db_service_name, db_sid, db_username,
+       db_password_secret_ref, connect_timeout_seconds, fetch_batch_size,
+       entity_batch_size, enabled_entities, sync_schedule, status, created_at, updated_at
 FROM erp_integration_instances
 WHERE tenant_id = current_tenant_id()
 ORDER BY created_at DESC
@@ -954,17 +985,31 @@ type scanner interface {
 
 func scanInstance(s scanner) (*domain.IntegrationInstance, error) {
 	var item domain.IntegrationInstance
-	var connectorType string
+	var connectorType, connectionKind string
 	var status string
 	var enabledEntities pgtype.FlatArray[string]
 	var syncSchedule sql.NullString
+	var serviceName sql.NullString
+	var sid sql.NullString
+	var connectTimeout sql.NullInt64
+	var fetchBatchSize sql.NullInt64
+	var entityBatchSize sql.NullInt64
 
 	if err := s.Scan(
 		&item.InstanceID,
 		&item.TenantID,
 		&connectorType,
 		&item.DisplayName,
-		&item.ConnectionRef,
+		&connectionKind,
+		&item.Connection.Host,
+		&item.Connection.Port,
+		&serviceName,
+		&sid,
+		&item.Connection.Username,
+		&item.Connection.PasswordSecretRef,
+		&connectTimeout,
+		&fetchBatchSize,
+		&entityBatchSize,
 		&enabledEntities,
 		&syncSchedule,
 		&status,
@@ -974,10 +1019,31 @@ func scanInstance(s scanner) (*domain.IntegrationInstance, error) {
 		return nil, err
 	}
 	item.ConnectorType = domain.ConnectorType(connectorType)
+	item.Connection.Kind = domain.ConnectionKind(connectionKind)
 	item.Status = domain.InstanceStatus(status)
 	item.EnabledEntities = make([]domain.EntityType, len(enabledEntities))
 	for i, e := range enabledEntities {
 		item.EnabledEntities[i] = domain.EntityType(e)
+	}
+	if serviceName.Valid {
+		value := serviceName.String
+		item.Connection.ServiceName = &value
+	}
+	if sid.Valid {
+		value := sid.String
+		item.Connection.SID = &value
+	}
+	if connectTimeout.Valid {
+		value := int(connectTimeout.Int64)
+		item.Connection.ConnectTimeoutSec = &value
+	}
+	if fetchBatchSize.Valid {
+		value := int(fetchBatchSize.Int64)
+		item.Connection.FetchBatchSize = &value
+	}
+	if entityBatchSize.Valid {
+		value := int(entityBatchSize.Int64)
+		item.Connection.EntityBatchSize = &value
 	}
 	if syncSchedule.Valid {
 		s := syncSchedule.String
@@ -1136,6 +1202,13 @@ func nullableText(value *string) any {
 }
 
 func nullableJSON(value *string) any {
+	if value == nil {
+		return nil
+	}
+	return *value
+}
+
+func nullableInt(value *int) any {
 	if value == nil {
 		return nil
 	}
