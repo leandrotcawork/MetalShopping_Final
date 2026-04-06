@@ -16,7 +16,8 @@ import (
 )
 
 func init() {
-	sql.Register("godror", oracleTestDriver{})
+	sql.Register("godror_test", oracleTestDriver{})
+	sqlDriverName = "godror_test"
 }
 
 func TestNewQueryRunnerPingsConnection(t *testing.T) {

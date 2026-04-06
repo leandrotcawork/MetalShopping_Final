@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	_ "github.com/godror/godror"
+
 	"metalshopping/integration_worker/internal/erp_runtime/dbsource"
 )
 
@@ -17,6 +19,8 @@ type QueryRunner struct {
 	db *sql.DB
 }
 
+var sqlDriverName = "godror"
+
 // NewQueryRunner opens and validates an Oracle connection.
 func NewQueryRunner(cfg Config) (*QueryRunner, error) {
 	dsn, err := cfg.ConnectString()
@@ -24,7 +28,7 @@ func NewQueryRunner(cfg Config) (*QueryRunner, error) {
 		return nil, err
 	}
 
-	db, err := sql.Open("godror", dsn)
+	db, err := sql.Open(sqlDriverName, dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open oracle connection: %w", err)
 	}

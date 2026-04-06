@@ -2,16 +2,20 @@ package sankhya
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
 	erp_runtime "metalshopping/integration_worker/internal/erp_runtime"
+	"metalshopping/integration_worker/internal/erp_runtime/dbsource"
 )
 
 func TestValidateConnectionAcceptsStructuredConnection(t *testing.T) {
 	t.Parallel()
 
-	connector := New()
+	connector := NewWithRunnerFactory(func(context.Context, erp_runtime.ExtractConnection) (dbsource.QueryRunner, error) {
+		return &noopRunner{}, nil
+	})
 	if err := connector.ValidateConnection(context.Background(), erp_runtime.ExtractConnection{
 		Host:              "dummy-host.example",
 		Port:              defaultOraclePort,
@@ -26,7 +30,9 @@ func TestValidateConnectionAcceptsStructuredConnection(t *testing.T) {
 func TestValidateConnectionRejectsMissingHost(t *testing.T) {
 	t.Parallel()
 
-	connector := New()
+	connector := NewWithRunnerFactory(func(context.Context, erp_runtime.ExtractConnection) (dbsource.QueryRunner, error) {
+		return &noopRunner{}, nil
+	})
 	err := connector.ValidateConnection(context.Background(), erp_runtime.ExtractConnection{
 		Port:              defaultOraclePort,
 		ServiceName:       strPtr("PROD"),
@@ -44,7 +50,9 @@ func TestValidateConnectionRejectsMissingHost(t *testing.T) {
 func TestValidateConnectionRejectsMissingPasswordSecretRef(t *testing.T) {
 	t.Parallel()
 
-	connector := New()
+	connector := NewWithRunnerFactory(func(context.Context, erp_runtime.ExtractConnection) (dbsource.QueryRunner, error) {
+		return &noopRunner{}, nil
+	})
 	err := connector.ValidateConnection(context.Background(), erp_runtime.ExtractConnection{
 		Host:        "dummy-host.example",
 		Port:        defaultOraclePort,
@@ -60,6 +68,34 @@ func TestValidateConnectionRejectsMissingPasswordSecretRef(t *testing.T) {
 }
 
 func strPtr(v string) *string { return &v }
+
+func TestValidateConnectionUsesRunnerFactory(t *testing.T) {
+	t.Parallel()
+
+	called := false
+	connector := NewWithRunnerFactory(func(_ context.Context, conn erp_runtime.ExtractConnection) (dbsource.QueryRunner, error) {
+		called = true
+		if conn.Host != "10.55.10.101" {
+			return nil, errors.New("unexpected host")
+		}
+		return &noopRunner{}, nil
+	})
+
+	err := connector.ValidateConnection(context.Background(), erp_runtime.ExtractConnection{
+		Kind:              "oracle",
+		Host:              "10.55.10.101",
+		Port:              1521,
+		ServiceName:       strPtr("ORCL"),
+		Username:          "leandroth",
+		PasswordSecretRef: "erp/sankhya/password",
+	})
+	if err != nil {
+		t.Fatalf("ValidateConnection returned error: %v", err)
+	}
+	if !called {
+		t.Fatal("expected ValidateConnection to call runner factory")
+	}
+}
 
 func TestQueryForEntityReturnsSnapshotSQL(t *testing.T) {
 	t.Parallel()
@@ -100,4 +136,14 @@ func TestQueryForEntityReturnsSnapshotSQL(t *testing.T) {
 			}
 		}
 	}
+}
+
+type noopRunner struct{}
+
+func (n *noopRunner) Query(context.Context, dbsource.QuerySpec, func(dbsource.RowReader) error) error {
+	return nil
+}
+
+func (n *noopRunner) Close() error {
+	return nil
 }
