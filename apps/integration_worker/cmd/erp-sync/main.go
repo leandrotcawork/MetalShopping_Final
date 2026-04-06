@@ -47,7 +47,8 @@ func main() {
 	reconciler := reconciliation.NewReconciler(db)
 	reviewStore := review.NewStore(db)
 	ledger := runs.NewLedger(db)
-	runner := erp_runtime.NewRunner(registry, rawStore, normalizer, reconciler, reviewStore, ledger)
+	entityStepStore := runs.NewEntityStepStore(db)
+	runner := erp_runtime.NewRunner(registry, rawStore, normalizer, reconciler, reviewStore, ledger, entityStepStore)
 
 	// 3. Register connectors
 	registry.Register(sankhya.New())
@@ -89,48 +90,68 @@ func main() {
 			continue
 		}
 
-		// Fetch connection_ref for this instance
-		connectionRef, err := getConnectionRef(tenantCtx, db, claim.TenantID, claim.InstanceID)
+		// Fetch structured connection config for this instance
+		connection, err := getConnection(tenantCtx, db, claim.TenantID, claim.InstanceID)
 		if err != nil {
-			log.Printf("erp-sync: getConnectionRef error for instance %s: %v", claim.InstanceID, err)
-			if markErr := ledger.MarkFailed(tenantCtx, claim.RunID, fmt.Sprintf("connection_ref lookup failed: %v", err)); markErr != nil {
+			log.Printf("erp-sync: getConnection error for instance %s: %v", claim.InstanceID, err)
+			if markErr := ledger.MarkFailed(tenantCtx, claim.RunID, fmt.Sprintf("connection lookup failed: %v", err)); markErr != nil {
 				log.Printf("erp-sync: MarkFailed error: %v", markErr)
 			}
 			continue
 		}
 
 		// Execute in a goroutine so the claim loop can pick up the next run immediately
-		go func(c *runs.RunClaim, ref string, runCtx context.Context) {
-			if execErr := runner.Execute(runCtx, c, ref); execErr != nil {
+		go func(c *runs.RunClaim, conn erp_runtime.ExtractConnection, runCtx context.Context) {
+			if execErr := runner.Execute(runCtx, c, conn); execErr != nil {
 				log.Printf("erp-sync: run %s failed: %v", c.RunID, execErr)
 			} else {
 				log.Printf("erp-sync: run %s completed", c.RunID)
 			}
-		}(claim, connectionRef, tenantCtx)
+		}(claim, connection, tenantCtx)
 	}
 }
 
-// getConnectionRef queries erp_integration_instances for the connection_ref of a given instance.
-func getConnectionRef(ctx context.Context, db *sql.DB, tenantID, instanceID string) (string, error) {
+// getConnection queries erp_integration_instances for structured Oracle connection fields.
+func getConnection(ctx context.Context, db *sql.DB, tenantID, instanceID string) (erp_runtime.ExtractConnection, error) {
 	tx, err := tenantdb.BeginTenantTx(ctx, db, tenantID, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
-		return "", err
+		return erp_runtime.ExtractConnection{}, err
 	}
 	defer tx.Rollback() //nolint:errcheck
 
 	const q = `
-SELECT connection_ref
+SELECT connection_kind, db_host, db_port, db_service_name, db_sid, db_username,
+       db_password_secret_ref, connect_timeout_seconds, fetch_batch_size, entity_batch_size
 FROM erp_integration_instances
 WHERE instance_id = $1
   AND tenant_id = current_tenant_id()`
-	var ref string
-	if err := tx.QueryRowContext(ctx, q, instanceID).Scan(&ref); err != nil {
-		return "", fmt.Errorf("instance %s: %w", instanceID, err)
+	var conn erp_runtime.ExtractConnection
+	var serviceName sql.NullString
+	var sid sql.NullString
+	if err := tx.QueryRowContext(ctx, q, instanceID).Scan(
+		&conn.Kind,
+		&conn.Host,
+		&conn.Port,
+		&serviceName,
+		&sid,
+		&conn.Username,
+		&conn.PasswordSecretRef,
+		&conn.ConnectTimeoutSec,
+		&conn.FetchBatchSize,
+		&conn.EntityBatchSize,
+	); err != nil {
+		return erp_runtime.ExtractConnection{}, fmt.Errorf("instance %s: %w", instanceID, err)
+	}
+	if serviceName.Valid {
+		conn.ServiceName = &serviceName.String
+	}
+	if sid.Valid {
+		conn.SID = &sid.String
 	}
 	if err := tx.Commit(); err != nil {
-		return "", err
+		return erp_runtime.ExtractConnection{}, err
 	}
-	return ref, nil
+	return conn, nil
 }
 
 // sleep waits for the given duration or until ctx is cancelled.
