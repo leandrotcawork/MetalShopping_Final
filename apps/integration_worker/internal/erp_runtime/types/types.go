@@ -64,13 +64,14 @@ type ExtractConnection struct {
 	Kind              string
 	Host              string
 	Port              int
-	ServiceName       string
-	SID               string
+	ServiceName       *string
+	SID               *string
 	Username          string
 	PasswordSecretRef string
 	ConnectTimeoutSec int
 	FetchBatchSize    int
 	EntityBatchSize   int
+	ConnectionURI     string
 }
 
 // ExtractRequest is the input to a connector's Extract call.

@@ -29,7 +29,8 @@ func TestExtractorProductsSnapshotFixture(t *testing.T) {
 	got, err := extractor.Extract(context.Background(), erp_runtime.ExtractRequest{
 		Entity: erp_runtime.EntityTypeProducts,
 		Connection: erp_runtime.ExtractConnection{
-			Kind: "fixture://products",
+			Kind:          ConnectorType,
+			ConnectionURI: "fixture://products",
 		},
 	})
 	if err != nil {
@@ -62,7 +63,8 @@ func TestExtractorPricesSnapshotAllowsNullDTVIGOR(t *testing.T) {
 	got, err := extractor.Extract(context.Background(), erp_runtime.ExtractRequest{
 		Entity: erp_runtime.EntityTypePrices,
 		Connection: erp_runtime.ExtractConnection{
-			Kind: "fixture://prices",
+			Kind:          ConnectorType,
+			ConnectionURI: "fixture://prices",
 		},
 	})
 	if err != nil {

@@ -115,7 +115,8 @@ func (r *Runner) processEntity(
 			Entity:   entity,
 			Cursor:   cursor,
 			Connection: types.ExtractConnection{
-				Kind: connectionRef,
+				Kind:          claim.ConnectorType,
+				ConnectionURI: connectionRef,
 			},
 		}
 
