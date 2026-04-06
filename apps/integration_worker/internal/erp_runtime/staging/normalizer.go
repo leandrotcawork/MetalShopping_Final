@@ -46,8 +46,8 @@ func (n *Normalizer) Normalize(
 	const q = `
 INSERT INTO erp_staging_records
   (staging_id, tenant_id, run_id, raw_id, entity_type, source_id,
-   normalized_json, validation_status, validation_errors, normalized_at)
-VALUES ($1, current_tenant_id(), $2, $3, $4, $5, $6, $7, $8, $9)`
+   batch_ordinal, normalized_json, validation_status, validation_errors, normalized_at)
+VALUES ($1, current_tenant_id(), $2, $3, $4, $5, $6, $7, $8, $9, $10)`
 
 	now := time.Now().UTC()
 	results := make([]*StagingRecord, 0, len(savedRaw))
@@ -81,6 +81,7 @@ VALUES ($1, current_tenant_id(), $2, $3, $4, $5, $6, $7, $8, $9)`
 			sr.RawID,
 			string(rec.EntityType),
 			rec.SourceID,
+			rec.BatchOrdinal,
 			rec.PayloadJSON,
 			string(validationStatus),
 			validationErrorsJSON,
@@ -97,6 +98,7 @@ VALUES ($1, current_tenant_id(), $2, $3, $4, $5, $6, $7, $8, $9)`
 			RawID:            sr.RawID,
 			EntityType:       types.EntityType(rec.EntityType),
 			SourceID:         rec.SourceID,
+			BatchOrdinal:     rec.BatchOrdinal,
 			NormalizedJSON:   rec.PayloadJSON,
 			ValidationStatus: validationStatus,
 			NormalizedAt:     now,

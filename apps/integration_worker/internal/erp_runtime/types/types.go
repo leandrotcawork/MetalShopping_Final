@@ -37,6 +37,7 @@ type RawRecord struct {
 	EntityType      EntityType
 	PayloadJSON     []byte
 	PayloadHash     string
+	BatchOrdinal    int
 	SourceTimestamp *time.Time
 	CursorValue     *string
 }

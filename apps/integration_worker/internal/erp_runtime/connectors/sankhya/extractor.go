@@ -162,6 +162,7 @@ func (e *Extractor) Extract(ctx context.Context, req erp_runtime.ExtractRequest,
 			EntityType:    req.Entity,
 			PayloadJSON:   payloadBytes,
 			PayloadHash:   hex.EncodeToString(hash[:]),
+			BatchOrdinal:  1,
 		})
 		return nil
 	})
@@ -200,6 +201,7 @@ func (e *Extractor) extractFromFixtureRows(req erp_runtime.ExtractRequest, rows 
 			EntityType:    req.Entity,
 			PayloadJSON:   payloadBytes,
 			PayloadHash:   hex.EncodeToString(hash[:]),
+			BatchOrdinal:  1,
 		}
 		records = append(records, rec)
 	}
