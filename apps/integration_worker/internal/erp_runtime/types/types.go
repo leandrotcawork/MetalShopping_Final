@@ -71,7 +71,6 @@ type ExtractConnection struct {
 	ConnectTimeoutSec int
 	FetchBatchSize    int
 	EntityBatchSize   int
-	ConnectionURI     string
 }
 
 // ExtractRequest is the input to a connector's Extract call.

@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/url"
+	"strconv"
 	"strings"
 
 	"metalshopping/integration_worker/internal/erp_runtime/raw"
@@ -110,14 +112,11 @@ func (r *Runner) processEntity(
 
 	for {
 		req := types.ExtractRequest{
-			TenantID: claim.TenantID,
-			RunID:    claim.RunID,
-			Entity:   entity,
-			Cursor:   cursor,
-			Connection: types.ExtractConnection{
-				Kind:          claim.ConnectorType,
-				ConnectionURI: connectionRef,
-			},
+			TenantID:   claim.TenantID,
+			RunID:      claim.RunID,
+			Entity:     entity,
+			Cursor:     cursor,
+			Connection: legacyExtractConnection(connectionRef),
 		}
 
 		result, err := connector.Extract(ctx, req)
@@ -175,4 +174,61 @@ func (r *Runner) processEntity(
 	}
 
 	return counts, nil
+}
+
+func legacyExtractConnection(connectionRef string) types.ExtractConnection {
+	ref := strings.TrimSpace(connectionRef)
+	if ref == "" {
+		return types.ExtractConnection{Kind: "oracle"}
+	}
+
+	u, err := url.Parse(ref)
+	if err != nil {
+		return types.ExtractConnection{
+			Kind: "oracle",
+			Host: ref,
+		}
+	}
+
+	if u.Scheme == "fixture" {
+		return types.ExtractConnection{
+			Kind: "oracle",
+			Host: "fixture",
+		}
+	}
+
+	connection := types.ExtractConnection{
+		Kind: "oracle",
+		Host: strings.TrimSpace(u.Hostname()),
+		Port: 1521,
+	}
+	if rawPort := strings.TrimSpace(u.Port()); rawPort != "" {
+		if parsedPort, convErr := strconv.Atoi(rawPort); convErr == nil && parsedPort > 0 {
+			connection.Port = parsedPort
+		}
+	}
+	if u.User != nil {
+		connection.Username = strings.TrimSpace(u.User.Username())
+		if password, ok := u.User.Password(); ok {
+			connection.PasswordSecretRef = strings.TrimSpace(password)
+		}
+	}
+	if connection.Username == "" {
+		connection.Username = strings.TrimSpace(u.Query().Get("user"))
+	}
+	if connection.Username == "" {
+		connection.Username = strings.TrimSpace(u.Query().Get("username"))
+	}
+	if connection.PasswordSecretRef == "" {
+		connection.PasswordSecretRef = strings.TrimSpace(u.Query().Get("password"))
+	}
+	if service := strings.TrimSpace(u.Query().Get("service")); service != "" {
+		connection.ServiceName = &service
+	} else if serviceName := strings.TrimSpace(u.Query().Get("serviceName")); serviceName != "" {
+		connection.ServiceName = &serviceName
+	} else if sid := strings.TrimSpace(u.Query().Get("sid")); sid != "" {
+		connection.SID = &sid
+	}
+
+	return connection
 }

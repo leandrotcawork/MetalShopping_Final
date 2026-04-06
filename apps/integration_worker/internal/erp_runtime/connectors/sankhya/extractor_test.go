@@ -7,6 +7,10 @@ import (
 	erp_runtime "metalshopping/integration_worker/internal/erp_runtime"
 )
 
+func stringPtr(s string) *string {
+	return &s
+}
+
 func loadFixtureCount(t *testing.T, name string) int {
 	t.Helper()
 
@@ -29,8 +33,8 @@ func TestExtractorProductsSnapshotFixture(t *testing.T) {
 	got, err := extractor.Extract(context.Background(), erp_runtime.ExtractRequest{
 		Entity: erp_runtime.EntityTypeProducts,
 		Connection: erp_runtime.ExtractConnection{
-			Kind:          ConnectorType,
-			ConnectionURI: "fixture://products",
+			Kind: "oracle",
+			Host: "fixture",
 		},
 	})
 	if err != nil {
@@ -63,8 +67,8 @@ func TestExtractorPricesSnapshotAllowsNullDTVIGOR(t *testing.T) {
 	got, err := extractor.Extract(context.Background(), erp_runtime.ExtractRequest{
 		Entity: erp_runtime.EntityTypePrices,
 		Connection: erp_runtime.ExtractConnection{
-			Kind:          ConnectorType,
-			ConnectionURI: "fixture://prices",
+			Kind: "oracle",
+			Host: "fixture",
 		},
 	})
 	if err != nil {

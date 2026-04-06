@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"strings"
 
 	erp_runtime "metalshopping/integration_worker/internal/erp_runtime"
@@ -126,27 +125,19 @@ func (e *Extractor) Extract(ctx context.Context, req erp_runtime.ExtractRequest)
 		return nil, fmt.Errorf("sankhya: no config for entity %q", req.Entity)
 	}
 
-	if strings.TrimSpace(req.Connection.ConnectionURI) == "" {
-		return nil, fmt.Errorf("sankhya: connectionRef must not be empty")
-	}
-
-	u, err := url.Parse(req.Connection.ConnectionURI)
-	if err != nil {
-		return nil, fmt.Errorf("sankhya: parse connectionRef: %w", err)
-	}
-
-	switch u.Scheme {
-	case "fixture":
+	if isFixtureConnection(req.Connection) {
 		rows, err := loadFixtureRows(cfg.fixtureFile)
 		if err != nil {
 			return nil, err
 		}
 		return e.extractFromRows(req, rows)
-	case "sankhya":
-		return nil, fmt.Errorf("sankhya: live extraction is not wired yet; use fixture:// for deterministic connector tests")
-	default:
-		return nil, fmt.Errorf("sankhya: unsupported connectionRef scheme %q", u.Scheme)
 	}
+
+	if _, err := buildConnectionConfig(req.Connection); err != nil {
+		return nil, fmt.Errorf("sankhya: validate connection: %w", err)
+	}
+
+	return nil, fmt.Errorf("sankhya: live extraction is not wired yet")
 }
 
 func (e *Extractor) extractFromRows(req erp_runtime.ExtractRequest, rows []map[string]any) (*erp_runtime.ExtractionResult, error) {
@@ -216,4 +207,19 @@ func queryForEntity(entity erp_runtime.EntityType) (string, error) {
 		return "", fmt.Errorf("sankhya: no config for entity %q", entity)
 	}
 	return cfg.query, nil
+}
+
+func isFixtureConnection(connection erp_runtime.ExtractConnection) bool {
+	if strings.TrimSpace(connection.Host) == "fixture" {
+		return true
+	}
+	if connection.ServiceName != nil && strings.TrimSpace(*connection.ServiceName) == "fixture" {
+		return true
+	}
+	return strings.TrimSpace(connection.Host) == "" &&
+		connection.Port == 0 &&
+		connection.ServiceName == nil &&
+		connection.SID == nil &&
+		strings.TrimSpace(connection.Username) == "" &&
+		strings.TrimSpace(connection.PasswordSecretRef) == ""
 }
