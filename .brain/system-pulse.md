@@ -38,12 +38,16 @@ ADRs, and implementation planning.
 - **Roadmap phase:** Phase 1 - Layer 0 Data Foundation
 - **Phase goal:** Establish ERP integration (0.1) while preserving the implemented canonical foundations.
 - **Last completed task:** Layer 0 foundations 0.2-0.6 are marked implemented in the master plan.
-- **Currently working on:** T-001 0.1 ERP Integration
+- **Currently working on:** T-001 0.1 ERP Integration (Oracle runtime tranche in progress)
 - **Next up:** T-007 1.1 Analytics Home after ERP data is running
-- **Blockers:** ERP integration is still not running against Sankhya
+- **Blockers:** Live Oracle/Sankhya connectivity still pending environment execution test (runtime path now wired)
 
 ## Recent Changes (last 3-5 sessions)
-- 2026-04-04: Initialized Nexus brain and captured system pulse.
+- 2026-04-05: Implemented worker Oracle query runner (`godror`) with typed row-reader and tightened test/runtime driver behavior.
+- 2026-04-05: Refactored Sankhya connector to use generic query-runner extraction path with fixture-compatible row-reader tests.
+- 2026-04-05: Added ERP run entity-step checkpoints and raw/staging batch ordinal persistence (`0038`, `0039`).
+- 2026-04-05: Updated worker execution to structured connection config and dependency-aware entity flow.
+- 2026-04-05: Exposed `cursor_state` in ERP run HTTP response and schema.
 
 ## Active Architectural Decisions
 - None listed here. See docs/adrs/ for the official ADR set.
