@@ -68,6 +68,45 @@ func TestConnectStringBuildsServiceNameDsn(t *testing.T) {
 	}
 }
 
+func TestConnectStringRejectsMissingHost(t *testing.T) {
+	t.Parallel()
+
+	cfg := Config{
+		Port:              1521,
+		ServiceName:       strPtr("ORCL"),
+		Username:          "erp_user",
+		Password:          "erp_secret",
+		ConnectTimeoutSec: 12,
+	}
+
+	_, err := cfg.ConnectString()
+	if err == nil {
+		t.Fatal("expected validation error, got nil")
+	}
+	if !strings.Contains(err.Error(), "host must not be empty") {
+		t.Fatalf("expected host validation error, got %v", err)
+	}
+}
+
+func TestConnectStringRejectsMissingPort(t *testing.T) {
+	t.Parallel()
+
+	cfg := Config{
+		Host:        "db.example.internal",
+		ServiceName: strPtr("ORCL"),
+		Username:    "erp_user",
+		Password:    "erp_secret",
+	}
+
+	_, err := cfg.ConnectString()
+	if err == nil {
+		t.Fatal("expected validation error, got nil")
+	}
+	if !strings.Contains(err.Error(), "port must be a positive integer") {
+		t.Fatalf("expected port validation error, got %v", err)
+	}
+}
+
 func strPtr(v string) *string {
 	return &v
 }

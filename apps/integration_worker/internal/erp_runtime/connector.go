@@ -49,8 +49,8 @@ type Connector interface {
 	Type() string
 	// Capabilities returns the entities this connector supports
 	Capabilities() []EntityCapability
-	// ValidateConnection checks connectivity (does not extract)
-	ValidateConnection(ctx context.Context, connectionRef string) error
+	// ValidateConnection checks structured connectivity inputs (does not extract)
+	ValidateConnection(ctx context.Context, connection ExtractConnection) error
 	// Extract fetches a page of raw records for the given entity
 	Extract(ctx context.Context, req ExtractRequest) (*ExtractionResult, error)
 	// ClassifyError classifies an extraction or mapping error

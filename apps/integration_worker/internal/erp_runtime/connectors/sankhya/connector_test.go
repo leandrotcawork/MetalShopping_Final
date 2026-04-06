@@ -8,31 +8,58 @@ import (
 	erp_runtime "metalshopping/integration_worker/internal/erp_runtime"
 )
 
-func TestValidateConnectionParsesHostUserPasswordAndDefaultPort(t *testing.T) {
+func TestValidateConnectionAcceptsStructuredConnection(t *testing.T) {
 	t.Parallel()
 
 	connector := New()
-	if err := connector.ValidateConnection(context.Background(), "sankhya://user:pass@dummy-host.example?service=PROD"); err != nil {
+	if err := connector.ValidateConnection(context.Background(), erp_runtime.ExtractConnection{
+		Host:              "dummy-host.example",
+		Port:              defaultOraclePort,
+		ServiceName:       strPtr("PROD"),
+		Username:          "user",
+		PasswordSecretRef: "erp/sankhya/password",
+	}); err != nil {
 		t.Fatalf("ValidateConnection returned error: %v", err)
 	}
+}
 
-	cfg, err := parseConnectionRef("sankhya://user:pass@dummy-host.example?service=PROD")
-	if err != nil {
-		t.Fatalf("parseConnectionRef returned error: %v", err)
+func TestValidateConnectionRejectsMissingHost(t *testing.T) {
+	t.Parallel()
+
+	connector := New()
+	err := connector.ValidateConnection(context.Background(), erp_runtime.ExtractConnection{
+		Port:              defaultOraclePort,
+		ServiceName:       strPtr("PROD"),
+		Username:          "user",
+		PasswordSecretRef: "erp/sankhya/password",
+	})
+	if err == nil {
+		t.Fatal("expected validation error, got nil")
 	}
-	if cfg.Host != "dummy-host.example" {
-		t.Fatalf("expected host dummy-host.example, got %q", cfg.Host)
-	}
-	if cfg.Port != defaultOraclePort {
-		t.Fatalf("expected default port %d, got %d", defaultOraclePort, cfg.Port)
-	}
-	if cfg.Username != "user" || cfg.Password != "pass" {
-		t.Fatalf("unexpected credentials parsed: %#v", cfg)
-	}
-	if cfg.Service != "PROD" {
-		t.Fatalf("expected service PROD, got %q", cfg.Service)
+	if !strings.Contains(err.Error(), "host must not be empty") {
+		t.Fatalf("expected host validation error, got %v", err)
 	}
 }
+
+func TestValidateConnectionRejectsMissingPasswordSecretRef(t *testing.T) {
+	t.Parallel()
+
+	connector := New()
+	err := connector.ValidateConnection(context.Background(), erp_runtime.ExtractConnection{
+		Host:        "dummy-host.example",
+		Port:        defaultOraclePort,
+		ServiceName: strPtr("PROD"),
+		Username:    "user",
+	})
+	if err == nil {
+		t.Fatal("expected validation error, got nil")
+	}
+	if !strings.Contains(err.Error(), "password_secret_ref must not be empty") {
+		t.Fatalf("expected password validation error, got %v", err)
+	}
+}
+
+func strPtr(v string) *string { return &v }
 
 func TestQueryForEntityReturnsSnapshotSQL(t *testing.T) {
 	t.Parallel()

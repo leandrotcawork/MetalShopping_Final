@@ -3,8 +3,6 @@ package sankhya
 import (
 	"context"
 	"fmt"
-	"net/url"
-	"strconv"
 	"strings"
 
 	erp_runtime "metalshopping/integration_worker/internal/erp_runtime"
@@ -52,8 +50,8 @@ func (c *Connector) Capabilities() []erp_runtime.EntityCapability {
 	}
 }
 
-func (c *Connector) ValidateConnection(ctx context.Context, connectionRef string) error {
-	_, err := parseConnectionRef(connectionRef)
+func (c *Connector) ValidateConnection(ctx context.Context, connection erp_runtime.ExtractConnection) error {
+	_, err := buildConnectionConfig(connection)
 	return err
 }
 
@@ -69,76 +67,48 @@ func (c *Connector) ClassifyError(err error) erp_runtime.ErrorClass {
 	return erp_runtime.ErrorClassSourceData
 }
 
-func parseConnectionRef(connectionRef string) (*ConnectionConfig, error) {
-	ref := strings.TrimSpace(connectionRef)
-	if ref == "" {
-		return nil, fmt.Errorf("connectionRef must not be empty")
-	}
-
-	u, err := url.Parse(ref)
-	if err != nil {
-		return nil, fmt.Errorf("parse sankhya connectionRef: %w", err)
-	}
-	if u.Scheme != "sankhya" {
-		return nil, fmt.Errorf("unsupported sankhya connectionRef scheme %q", u.Scheme)
-	}
-
-	host := strings.TrimSpace(u.Hostname())
+func buildConnectionConfig(connection erp_runtime.ExtractConnection) (*ConnectionConfig, error) {
+	host := strings.TrimSpace(connection.Host)
 	if host == "" {
-		return nil, fmt.Errorf("connectionRef host must not be empty")
+		return nil, fmt.Errorf("connection host must not be empty")
+	}
+	if connection.Port <= 0 {
+		return nil, fmt.Errorf("connection port must be a positive integer")
 	}
 
-	port := defaultOraclePort
-	if rawPort := strings.TrimSpace(u.Port()); rawPort != "" {
-		parsedPort, err := strconv.Atoi(rawPort)
-		if err != nil || parsedPort <= 0 {
-			return nil, fmt.Errorf("connectionRef port must be a positive integer")
-		}
-		port = parsedPort
+	hasServiceName := connection.ServiceName != nil && strings.TrimSpace(*connection.ServiceName) != ""
+	hasSID := connection.SID != nil && strings.TrimSpace(*connection.SID) != ""
+	switch {
+	case hasServiceName && hasSID:
+		return nil, fmt.Errorf("connection must set exactly one of service_name or sid")
+	case !hasServiceName && !hasSID:
+		return nil, fmt.Errorf("connection must set exactly one of service_name or sid")
 	}
 
-	username, password := parseUserInfo(u)
+	username := strings.TrimSpace(connection.Username)
 	if username == "" {
-		return nil, fmt.Errorf("connectionRef username must not be empty")
+		return nil, fmt.Errorf("connection username must not be empty")
 	}
+	password := strings.TrimSpace(connection.PasswordSecretRef)
 	if password == "" {
-		return nil, fmt.Errorf("connectionRef password must not be empty")
+		return nil, fmt.Errorf("connection password_secret_ref must not be empty")
 	}
 
-	service := strings.TrimSpace(u.Query().Get("service"))
-	if service == "" {
-		service = strings.TrimSpace(u.Query().Get("serviceName"))
+	port := connection.Port
+	if port == 0 {
+		port = defaultOraclePort
 	}
 
-	return &ConnectionConfig{
+	cfg := &ConnectionConfig{
 		Host:     host,
 		Port:     port,
 		Username: username,
 		Password: password,
-		Service:  service,
-	}, nil
-}
-
-func parseUserInfo(u *url.URL) (string, string) {
-	username := ""
-	password := ""
-
-	if u.User != nil {
-		username = strings.TrimSpace(u.User.Username())
-		if rawPassword, ok := u.User.Password(); ok {
-			password = strings.TrimSpace(rawPassword)
-		}
 	}
-
-	if username == "" {
-		username = strings.TrimSpace(u.Query().Get("user"))
+	if hasServiceName {
+		cfg.Service = strings.TrimSpace(*connection.ServiceName)
+	} else {
+		cfg.Service = strings.TrimSpace(*connection.SID)
 	}
-	if username == "" {
-		username = strings.TrimSpace(u.Query().Get("username"))
-	}
-	if password == "" {
-		password = strings.TrimSpace(u.Query().Get("password"))
-	}
-
-	return username, password
+	return cfg, nil
 }
