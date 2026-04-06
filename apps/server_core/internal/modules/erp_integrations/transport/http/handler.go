@@ -428,6 +428,9 @@ func mapRun(r *domain.SyncRun) map[string]any {
 	if r.FailureSummary != nil {
 		m["failure_summary"] = *r.FailureSummary
 	}
+	if r.CursorState != nil {
+		m["cursor_state"] = *r.CursorState
+	}
 	return m
 }
 

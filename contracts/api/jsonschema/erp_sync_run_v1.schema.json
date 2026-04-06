@@ -19,6 +19,7 @@
     "rejected_count": {"type":"integer"},
     "review_count": {"type":"integer"},
     "failure_summary": {"type":["string","null"]},
+    "cursor_state": {"type":["string","null"]},
     "created_at": {"type":"string","format":"date-time"}
   }
 }
