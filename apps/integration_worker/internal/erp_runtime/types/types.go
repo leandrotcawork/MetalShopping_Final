@@ -75,10 +75,9 @@ type ExtractConnection struct {
 
 // ExtractRequest is the input to a connector's Extract call.
 type ExtractRequest struct {
-	TenantID      string
-	RunID         string
-	Entity        EntityType
-	Cursor        *string
-	Connection    ExtractConnection
-	ConnectionRef string
+	TenantID   string
+	RunID      string
+	Entity     EntityType
+	Cursor     *string
+	Connection ExtractConnection
 }

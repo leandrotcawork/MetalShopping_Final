@@ -110,11 +110,13 @@ func (r *Runner) processEntity(
 
 	for {
 		req := types.ExtractRequest{
-			TenantID:      claim.TenantID,
-			RunID:         claim.RunID,
-			Entity:        entity,
-			Cursor:        cursor,
-			ConnectionRef: connectionRef,
+			TenantID: claim.TenantID,
+			RunID:    claim.RunID,
+			Entity:   entity,
+			Cursor:   cursor,
+			Connection: types.ExtractConnection{
+				Kind: connectionRef,
+			},
 		}
 
 		result, err := connector.Extract(ctx, req)

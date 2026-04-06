@@ -27,8 +27,10 @@ func TestExtractorProductsSnapshotFixture(t *testing.T) {
 
 	extractor := newExtractor()
 	got, err := extractor.Extract(context.Background(), erp_runtime.ExtractRequest{
-		Entity:        erp_runtime.EntityTypeProducts,
-		ConnectionRef: "fixture://products",
+		Entity: erp_runtime.EntityTypeProducts,
+		Connection: erp_runtime.ExtractConnection{
+			Kind: "fixture://products",
+		},
 	})
 	if err != nil {
 		t.Fatalf("Extract returned error: %v", err)
@@ -58,8 +60,10 @@ func TestExtractorPricesSnapshotAllowsNullDTVIGOR(t *testing.T) {
 
 	extractor := newExtractor()
 	got, err := extractor.Extract(context.Background(), erp_runtime.ExtractRequest{
-		Entity:        erp_runtime.EntityTypePrices,
-		ConnectionRef: "fixture://prices",
+		Entity: erp_runtime.EntityTypePrices,
+		Connection: erp_runtime.ExtractConnection{
+			Kind: "fixture://prices",
+		},
 	})
 	if err != nil {
 		t.Fatalf("Extract returned error: %v", err)

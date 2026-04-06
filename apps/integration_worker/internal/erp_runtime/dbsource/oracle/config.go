@@ -12,8 +12,8 @@ import (
 type Config struct {
 	Host              string
 	Port              int
-	ServiceName       string
-	SID               string
+	ServiceName       *string
+	SID               *string
 	Username          string
 	Password          string
 	ConnectTimeoutSec int
@@ -32,10 +32,10 @@ func (c Config) ConnectString() (string, error) {
 	}
 
 	query := u.Query()
-	if c.ServiceName != "" {
-		query.Set("service_name", c.ServiceName)
+	if c.ServiceName != nil {
+		query.Set("service_name", strings.TrimSpace(*c.ServiceName))
 	} else {
-		query.Set("sid", c.SID)
+		query.Set("sid", strings.TrimSpace(*c.SID))
 	}
 	if c.ConnectTimeoutSec > 0 {
 		query.Set("connect_timeout", strconv.Itoa(c.ConnectTimeoutSec))
@@ -51,8 +51,8 @@ func (c Config) validate() error {
 	if c.Port <= 0 {
 		return fmt.Errorf("oracle config port must be a positive integer")
 	}
-	hasServiceName := strings.TrimSpace(c.ServiceName) != ""
-	hasSID := strings.TrimSpace(c.SID) != ""
+	hasServiceName := c.ServiceName != nil && strings.TrimSpace(*c.ServiceName) != ""
+	hasSID := c.SID != nil && strings.TrimSpace(*c.SID) != ""
 	switch {
 	case hasServiceName && hasSID:
 		return fmt.Errorf("oracle config must set exactly one of service_name or sid")

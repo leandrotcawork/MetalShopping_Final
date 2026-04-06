@@ -30,8 +30,8 @@ func TestConnectStringRejectsBothTargets(t *testing.T) {
 	cfg := Config{
 		Host:        "db.example.internal",
 		Port:        1521,
-		ServiceName: "ORCL",
-		SID:         "XE",
+		ServiceName: strPtr("ORCL"),
+		SID:         strPtr("XE"),
 		Username:    "erp_user",
 		Password:    "erp_secret",
 	}
@@ -51,7 +51,7 @@ func TestConnectStringBuildsServiceNameDsn(t *testing.T) {
 	cfg := Config{
 		Host:              "db.example.internal",
 		Port:              1521,
-		ServiceName:       "ORCL",
+		ServiceName:       strPtr("ORCL"),
 		Username:          "erp_user",
 		Password:          "erp_secret",
 		ConnectTimeoutSec: 12,
@@ -66,4 +66,8 @@ func TestConnectStringBuildsServiceNameDsn(t *testing.T) {
 			t.Fatalf("ConnectString() = %q, missing %q", got, want)
 		}
 	}
+}
+
+func strPtr(v string) *string {
+	return &v
 }

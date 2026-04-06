@@ -126,11 +126,11 @@ func (e *Extractor) Extract(ctx context.Context, req erp_runtime.ExtractRequest)
 		return nil, fmt.Errorf("sankhya: no config for entity %q", req.Entity)
 	}
 
-	if strings.TrimSpace(req.ConnectionRef) == "" {
+	if strings.TrimSpace(req.Connection.Kind) == "" {
 		return nil, fmt.Errorf("sankhya: connectionRef must not be empty")
 	}
 
-	u, err := url.Parse(req.ConnectionRef)
+	u, err := url.Parse(req.Connection.Kind)
 	if err != nil {
 		return nil, fmt.Errorf("sankhya: parse connectionRef: %w", err)
 	}
