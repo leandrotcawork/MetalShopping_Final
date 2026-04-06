@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/godror/godror"
-
 	"metalshopping/integration_worker/internal/erp_runtime/dbsource"
 )
 
@@ -19,7 +17,7 @@ type QueryRunner struct {
 	db *sql.DB
 }
 
-// NewQueryRunner opens an Oracle connection using the validated config.
+// NewQueryRunner opens and validates an Oracle connection.
 func NewQueryRunner(cfg Config) (*QueryRunner, error) {
 	dsn, err := cfg.ConnectString()
 	if err != nil {
@@ -29,6 +27,18 @@ func NewQueryRunner(cfg Config) (*QueryRunner, error) {
 	db, err := sql.Open("godror", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open oracle connection: %w", err)
+	}
+
+	pingCtx := context.Background()
+	cancel := func() {}
+	if cfg.ConnectTimeoutSec > 0 {
+		pingCtx, cancel = context.WithTimeout(context.Background(), time.Duration(cfg.ConnectTimeoutSec)*time.Second)
+	}
+	defer cancel()
+
+	if err := db.PingContext(pingCtx); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("ping oracle connection: %w", err)
 	}
 
 	return &QueryRunner{db: db}, nil
@@ -79,7 +89,10 @@ func (r *QueryRunner) Query(ctx context.Context, spec dbsource.QuerySpec, fn fun
 			return fmt.Errorf("oracle query runner: scan: %w", err)
 		}
 
-		reader := newRowReader(columns, scanValues)
+		reader, err := newRowReader(columns, scanValues)
+		if err != nil {
+			return err
+		}
 		if err := fn(reader); err != nil {
 			return err
 		}
@@ -104,12 +117,22 @@ type rowReader struct {
 	values map[string]any
 }
 
-func newRowReader(columns []string, values []any) rowReader {
+func newRowReader(columns []string, values []any) (rowReader, error) {
 	reader := rowReader{values: make(map[string]any, len(columns))}
+	seen := make(map[string]string, len(columns))
 	for i, column := range columns {
-		reader.values[column] = cloneRowValue(values[i])
+		columnName := strings.TrimSpace(column)
+		if columnName == "" {
+			return rowReader{}, fmt.Errorf("oracle row reader: column %d name is empty", i+1)
+		}
+		folded := strings.ToLower(columnName)
+		if prev, ok := seen[folded]; ok {
+			return rowReader{}, fmt.Errorf("oracle row reader: duplicate column %q collides with %q", columnName, prev)
+		}
+		seen[folded] = columnName
+		reader.values[columnName] = cloneRowValue(values[i])
 	}
-	return reader
+	return reader, nil
 }
 
 func cloneRowValue(value any) any {
@@ -149,10 +172,15 @@ func (r rowReader) String(name string) (string, error) {
 		return v, nil
 	case []byte:
 		return string(v), nil
-	case fmt.Stringer:
-		return v.String(), nil
 	case time.Time:
 		return v.Format(time.RFC3339Nano), nil
+	case *time.Time:
+		if v == nil {
+			return "", fmt.Errorf("oracle row reader: column %q is null", name)
+		}
+		return v.Format(time.RFC3339Nano), nil
+	case fmt.Stringer:
+		return v.String(), nil
 	default:
 		return fmt.Sprint(v), nil
 	}
