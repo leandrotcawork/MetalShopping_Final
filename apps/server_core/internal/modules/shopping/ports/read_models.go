@@ -161,7 +161,6 @@ type MarketReportSupplier struct {
 
 type MarketReportExportXlsxInput struct {
 	SupplierCodes  []string
-	ProductIDs     []string
 	OutputFilePath string
 }
 
@@ -288,6 +287,7 @@ type Reader interface {
 	GetRunSupplierItemStatusSummary(ctx context.Context, tenantID, runID string) (RunSupplierItemStatusSummary, error)
 	ListRunItems(ctx context.Context, tenantID, runID string, filter RunItemListFilter) (RunItemList, error)
 	ListRunItemsForExport(ctx context.Context, tenantID, runID string, filter RunExportListFilter) (RunExportList, error)
+	ListMarketReportProductIDs(ctx context.Context, tenantID, runID string, supplierCodes []string) ([]string, error)
 	ListMarketReportProducts(ctx context.Context, tenantID string, productIDs []string) ([]MarketReportProductRow, error)
 	ListMarketReportRunItems(ctx context.Context, tenantID, runID string, productIDs []string, supplierCodes []string) ([]MarketReportRunItem, error)
 	ListMarketReportSuppliers(ctx context.Context, tenantID string, supplierCodes []string) ([]MarketReportSupplier, error)

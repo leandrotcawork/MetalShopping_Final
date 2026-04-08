@@ -27,12 +27,6 @@ export interface ShoppingMarketReportExportXlsxRequestV1 {
     supplierCodes: Array<string>;
     /**
      * 
-     * @type {Array<string>}
-     * @memberof ShoppingMarketReportExportXlsxRequestV1
-     */
-    productIds: Array<string>;
-    /**
-     * 
      * @type {string}
      * @memberof ShoppingMarketReportExportXlsxRequestV1
      */
@@ -44,7 +38,6 @@ export interface ShoppingMarketReportExportXlsxRequestV1 {
  */
 export function instanceOfShoppingMarketReportExportXlsxRequestV1(value: object): value is ShoppingMarketReportExportXlsxRequestV1 {
     if (!('supplierCodes' in value) || value['supplierCodes'] === undefined) return false;
-    if (!('productIds' in value) || value['productIds'] === undefined) return false;
     if (!('outputFilePath' in value) || value['outputFilePath'] === undefined) return false;
     return true;
 }
@@ -60,7 +53,6 @@ export function ShoppingMarketReportExportXlsxRequestV1FromJSONTyped(json: any, 
     return {
         
         'supplierCodes': json['supplierCodes'],
-        'productIds': json['productIds'],
         'outputFilePath': json['outputFilePath'],
     };
 }
@@ -77,7 +69,6 @@ export function ShoppingMarketReportExportXlsxRequestV1ToJSONTyped(value?: Shopp
     return {
         
         'supplierCodes': value['supplierCodes'],
-        'productIds': value['productIds'],
         'outputFilePath': value['outputFilePath'],
     };
 }

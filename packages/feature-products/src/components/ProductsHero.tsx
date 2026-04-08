@@ -15,8 +15,8 @@ export function ProductsHero(props: {
     <AppFrame
       fullWidth
       eyebrow="Products · Market Report"
-      title="Relatório de preço de mercado por run"
-      subtitle="Selecione produtos por filtros e exporte um XLSX comparativo com preço interno versus concorrentes."
+      title="Relatorio de preco de mercado por run"
+      subtitle="Escolha uma run e exporte um XLSX comparativo com os produtos observados nela e seus concorrentes."
       aside={
         <div className={styles.heroAside}>
           <MetricChip label="Na grade">{props.totalVisible}</MetricChip>
@@ -25,7 +25,7 @@ export function ProductsHero(props: {
           <MetricChip label="Runs">{props.totalRuns}</MetricChip>
           <div className={styles.heroActions}>
             <Button className={styles.actionButton} variant="secondary" onClick={props.onConfigureReport}>
-              Configurar relatório
+              Configurar relatorio
             </Button>
             <Button
               className={styles.actionButtonPrimary}
@@ -33,7 +33,7 @@ export function ProductsHero(props: {
               disabled={props.exportDisabled}
               onClick={props.onExportReport}
             >
-              Exportar relatório
+              Exportar relatorio
             </Button>
           </div>
         </div>

@@ -228,7 +228,18 @@ export type CommonHealthV1 = {
 export type ErpCreateInstanceRequestV1 = {
   connector_type: "sankhya";
   display_name: string;
-  connection_ref: string;
+  connection: {
+    kind: "oracle";
+    host: string;
+    port: number;
+    service_name?: string | null;
+    sid?: string | null;
+    username: string;
+    password_secret_ref: string;
+    connect_timeout_seconds?: number | null;
+    fetch_batch_size?: number | null;
+    entity_batch_size?: number | null;
+  };
   enabled_entities: Array<"products" | "prices" | "costs" | "inventory" | "sales" | "purchases" | "customers" | "suppliers">;
   sync_schedule?: string | null;
 };
@@ -255,7 +266,18 @@ export type ErpIntegrationInstanceV1 = {
   tenant_id: string;
   connector_type: "sankhya";
   display_name: string;
-  connection_ref: string;
+  connection: {
+    kind: "oracle";
+    host: string;
+    port: number;
+    service_name?: string | null;
+    sid?: string | null;
+    username: string;
+    password_secret_ref: string;
+    connect_timeout_seconds?: number | null;
+    fetch_batch_size?: number | null;
+    entity_batch_size?: number | null;
+  };
   enabled_entities: Array<"products" | "prices" | "costs" | "inventory" | "sales" | "purchases" | "customers" | "suppliers">;
   sync_schedule?: string | null;
   status: "active" | "paused" | "disabled";
@@ -609,7 +631,6 @@ export type ShoppingManualUrlCandidateV1 = {
 
 export type ShoppingMarketReportExportXlsxRequestV1 = {
   supplierCodes: Array<string>;
-  productIds: Array<string>;
   outputFilePath: string;
 };
 

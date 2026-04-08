@@ -25,8 +25,6 @@ import { Button, FilterDropdown, StatusBanner, type SelectMenuOption } from "@me
 import type { ShoppingBootstrapV1, ShoppingMarketReportExportXlsxResponseV1, ShoppingRunV1 } from "@metalshopping/sdk-types";
 
 const pageSizeOptions = [25, 50, 100];
-const exportBatchLimit = 250;
-const exportMaxRows = 5000;
 const exportDraftStorageKey = "ms.products.marketReportExport.v1";
 const allSuppliersValue = "all";
 
@@ -298,9 +296,7 @@ export function ProductsPortfolioPage(props: { api: ProductsPortfolioApi; shoppi
   );
   const selectedSuppliersLabel =
     exportSupplierOptions.length === 0 ? "--" : exportSupplierCodes.length === 0 ? "Todos" : `${exportSupplierCodes.length}`;
-  const exportSelectionCount = totalSelected;
-  const exportOverLimit = exportSelectionCount > exportMaxRows;
-  const exportDisabled = exportSelectionCount === 0 || exporting;
+  const exportDisabled = exporting;
 
   function clearSelection() {
     setSelectionMode("explicit");
@@ -343,39 +339,6 @@ export function ProductsPortfolioPage(props: { api: ProductsPortfolioApi; shoppi
     setExportModalOpen(false);
   }
 
-  async function resolveExportProductIds() {
-    if (selectionMode === "explicit") {
-      return Array.from(new Set(selectedProductIds));
-    }
-    if (!result) {
-      return [];
-    }
-
-    const targetTotal = Math.min(totalMatching, exportMaxRows);
-    const collectedIds: string[] = [];
-    let offset = 0;
-
-    while (offset < targetTotal) {
-      const response = await props.api.listProductsPortfolio({
-        search: query.search.trim() || undefined,
-        brand_name: query.brand_name.length > 0 ? query.brand_name : undefined,
-        taxonomy_leaf0_name: query.taxonomy_leaf0_name.length > 0 ? query.taxonomy_leaf0_name : undefined,
-        status: query.status.length > 0 ? query.status : undefined,
-        sort_key: query.sort_key,
-        sort_direction: query.sort_direction,
-        limit: exportBatchLimit,
-        offset,
-      });
-      collectedIds.push(...response.rows.map((row) => row.product_id));
-      if (response.rows.length === 0) {
-        break;
-      }
-      offset += response.rows.length;
-    }
-
-    return Array.from(new Set(collectedIds)).slice(0, targetTotal);
-  }
-
   async function handleExport() {
     if (exporting) {
       return;
@@ -383,22 +346,6 @@ export function ProductsPortfolioPage(props: { api: ProductsPortfolioApi; shoppi
     setExportModalOpen(true);
     setExportStatus(null);
     setExportResult(null);
-
-    if (exportSelectionCount === 0) {
-      setExportStatus({ tone: "error", message: "Selecione produtos para exportar o relatório." });
-      return;
-    }
-    if (exportOverLimit) {
-      setExportStatus({
-        tone: "error",
-        message: `Seleção acima de ${exportMaxRows} itens. Ajuste os filtros antes de exportar.`,
-      });
-      return;
-    }
-    if (selectionMode === "filtered" && !result) {
-      setExportStatus({ tone: "error", message: "Aguarde o carregamento da lista antes de exportar." });
-      return;
-    }
 
     const runId = exportRunId.trim();
     if (!runId) {
@@ -421,13 +368,7 @@ export function ProductsPortfolioPage(props: { api: ProductsPortfolioApi; shoppi
 
     setExporting(true);
     try {
-      const productIds = await resolveExportProductIds();
-      if (productIds.length === 0) {
-        setExportStatus({ tone: "error", message: "Nenhum produto encontrado para exportação." });
-        return;
-      }
       const response = await props.shoppingApi.exportMarketReportXlsx(runId, {
-        productIds,
         supplierCodes,
         outputFilePath,
       });
@@ -569,7 +510,7 @@ export function ProductsPortfolioPage(props: { api: ProductsPortfolioApi; shoppi
               <div>
                 <h3 className={styles.exportTitle}>Configurar exportação (.xlsx)</h3>
                 <p className={styles.exportSubtitle}>
-                  Defina run, fornecedores e a pasta ou arquivo de saída antes de gerar o relatório.
+                  Defina run, fornecedores e a pasta ou arquivo de saída. Os produtos serão derivados da run selecionada.
                 </p>
               </div>
               <button
@@ -619,10 +560,7 @@ export function ProductsPortfolioPage(props: { api: ProductsPortfolioApi; shoppi
 
             <div className={styles.exportSummary}>
               <span>
-                Modo seleção: <strong>{selectionMode === "filtered" ? "Filtrados" : "Explícito"}</strong>
-              </span>
-              <span>
-                Itens: <strong>{exportSelectionCount}</strong>
+                Fonte: <strong>Produtos observados na run</strong>
               </span>
               <span>
                 Fornecedores: <strong>{selectedSuppliersLabel}</strong>
@@ -633,11 +571,6 @@ export function ProductsPortfolioPage(props: { api: ProductsPortfolioApi; shoppi
             {exportConfigError ? (
               <StatusBanner className={styles.exportStatus} tone="error">
                 {exportConfigError}
-              </StatusBanner>
-            ) : null}
-            {exportOverLimit ? (
-              <StatusBanner className={styles.exportStatus} tone="error">
-                Seleção acima de {exportMaxRows} itens. Ajuste os filtros antes de exportar.
               </StatusBanner>
             ) : null}
             {exportStatus ? (

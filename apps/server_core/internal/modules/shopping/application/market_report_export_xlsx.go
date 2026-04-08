@@ -38,9 +38,17 @@ func (s *Service) ExportMarketReportXlsx(
 		return ports.MarketReportExportXlsxResult{}, fmt.Errorf("%w: supplierCodes is required", ErrExportInvalid)
 	}
 
-	productIDs := normalizeProductIDs(input.ProductIDs)
+	productIDs, err := s.reader.ListMarketReportProductIDs(
+		ctx,
+		strings.TrimSpace(tenantID),
+		strings.TrimSpace(runID),
+		supplierCodes,
+	)
+	if err != nil {
+		return ports.MarketReportExportXlsxResult{}, err
+	}
 	if len(productIDs) == 0 {
-		return ports.MarketReportExportXlsxResult{}, fmt.Errorf("%w: productIds is required", ErrExportInvalid)
+		return ports.MarketReportExportXlsxResult{}, fmt.Errorf("%w: no products found for selected suppliers", ErrExportInvalid)
 	}
 
 	maxRows := exportMaxRowsFromEnv()
@@ -51,10 +59,6 @@ func (s *Service) ExportMarketReportXlsx(
 			len(productIDs),
 			maxRows,
 		)
-	}
-
-	if _, err := s.reader.GetRun(ctx, strings.TrimSpace(tenantID), strings.TrimSpace(runID)); err != nil {
-		return ports.MarketReportExportXlsxResult{}, err
 	}
 
 	suppliers, err := s.reader.ListMarketReportSuppliers(ctx, strings.TrimSpace(tenantID), supplierCodes)
@@ -88,23 +92,6 @@ func (s *Service) ExportMarketReportXlsx(
 		TotalProducts:  int64(len(orderedProducts)),
 		SupplierCodes:  supplierCodes,
 	}, nil
-}
-
-func normalizeProductIDs(raw []string) []string {
-	unique := make([]string, 0, len(raw))
-	seen := map[string]struct{}{}
-	for _, id := range raw {
-		id = strings.TrimSpace(id)
-		if id == "" {
-			continue
-		}
-		if _, exists := seen[id]; exists {
-			continue
-		}
-		seen[id] = struct{}{}
-		unique = append(unique, id)
-	}
-	return unique
 }
 
 func defaultMarketReportFileName(runID string) string {

@@ -258,7 +258,6 @@ type shoppingExportRunXlsxBody struct {
 
 type shoppingExportMarketReportXlsxBody struct {
 	SupplierCodes  []string `json:"supplierCodes"`
-	ProductIDs     []string `json:"productIds"`
 	OutputFilePath string   `json:"outputFilePath"`
 }
 
@@ -524,7 +523,6 @@ func (h *Handler) handleRunByID(w http.ResponseWriter, r *http.Request) {
 
 		result, err := h.service.ExportMarketReportXlsx(r.Context(), tenantID, runID, ports.MarketReportExportXlsxInput{
 			SupplierCodes:  requestBody.SupplierCodes,
-			ProductIDs:     requestBody.ProductIDs,
 			OutputFilePath: requestBody.OutputFilePath,
 		})
 		if err != nil {

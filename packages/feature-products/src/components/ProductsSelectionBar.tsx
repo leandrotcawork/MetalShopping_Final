@@ -27,7 +27,7 @@ export function ProductsSelectionBar(props: {
             disabled={props.exportDisabled}
             onClick={props.onExport}
           >
-            Exportar selecionados
+            Exportar relatorio
           </Button>
           <Button
             className={styles.secondaryActionButton}
@@ -35,7 +35,7 @@ export function ProductsSelectionBar(props: {
             disabled={props.rowsCount === 0}
             onClick={props.onToggleCurrentPage}
           >
-            {props.allVisibleSelected ? "Desmarcar página" : "Selecionar página"}
+            {props.allVisibleSelected ? "Desmarcar pagina" : "Selecionar pagina"}
           </Button>
           <Button
             className={styles.secondaryActionButton}
@@ -59,7 +59,7 @@ export function ProductsSelectionBar(props: {
       {mode !== "actions" ? (
         <div className={styles.selectionRow}>
           <span>
-            Modo: <strong>{props.selectionMode === "filtered" ? "Filtrados" : "Explícito"}</strong>
+            Modo: <strong>{props.selectionMode === "filtered" ? "Filtrados" : "Explicito"}</strong>
           </span>
           <span>
             Itens: <strong>{props.totalSelected}</strong>

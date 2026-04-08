@@ -800,6 +800,72 @@ ORDER BY input_ids.ord
 	return items, nil
 }
 
+func (r *Reader) ListMarketReportProductIDs(
+	ctx context.Context,
+	tenantID, runID string,
+	supplierCodes []string,
+) ([]string, error) {
+	tx, err := pgdb.BeginTenantTx(ctx, r.db, tenantID, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	const runExistsQuery = `
+SELECT 1
+FROM shopping_price_runs
+WHERE tenant_id = current_tenant_id()
+  AND run_id = $1
+LIMIT 1
+`
+	var one int
+	if err := tx.QueryRowContext(ctx, runExistsQuery, runID).Scan(&one); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrRunNotFound
+		}
+		return nil, fmt.Errorf("check market report run exists: %w", err)
+	}
+
+	if len(supplierCodes) == 0 {
+		return []string{}, nil
+	}
+
+	const query = `
+SELECT
+  i.product_id
+FROM shopping_price_run_items i
+WHERE i.tenant_id = current_tenant_id()
+  AND i.run_id = $1
+  AND i.supplier_code = ANY($2)
+GROUP BY i.product_id
+ORDER BY MIN(i.observed_at), i.product_id
+`
+
+	rows, err := tx.QueryContext(ctx, query, runID, supplierCodes)
+	if err != nil {
+		return nil, fmt.Errorf("list market report product ids: %w", err)
+	}
+	defer rows.Close()
+
+	productIDs := make([]string, 0, 128)
+	for rows.Next() {
+		var productID string
+		if err := rows.Scan(&productID); err != nil {
+			return nil, fmt.Errorf("scan market report product id: %w", err)
+		}
+		productIDs = append(productIDs, strings.TrimSpace(productID))
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate market report product ids: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit market report product ids read: %w", err)
+	}
+
+	return productIDs, nil
+}
+
 func (r *Reader) ListMarketReportRunItems(
 	ctx context.Context,
 	tenantID, runID string,
