@@ -4,6 +4,19 @@ import (
 	"testing"
 )
 
+func stringPtr(v string) *string { return &v }
+
+func validConnectionConfig() InstanceConnectionConfig {
+	return InstanceConnectionConfig{
+		Kind:              ConnectionKindOracle,
+		Host:              "10.55.10.101",
+		Port:              1521,
+		ServiceName:       stringPtr("ORCL"),
+		Username:          "leandroth",
+		PasswordSecretRef: "erp/sankhya/password",
+	}
+}
+
 // ---------------------------------------------------------------------------
 // IntegrationInstance.ValidateForWrite
 // ---------------------------------------------------------------------------
@@ -14,7 +27,7 @@ func TestIntegrationInstance_ValidateForWrite_Valid(t *testing.T) {
 		TenantID:        "tenant-abc",
 		ConnectorType:   ConnectorTypeSankhya,
 		DisplayName:     "My ERP",
-		ConnectionRef:   "conn-ref-1",
+		Connection:      validConnectionConfig(),
 		EnabledEntities: []EntityType{EntityTypeProducts, EntityTypePrices},
 		Status:          InstanceStatusActive,
 	}
@@ -29,6 +42,7 @@ func TestIntegrationInstance_ValidateForWrite_MissingTenantID(t *testing.T) {
 		TenantID:        "",
 		ConnectorType:   ConnectorTypeSankhya,
 		DisplayName:     "My ERP",
+		Connection:      validConnectionConfig(),
 		EnabledEntities: []EntityType{EntityTypeProducts},
 		Status:          InstanceStatusActive,
 	}
@@ -43,6 +57,7 @@ func TestIntegrationInstance_ValidateForWrite_InvalidConnectorType(t *testing.T)
 		TenantID:        "tenant-abc",
 		ConnectorType:   ConnectorType("unknown"),
 		DisplayName:     "My ERP",
+		Connection:      validConnectionConfig(),
 		EnabledEntities: []EntityType{EntityTypeProducts},
 		Status:          InstanceStatusActive,
 	}
@@ -57,6 +72,7 @@ func TestIntegrationInstance_ValidateForWrite_EmptyEntities(t *testing.T) {
 		TenantID:        "tenant-abc",
 		ConnectorType:   ConnectorTypeSankhya,
 		DisplayName:     "My ERP",
+		Connection:      validConnectionConfig(),
 		EnabledEntities: []EntityType{},
 		Status:          InstanceStatusActive,
 	}
@@ -71,11 +87,100 @@ func TestIntegrationInstance_ValidateForWrite_InvalidEntity(t *testing.T) {
 		TenantID:        "tenant-abc",
 		ConnectorType:   ConnectorTypeSankhya,
 		DisplayName:     "My ERP",
+		Connection:      validConnectionConfig(),
 		EnabledEntities: []EntityType{EntityTypeProducts, EntityType("unknown_entity")},
 		Status:          InstanceStatusActive,
 	}
 	if err := inst.ValidateForWrite(); err != ErrInvalidEntityType {
 		t.Fatalf("expected ErrInvalidEntityType, got: %v", err)
+	}
+}
+
+func TestIntegrationInstance_ValidateForWrite_MissingOracleTarget(t *testing.T) {
+	inst := &IntegrationInstance{
+		InstanceID:      "inst-1",
+		TenantID:        "tenant-abc",
+		ConnectorType:   ConnectorTypeSankhya,
+		DisplayName:     "My ERP",
+		Connection: InstanceConnectionConfig{
+			Kind:              ConnectionKindOracle,
+			Host:              "10.55.10.101",
+			Port:              1521,
+			Username:          "leandroth",
+			PasswordSecretRef: "erp/sankhya/password",
+		},
+		EnabledEntities: []EntityType{EntityTypeProducts},
+		Status:          InstanceStatusActive,
+	}
+	if err := inst.ValidateForWrite(); err != ErrInvalidOracleConnectionTarget {
+		t.Fatalf("expected ErrInvalidOracleConnectionTarget, got: %v", err)
+	}
+}
+
+func TestIntegrationInstance_ValidateForWrite_RejectsBothOracleTargets(t *testing.T) {
+	inst := &IntegrationInstance{
+		InstanceID:      "inst-1",
+		TenantID:        "tenant-abc",
+		ConnectorType:   ConnectorTypeSankhya,
+		DisplayName:     "My ERP",
+		Connection: InstanceConnectionConfig{
+			Kind:              ConnectionKindOracle,
+			Host:              "10.55.10.101",
+			Port:              1521,
+			ServiceName:       stringPtr("ORCL"),
+			SID:               stringPtr("ORCLSID"),
+			Username:          "leandroth",
+			PasswordSecretRef: "erp/sankhya/password",
+		},
+		EnabledEntities: []EntityType{EntityTypeProducts},
+		Status:          InstanceStatusActive,
+	}
+	if err := inst.ValidateForWrite(); err != ErrInvalidOracleConnectionTarget {
+		t.Fatalf("expected ErrInvalidOracleConnectionTarget, got: %v", err)
+	}
+}
+
+func TestIntegrationInstance_ValidateForWrite_InvalidConnectionKind(t *testing.T) {
+	inst := &IntegrationInstance{
+		InstanceID:      "inst-1",
+		TenantID:        "tenant-abc",
+		ConnectorType:   ConnectorTypeSankhya,
+		DisplayName:     "My ERP",
+		Connection: InstanceConnectionConfig{
+			Kind:              ConnectionKind("unknown"),
+			Host:              "10.55.10.101",
+			Port:              1521,
+			ServiceName:       stringPtr("ORCL"),
+			Username:          "leandroth",
+			PasswordSecretRef: "erp/sankhya/password",
+		},
+		EnabledEntities: []EntityType{EntityTypeProducts},
+		Status:          InstanceStatusActive,
+	}
+	if err := inst.ValidateForWrite(); err != ErrInvalidConnectionKind {
+		t.Fatalf("expected ErrInvalidConnectionKind, got: %v", err)
+	}
+}
+
+func TestIntegrationInstance_ValidateForWrite_InvalidOraclePort(t *testing.T) {
+	inst := &IntegrationInstance{
+		InstanceID:      "inst-1",
+		TenantID:        "tenant-abc",
+		ConnectorType:   ConnectorTypeSankhya,
+		DisplayName:     "My ERP",
+		Connection: InstanceConnectionConfig{
+			Kind:              ConnectionKindOracle,
+			Host:              "10.55.10.101",
+			Port:              0,
+			ServiceName:       stringPtr("ORCL"),
+			Username:          "leandroth",
+			PasswordSecretRef: "erp/sankhya/password",
+		},
+		EnabledEntities: []EntityType{EntityTypeProducts},
+		Status:          InstanceStatusActive,
+	}
+	if err := inst.ValidateForWrite(); err != ErrInvalidOraclePort {
+		t.Fatalf("expected ErrInvalidOraclePort, got: %v", err)
 	}
 }
 

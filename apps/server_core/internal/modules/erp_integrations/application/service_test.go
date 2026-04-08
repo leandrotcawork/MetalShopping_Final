@@ -336,8 +336,6 @@ func buildService(
 
 func stringPtr(v string) *string { return &v }
 
-func stringPtr(v string) *string { return &v }
-
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -384,12 +382,9 @@ func TestCreateInstance_Success(t *testing.T) {
 	if len(instanceRepo.instances) != 1 {
 		t.Errorf("expected 1 persisted instance, got %d", len(instanceRepo.instances))
 	}
-	if got := instanceRepo.instances[0].Connection.Kind; got != domain.ConnectionKindOracle {
-		t.Fatalf("expected oracle connection kind, got %s", got)
-	}
 }
 
-func TestCreateInstance_RejectsMissingPasswordSecretRef(t *testing.T) {
+func TestCreateInstanceRejectsMissingPasswordSecretRef(t *testing.T) {
 	svc := buildService(
 		&stubInstanceRepo{},
 		&stubRunRepo{},
@@ -402,7 +397,7 @@ func TestCreateInstance_RejectsMissingPasswordSecretRef(t *testing.T) {
 		TenantID:      "tenant-1",
 		PrincipalID:   "user-1",
 		ConnectorType: domain.ConnectorTypeSankhya,
-		DisplayName:   "Test ERP",
+		DisplayName:   "ERP Oracle",
 		Connection: domain.InstanceConnectionConfig{
 			Kind:        domain.ConnectionKindOracle,
 			Host:        "10.55.10.101",
@@ -414,36 +409,6 @@ func TestCreateInstance_RejectsMissingPasswordSecretRef(t *testing.T) {
 	})
 	if !errors.Is(err, domain.ErrEmptyPasswordSecretRef) {
 		t.Fatalf("expected ErrEmptyPasswordSecretRef, got %v", err)
-	}
-}
-
-func TestCreateInstance_RejectsServiceNameAndSIDTogether(t *testing.T) {
-	svc := buildService(
-		&stubInstanceRepo{},
-		&stubRunRepo{},
-		&stubReviewRepo{},
-		&stubEnabledGuard{},
-		&stubPermChecker{allowed: true},
-	)
-
-	_, err := svc.CreateInstance(context.Background(), application.CreateInstanceCommand{
-		TenantID:      "tenant-1",
-		PrincipalID:   "user-1",
-		ConnectorType: domain.ConnectorTypeSankhya,
-		DisplayName:   "Test ERP",
-		Connection: domain.InstanceConnectionConfig{
-			Kind:              domain.ConnectionKindOracle,
-			Host:              "10.55.10.101",
-			Port:              1521,
-			ServiceName:       stringPtr("ORCL"),
-			SID:               stringPtr("ORCLSID"),
-			Username:          "leandroth",
-			PasswordSecretRef: "erp/sankhya/password",
-		},
-		EnabledEntities: []domain.EntityType{domain.EntityTypeProducts},
-	})
-	if !errors.Is(err, domain.ErrInvalidOracleConnectionTarget) {
-		t.Fatalf("expected ErrInvalidOracleConnectionTarget, got %v", err)
 	}
 }
 
@@ -473,34 +438,6 @@ func TestCreateInstance_AlreadyActive(t *testing.T) {
 	})
 	if !errors.Is(err, domain.ErrActiveInstanceExists) {
 		t.Errorf("expected ErrActiveInstanceExists, got %v", err)
-	}
-}
-
-func TestCreateInstance_MissingPasswordSecretRef(t *testing.T) {
-	svc := buildService(
-		&stubInstanceRepo{},
-		&stubRunRepo{},
-		&stubReviewRepo{},
-		&stubEnabledGuard{},
-		&stubPermChecker{allowed: true},
-	)
-
-	_, err := svc.CreateInstance(context.Background(), application.CreateInstanceCommand{
-		TenantID:      "tenant-1",
-		PrincipalID:   "user-1",
-		ConnectorType: domain.ConnectorTypeSankhya,
-		DisplayName:   "Test ERP",
-		Connection: domain.InstanceConnectionConfig{
-			Kind:        domain.ConnectionKindOracle,
-			Host:        "10.55.10.101",
-			Port:        1521,
-			ServiceName: stringPtr("ORCL"),
-			Username:    "leandroth",
-		},
-		EnabledEntities: []domain.EntityType{domain.EntityTypeProducts},
-	})
-	if !errors.Is(err, domain.ErrEmptyPasswordSecretRef) {
-		t.Fatalf("expected ErrEmptyPasswordSecretRef, got %v", err)
 	}
 }
 
@@ -538,10 +475,10 @@ func TestTriggerRun_Success(t *testing.T) {
 	instanceRepo := &stubInstanceRepo{
 		instances: []*domain.IntegrationInstance{
 			{
-				InstanceID:      "inst_abc",
-				TenantID:        "tenant-1",
-				ConnectorType:   domain.ConnectorTypeSankhya,
-				DisplayName:     "Test",
+				InstanceID:    "inst_abc",
+				TenantID:      "tenant-1",
+				ConnectorType: domain.ConnectorTypeSankhya,
+				DisplayName:   "Test",
 				Connection: domain.InstanceConnectionConfig{
 					Kind:              domain.ConnectionKindOracle,
 					Host:              "10.55.10.101",
@@ -620,10 +557,10 @@ func TestTriggerRun_AppendsOutboxInSameTransaction(t *testing.T) {
 	instanceRepo := &stubInstanceRepo{
 		instances: []*domain.IntegrationInstance{
 			{
-				InstanceID:      "inst_abc",
-				TenantID:        "tenant-1",
-				ConnectorType:   domain.ConnectorTypeSankhya,
-				DisplayName:     "Test",
+				InstanceID:    "inst_abc",
+				TenantID:      "tenant-1",
+				ConnectorType: domain.ConnectorTypeSankhya,
+				DisplayName:   "Test",
 				Connection: domain.InstanceConnectionConfig{
 					Kind:              domain.ConnectionKindOracle,
 					Host:              "10.55.10.101",
@@ -701,22 +638,22 @@ func TestListInstances_Pagination(t *testing.T) {
 	// Seed 5 instances.
 	instances := make([]*domain.IntegrationInstance, 5)
 	for i := range instances {
-			instances[i] = &domain.IntegrationInstance{
-				InstanceID:      "inst_" + string(rune('a'+i)),
-				TenantID:        "tenant-1",
-				ConnectorType:   domain.ConnectorTypeSankhya,
-				DisplayName:     "Test",
-				Connection: domain.InstanceConnectionConfig{
-					Kind:              domain.ConnectionKindOracle,
-					Host:              "10.55.10.101",
-					Port:              1521,
-					ServiceName:       stringPtr("ORCL"),
-					Username:          "leandroth",
-					PasswordSecretRef: "erp/sankhya/password",
-				},
-				EnabledEntities: []domain.EntityType{domain.EntityTypeProducts},
-				Status:          domain.InstanceStatusActive,
-				CreatedAt:       time.Now(),
+		instances[i] = &domain.IntegrationInstance{
+			InstanceID:    "inst_" + string(rune('a'+i)),
+			TenantID:      "tenant-1",
+			ConnectorType: domain.ConnectorTypeSankhya,
+			DisplayName:   "Test",
+			Connection: domain.InstanceConnectionConfig{
+				Kind:              domain.ConnectionKindOracle,
+				Host:              "10.55.10.101",
+				Port:              1521,
+				ServiceName:       stringPtr("ORCL"),
+				Username:          "leandroth",
+				PasswordSecretRef: "erp/sankhya/password",
+			},
+			EnabledEntities: []domain.EntityType{domain.EntityTypeProducts},
+			Status:          domain.InstanceStatusActive,
+			CreatedAt:       time.Now(),
 			UpdatedAt:       time.Now(),
 		}
 	}

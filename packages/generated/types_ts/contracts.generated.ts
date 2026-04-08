@@ -270,13 +270,13 @@ export type ErpIntegrationInstanceV1 = {
     kind: "oracle";
     host: string;
     port: number;
-    service_name?: string | null;
-    sid?: string | null;
+    service_name?: string;
+    sid?: string;
     username: string;
     password_secret_ref: string;
-    connect_timeout_seconds?: number | null;
-    fetch_batch_size?: number | null;
-    entity_batch_size?: number | null;
+    connect_timeout_seconds?: number;
+    fetch_batch_size?: number;
+    entity_batch_size?: number;
   };
   enabled_entities: Array<"products" | "prices" | "costs" | "inventory" | "sales" | "purchases" | "customers" | "suppliers">;
   sync_schedule?: string | null;
@@ -352,6 +352,7 @@ export type ErpSyncRunV1 = {
   rejected_count: number;
   review_count: number;
   failure_summary?: string | null;
+  cursor_state?: string | null;
   created_at: string;
 };
 
@@ -631,6 +632,7 @@ export type ShoppingManualUrlCandidateV1 = {
 
 export type ShoppingMarketReportExportXlsxRequestV1 = {
   supplierCodes: Array<string>;
+  productIds: Array<string>;
   outputFilePath: string;
 };
 

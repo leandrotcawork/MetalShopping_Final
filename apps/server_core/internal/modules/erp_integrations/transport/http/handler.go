@@ -63,11 +63,11 @@ func (h *Handler) listInstances(w http.ResponseWriter, r *http.Request) {
 }
 
 type createInstanceRequest struct {
-	ConnectorType   string             `json:"connector_type"`
-	DisplayName     string             `json:"display_name"`
-	Connection      connectionRequest  `json:"connection"`
-	EnabledEntities []string           `json:"enabled_entities"`
-	SyncSchedule    *string            `json:"sync_schedule,omitempty"`
+	ConnectorType   string            `json:"connector_type"`
+	DisplayName     string            `json:"display_name"`
+	Connection      connectionRequest `json:"connection"`
+	EnabledEntities []string          `json:"enabled_entities"`
+	SyncSchedule    *string           `json:"sync_schedule,omitempty"`
 }
 
 type connectionRequest struct {
@@ -101,10 +101,10 @@ func (h *Handler) createInstance(w http.ResponseWriter, r *http.Request) {
 	}
 
 	instance, err := h.svc.CreateInstance(r.Context(), application.CreateInstanceCommand{
-		TenantID:        tenant.ID,
-		PrincipalID:     principal.SubjectID,
-		ConnectorType:   domain.ConnectorType(req.ConnectorType),
-		DisplayName:     req.DisplayName,
+		TenantID:      tenant.ID,
+		PrincipalID:   principal.SubjectID,
+		ConnectorType: domain.ConnectorType(req.ConnectorType),
+		DisplayName:   req.DisplayName,
 		Connection: domain.InstanceConnectionConfig{
 			Kind:              domain.ConnectionKind(req.Connection.Kind),
 			Host:              req.Connection.Host,
@@ -427,6 +427,9 @@ func mapRun(r *domain.SyncRun) map[string]any {
 	}
 	if r.FailureSummary != nil {
 		m["failure_summary"] = *r.FailureSummary
+	}
+	if r.CursorState != nil {
+		m["cursor_state"] = *r.CursorState
 	}
 	return m
 }

@@ -1,23 +1,22 @@
 # Last Session — MetalShopping Final
-> Date: 2026-04-08 | Session: #4
+> Date: 2026-04-08 | Session: #5
 
 ## What Was Accomplished
-- Installed Oracle Instant Client locally and wired runtime env vars for the worker.
-- Fixed ERP instance list scan errors by parsing Postgres text arrays.
-- Added repository tests to validate array parsing behavior.
-- Updated Oracle DSN composition to use service name in the path.
-- Confirmed live Oracle connectivity (user/password now works) and moved to schema errors.
+- Executed Gate B ERP Oracle run and confirmed completion with promotion/review counts.
+- Captured canonical catalog, pricing, and inventory evidence and updated the acceptance workbook.
+- Committed Gate B acceptance evidence and fixed ERP integration runtime tests.
+- Ran required verifications: Go tests, contract validation, and contract artifact generation.
+- Updated progress tracking to mark ERP Oracle acceptance complete.
 
 ## What Changed in the System
-- ERP worker now tolerates NULL connection tuning fields.
-- Sankhya extractor queries now target the METALPRD schema (owner reported by user).
-- Oracle DSN generation updated for service name usage.
+- ERP integration runtime tests now expect schema-qualified Sankhya sources.
+- Acceptance evidence recorded in docs and progress updated.
 
 ## Decisions Made This Session
-- None.
+- None
 
-## What's Immediately Next
-- Rerun Gate A with METALPRD schema queries and confirm product extraction works.
+## What’s Immediately Next
+- Update Nexus brain, commit progress/brain updates, and merge `feat/erp-oracle-integration` to `main`.
 
 ## Open Questions
-- Does the Oracle user `leandro` have SELECT on all required METALPRD tables?
+- None

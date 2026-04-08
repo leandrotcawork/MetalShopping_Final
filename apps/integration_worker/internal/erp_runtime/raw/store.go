@@ -37,14 +37,18 @@ func (s *Store) Save(ctx context.Context, tenantID, runID string, records []*typ
 	const q = `
 INSERT INTO erp_raw_records
   (raw_id, tenant_id, run_id, connector_type, entity_type, source_id,
-   payload_json, payload_hash, source_timestamp, cursor_value, extracted_at)
-VALUES ($1, current_tenant_id(), $2, $3, $4, $5, $6, $7, $8, $9, $10)
+   payload_json, payload_hash, batch_ordinal, source_timestamp, cursor_value, extracted_at)
+VALUES ($1, current_tenant_id(), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 ON CONFLICT (raw_id) DO NOTHING`
 
 	extractedAt := time.Now().UTC()
 	saved := make([]*SavedRecord, 0, len(records))
 	for _, rec := range records {
 		rawID := uuid.New().String()
+		batchOrdinal := rec.BatchOrdinal
+		if batchOrdinal <= 0 {
+			batchOrdinal = 1
+		}
 		_, err := tx.ExecContext(ctx, q,
 			rawID,
 			runID,
@@ -53,6 +57,7 @@ ON CONFLICT (raw_id) DO NOTHING`
 			rec.SourceID,
 			rec.PayloadJSON,
 			rec.PayloadHash,
+			batchOrdinal,
 			rec.SourceTimestamp,
 			rec.CursorValue,
 			extractedAt,

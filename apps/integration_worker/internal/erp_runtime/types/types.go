@@ -1,5 +1,3 @@
-// Package types contains the shared data types used across all erp_runtime sub-packages.
-// It has no imports from other erp_runtime packages, preventing import cycles.
 package types
 
 import "time"
@@ -39,6 +37,7 @@ type RawRecord struct {
 	EntityType      EntityType
 	PayloadJSON     []byte
 	PayloadHash     string
+	BatchOrdinal    int
 	SourceTimestamp *time.Time
 	CursorValue     *string
 }
@@ -61,11 +60,25 @@ const (
 	ErrorClassPlatform       ErrorClass = "platform_error"
 )
 
+// ExtractConnection carries structured source connection details.
+type ExtractConnection struct {
+	Kind              string
+	Host              string
+	Port              int
+	ServiceName       *string
+	SID               *string
+	Username          string
+	PasswordSecretRef string
+	ConnectTimeoutSec int
+	FetchBatchSize    int
+	EntityBatchSize   int
+}
+
 // ExtractRequest is the input to a connector's Extract call.
 type ExtractRequest struct {
-	TenantID      string
-	RunID         string
-	Entity        EntityType
-	Cursor        *string
-	ConnectionRef string
+	TenantID   string
+	RunID      string
+	Entity     EntityType
+	Cursor     *string
+	Connection ExtractConnection
 }

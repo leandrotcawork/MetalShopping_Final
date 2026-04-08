@@ -8,24 +8,24 @@
     "connector_type": {"type":"string","enum":["sankhya"]},
     "display_name": {"type":"string","minLength":1,"maxLength":200},
     "connection": {
-      "type": "object",
+      "type":"object",
       "required": ["kind","host","port","username","password_secret_ref"],
+      "oneOf": [
+        {"required": ["service_name"], "not": {"required": ["sid"]}},
+        {"required": ["sid"], "not": {"required": ["service_name"]}}
+      ],
       "properties": {
         "kind": {"type":"string","enum":["oracle"]},
         "host": {"type":"string","minLength":1},
         "port": {"type":"integer","minimum":1},
-        "service_name": {"type":["string","null"]},
-        "sid": {"type":["string","null"]},
+        "service_name": {"type":["string","null"],"minLength":1},
+        "sid": {"type":["string","null"],"minLength":1},
         "username": {"type":"string","minLength":1},
         "password_secret_ref": {"type":"string","minLength":1},
         "connect_timeout_seconds": {"type":["integer","null"],"minimum":1},
         "fetch_batch_size": {"type":["integer","null"],"minimum":1},
         "entity_batch_size": {"type":["integer","null"],"minimum":1}
-      },
-      "oneOf": [
-        {"required": ["service_name"], "not": {"required": ["sid"]}},
-        {"required": ["sid"], "not": {"required": ["service_name"]}}
-      ]
+      }
     },
     "enabled_entities": {"type":"array","minItems":1,"items":{"type":"string","enum":["products","prices","costs","inventory","sales","purchases","customers","suppliers"]}},
     "sync_schedule": {"type":["string","null"]}

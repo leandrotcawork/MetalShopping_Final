@@ -87,7 +87,7 @@ func (r RunStatus) IsValid() bool {
 		r == RunStatusPartial
 }
 
-// ConnectionKind identifies the transport-specific connection configuration.
+// ConnectionKind identifies the transport-specific ERP connection format.
 type ConnectionKind string
 
 const (
@@ -204,8 +204,8 @@ type IntegrationInstance struct {
 	UpdatedAt       time.Time
 }
 
-// InstanceConnectionConfig stores the structured Oracle connection metadata for
-// an ERP integration instance.
+// InstanceConnectionConfig stores the structured Oracle connection metadata
+// for an ERP integration instance.
 type InstanceConnectionConfig struct {
 	Kind              ConnectionKind
 	Host              string

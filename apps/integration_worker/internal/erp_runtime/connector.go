@@ -13,6 +13,7 @@ type EntityCapability = types.EntityCapability
 type RawRecord = types.RawRecord
 type ExtractionResult = types.ExtractionResult
 type ErrorClass = types.ErrorClass
+type ExtractConnection = types.ExtractConnection
 type ExtractRequest = types.ExtractRequest
 
 // Entity type constants.
@@ -44,12 +45,12 @@ const (
 
 // Connector is the interface all ERP connectors must implement.
 type Connector interface {
-	// Type returns the connector type identifier (e.g., "sankhya")
+	// Type returns the connector type identifier (e.g., "sankhya").
 	Type() string
 	// Capabilities returns the entities this connector supports
 	Capabilities() []EntityCapability
-	// ValidateConnection checks connectivity (does not extract)
-	ValidateConnection(ctx context.Context, connectionRef string) error
+	// ValidateConnection checks structured connectivity inputs (does not extract)
+	ValidateConnection(ctx context.Context, connection ExtractConnection) error
 	// Extract fetches a page of raw records for the given entity
 	Extract(ctx context.Context, req ExtractRequest) (*ExtractionResult, error)
 	// ClassifyError classifies an extraction or mapping error

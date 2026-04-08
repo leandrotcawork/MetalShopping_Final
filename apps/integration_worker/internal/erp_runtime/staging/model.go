@@ -22,6 +22,7 @@ type StagingRecord struct {
 	RawID            string
 	EntityType       types.EntityType
 	SourceID         string
+	BatchOrdinal     int
 	NormalizedJSON   []byte
 	ValidationStatus ValidationStatus
 	ValidationErrors []string // nil or empty if valid

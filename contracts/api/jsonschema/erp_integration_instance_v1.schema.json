@@ -10,19 +10,19 @@
     "connector_type": {"type":"string","enum":["sankhya"]},
     "display_name": {"type":"string"},
     "connection": {
-      "type": "object",
+      "type":"object",
       "required": ["kind","host","port","username","password_secret_ref"],
       "properties": {
         "kind": {"type":"string","enum":["oracle"]},
-        "host": {"type":"string"},
-        "port": {"type":"integer"},
-        "service_name": {"type":["string","null"]},
-        "sid": {"type":["string","null"]},
-        "username": {"type":"string"},
-        "password_secret_ref": {"type":"string"},
-        "connect_timeout_seconds": {"type":["integer","null"]},
-        "fetch_batch_size": {"type":["integer","null"]},
-        "entity_batch_size": {"type":["integer","null"]}
+        "host": {"type":"string","minLength":1},
+        "port": {"type":"integer","minimum":1},
+        "service_name": {"type":"string","minLength":1},
+        "sid": {"type":"string","minLength":1},
+        "username": {"type":"string","minLength":1},
+        "password_secret_ref": {"type":"string","minLength":1},
+        "connect_timeout_seconds": {"type":"integer","minimum":1},
+        "fetch_batch_size": {"type":"integer","minimum":1},
+        "entity_batch_size": {"type":"integer","minimum":1}
       }
     },
     "enabled_entities": {"type":"array","items":{"type":"string","enum":["products","prices","costs","inventory","sales","purchases","customers","suppliers"]}},

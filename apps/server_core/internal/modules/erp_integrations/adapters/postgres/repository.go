@@ -105,6 +105,7 @@ INSERT INTO erp_integration_instances (
   tenant_id,
   connector_type,
   display_name,
+  connection_ref,
   connection_kind,
   db_host,
   db_port,
@@ -138,7 +139,10 @@ VALUES (
   $13,
   $14,
   $15,
-  $16
+  $16,
+  $17,
+  $18,
+  $19
 )
 `
 	if _, err := tx.ExecContext(
@@ -147,6 +151,7 @@ VALUES (
 		instance.InstanceID,
 		string(instance.ConnectorType),
 		instance.DisplayName,
+		"",
 		string(instance.Connection.Kind),
 		instance.Connection.Host,
 		instance.Connection.Port,
@@ -985,7 +990,7 @@ func scanInstance(s scanner) (*domain.IntegrationInstance, error) {
 	var item domain.IntegrationInstance
 	var connectorType, connectionKind string
 	var status string
-	var enabledEntities pgtype.FlatArray[string]
+	var enabledEntitiesRaw string
 	var syncSchedule sql.NullString
 	var serviceName sql.NullString
 	var sid sql.NullString
@@ -1008,7 +1013,7 @@ func scanInstance(s scanner) (*domain.IntegrationInstance, error) {
 		&connectTimeout,
 		&fetchBatchSize,
 		&entityBatchSize,
-		&enabledEntities,
+		&enabledEntitiesRaw,
 		&syncSchedule,
 		&status,
 		&item.CreatedAt,
@@ -1019,8 +1024,12 @@ func scanInstance(s scanner) (*domain.IntegrationInstance, error) {
 	item.ConnectorType = domain.ConnectorType(connectorType)
 	item.Connection.Kind = domain.ConnectionKind(connectionKind)
 	item.Status = domain.InstanceStatus(status)
-	item.EnabledEntities = make([]domain.EntityType, len(enabledEntities))
-	for i, e := range enabledEntities {
+	enabledValues, err := parseTextArray(enabledEntitiesRaw)
+	if err != nil {
+		return nil, err
+	}
+	item.EnabledEntities = make([]domain.EntityType, len(enabledValues))
+	for i, e := range enabledValues {
 		item.EnabledEntities[i] = domain.EntityType(e)
 	}
 	if serviceName.Valid {
@@ -1053,7 +1062,7 @@ func scanInstance(s scanner) (*domain.IntegrationInstance, error) {
 func scanRun(s scanner) (*domain.SyncRun, error) {
 	var item domain.SyncRun
 	var connectorType, runMode, status string
-	var entityScope pgtype.FlatArray[string]
+	var entityScopeRaw string
 	var startedAt, completedAt sql.NullTime
 	var failureSummary, cursorState sql.NullString
 
@@ -1063,7 +1072,7 @@ func scanRun(s scanner) (*domain.SyncRun, error) {
 		&item.InstanceID,
 		&connectorType,
 		&runMode,
-		&entityScope,
+		&entityScopeRaw,
 		&status,
 		&startedAt,
 		&completedAt,
@@ -1080,8 +1089,12 @@ func scanRun(s scanner) (*domain.SyncRun, error) {
 	item.ConnectorType = domain.ConnectorType(connectorType)
 	item.RunMode = domain.RunMode(runMode)
 	item.Status = domain.RunStatus(status)
-	item.EntityScope = make([]domain.EntityType, len(entityScope))
-	for i, e := range entityScope {
+	entityValues, err := parseTextArray(entityScopeRaw)
+	if err != nil {
+		return nil, err
+	}
+	item.EntityScope = make([]domain.EntityType, len(entityValues))
+	for i, e := range entityValues {
 		item.EntityScope[i] = domain.EntityType(e)
 	}
 	if startedAt.Valid {
@@ -1218,6 +1231,52 @@ func nullableTimePtr(value *time.Time) any {
 		return nil
 	}
 	return value.UTC()
+}
+
+func parseTextArray(raw string) ([]string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || raw == "{}" {
+		return []string{}, nil
+	}
+	if strings.HasPrefix(raw, "{") && strings.HasSuffix(raw, "}") {
+		raw = raw[1 : len(raw)-1]
+	}
+	if raw == "" {
+		return []string{}, nil
+	}
+
+	values := make([]string, 0, 4)
+	var buf strings.Builder
+	inQuotes := false
+	escapeNext := false
+
+	for _, r := range raw {
+		switch {
+		case escapeNext:
+			buf.WriteRune(r)
+			escapeNext = false
+		case r == '\\':
+			if inQuotes {
+				escapeNext = true
+				continue
+			}
+			buf.WriteRune(r)
+		case r == '"':
+			inQuotes = !inQuotes
+		case r == ',' && !inQuotes:
+			values = append(values, buf.String())
+			buf.Reset()
+		default:
+			buf.WriteRune(r)
+		}
+	}
+
+	if escapeNext || inQuotes {
+		return nil, fmt.Errorf("invalid postgres text array %q", raw)
+	}
+
+	values = append(values, buf.String())
+	return values, nil
 }
 
 func generateReviewID(tenantID, reconciliationID string) string {

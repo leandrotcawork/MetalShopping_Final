@@ -126,6 +126,9 @@
 - ERP integration remediation pass completed after implementation audit: worker tenant-bound DB sessions enforced, run outbox writes made transactional on create/finalize paths, and event contract/runtime payload alignment corrected
 - ERP promotion flow now performs real canonical product promotion through a catalog-owned boundary with replay-safe behavior, provenance-complete `entity_promoted` payloads, and persisted failure context for replay
 - non-promotable ERP reconciliation paths now route into review flow (`review_required` + visible review items) with idempotent repository semantics for multi-poller retries
+- ERP Oracle runtime baseline advanced: `godror` query runner + typed row reader, Sankhya extraction moved to query-runner path, run/entity checkpoint persistence added (`erp_run_entity_steps`, raw/staging `batch_ordinal`), and worker run execution now uses structured Oracle connection fields instead of legacy `connection_ref`
+- ERP run HTTP payload now includes `cursor_state` and contract schema updated accordingly
+- ERP Oracle integration live acceptance completed on `feat/erp-oracle-integration` with Gate A read-only proof and Gate B canonical write proof for `products`, `prices`, and `inventory`
 
 ## Next
 

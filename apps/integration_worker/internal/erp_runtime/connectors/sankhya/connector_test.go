@@ -2,35 +2,98 @@ package sankhya
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
 	erp_runtime "metalshopping/integration_worker/internal/erp_runtime"
+	"metalshopping/integration_worker/internal/erp_runtime/dbsource"
 )
 
-func TestValidateConnectionParsesHostUserPasswordAndDefaultPort(t *testing.T) {
+func TestValidateConnectionAcceptsStructuredConnection(t *testing.T) {
 	t.Parallel()
 
-	connector := New()
-	if err := connector.ValidateConnection(context.Background(), "sankhya://user:pass@dummy-host.example?service=PROD"); err != nil {
+	connector := NewWithRunnerFactory(func(context.Context, erp_runtime.ExtractConnection) (dbsource.QueryRunner, error) {
+		return &noopRunner{}, nil
+	})
+	if err := connector.ValidateConnection(context.Background(), erp_runtime.ExtractConnection{
+		Host:              "dummy-host.example",
+		Port:              defaultOraclePort,
+		ServiceName:       strPtr("PROD"),
+		Username:          "user",
+		PasswordSecretRef: "erp/sankhya/password",
+	}); err != nil {
 		t.Fatalf("ValidateConnection returned error: %v", err)
 	}
+}
 
-	cfg, err := parseConnectionRef("sankhya://user:pass@dummy-host.example?service=PROD")
+func TestValidateConnectionRejectsMissingHost(t *testing.T) {
+	t.Parallel()
+
+	connector := NewWithRunnerFactory(func(context.Context, erp_runtime.ExtractConnection) (dbsource.QueryRunner, error) {
+		return &noopRunner{}, nil
+	})
+	err := connector.ValidateConnection(context.Background(), erp_runtime.ExtractConnection{
+		Port:              defaultOraclePort,
+		ServiceName:       strPtr("PROD"),
+		Username:          "user",
+		PasswordSecretRef: "erp/sankhya/password",
+	})
+	if err == nil {
+		t.Fatal("expected validation error, got nil")
+	}
+	if !strings.Contains(err.Error(), "host must not be empty") {
+		t.Fatalf("expected host validation error, got %v", err)
+	}
+}
+
+func TestValidateConnectionRejectsMissingPasswordSecretRef(t *testing.T) {
+	t.Parallel()
+
+	connector := NewWithRunnerFactory(func(context.Context, erp_runtime.ExtractConnection) (dbsource.QueryRunner, error) {
+		return &noopRunner{}, nil
+	})
+	err := connector.ValidateConnection(context.Background(), erp_runtime.ExtractConnection{
+		Host:        "dummy-host.example",
+		Port:        defaultOraclePort,
+		ServiceName: strPtr("PROD"),
+		Username:    "user",
+	})
+	if err == nil {
+		t.Fatal("expected validation error, got nil")
+	}
+	if !strings.Contains(err.Error(), "password_secret_ref must not be empty") {
+		t.Fatalf("expected password validation error, got %v", err)
+	}
+}
+
+func strPtr(v string) *string { return &v }
+
+func TestValidateConnectionUsesRunnerFactory(t *testing.T) {
+	t.Parallel()
+
+	called := false
+	connector := NewWithRunnerFactory(func(_ context.Context, conn erp_runtime.ExtractConnection) (dbsource.QueryRunner, error) {
+		called = true
+		if conn.Host != "10.55.10.101" {
+			return nil, errors.New("unexpected host")
+		}
+		return &noopRunner{}, nil
+	})
+
+	err := connector.ValidateConnection(context.Background(), erp_runtime.ExtractConnection{
+		Kind:              "oracle",
+		Host:              "10.55.10.101",
+		Port:              1521,
+		ServiceName:       strPtr("ORCL"),
+		Username:          "leandroth",
+		PasswordSecretRef: "erp/sankhya/password",
+	})
 	if err != nil {
-		t.Fatalf("parseConnectionRef returned error: %v", err)
+		t.Fatalf("ValidateConnection returned error: %v", err)
 	}
-	if cfg.Host != "dummy-host.example" {
-		t.Fatalf("expected host dummy-host.example, got %q", cfg.Host)
-	}
-	if cfg.Port != defaultOraclePort {
-		t.Fatalf("expected default port %d, got %d", defaultOraclePort, cfg.Port)
-	}
-	if cfg.Username != "user" || cfg.Password != "pass" {
-		t.Fatalf("unexpected credentials parsed: %#v", cfg)
-	}
-	if cfg.Service != "PROD" {
-		t.Fatalf("expected service PROD, got %q", cfg.Service)
+	if !called {
+		t.Fatal("expected ValidateConnection to call runner factory")
 	}
 }
 
@@ -38,9 +101,9 @@ func TestQueryForEntityReturnsSnapshotSQL(t *testing.T) {
 	t.Parallel()
 
 	cases := map[string]string{
-		"products":  "FROM TGFPRO",
-		"prices":    "FROM TGFTAB",
-		"inventory": "FROM TGFEST",
+		"products":  "FROM METALPRD.TGFPRO",
+		"prices":    "FROM METALPRD.TGFTAB",
+		"inventory": "FROM METALPRD.TGFEST",
 	}
 
 	for entityName, wantFragment := range cases {
@@ -73,4 +136,14 @@ func TestQueryForEntityReturnsSnapshotSQL(t *testing.T) {
 			}
 		}
 	}
+}
+
+type noopRunner struct{}
+
+func (n *noopRunner) Query(context.Context, dbsource.QuerySpec, func(dbsource.RowReader) error) error {
+	return nil
+}
+
+func (n *noopRunner) Close() error {
+	return nil
 }

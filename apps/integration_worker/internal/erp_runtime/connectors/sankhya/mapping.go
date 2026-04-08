@@ -1,6 +1,12 @@
 package sankhya
 
-import erp_runtime "metalshopping/integration_worker/internal/erp_runtime"
+import (
+	"fmt"
+	"strings"
+
+	erp_runtime "metalshopping/integration_worker/internal/erp_runtime"
+	"metalshopping/integration_worker/internal/erp_runtime/dbsource"
+)
 
 // FieldMapping maps a Sankhya source field to a MetalShopping canonical field name.
 type FieldMapping struct {
@@ -82,4 +88,61 @@ func newMapper() *Mapper { return &Mapper{} }
 // MappingsFor returns the field mappings for the given entity.
 func (m *Mapper) MappingsFor(entity erp_runtime.EntityType) []FieldMapping {
 	return entityMappings[entity]
+}
+
+// MapRow maps a source row into a Sankhya payload and stable source ID.
+func (m *Mapper) MapRow(entity erp_runtime.EntityType, row dbsource.RowReader, sourceIDKeys []string) (map[string]any, string, error) {
+	mappings := m.MappingsFor(entity)
+	if len(mappings) == 0 {
+		return nil, "", fmt.Errorf("sankhya mapper: no mappings for entity %q", entity)
+	}
+
+	payload := make(map[string]any, len(mappings))
+	for _, field := range mappings {
+		value, err := row.NullString(field.SourceField)
+		if err != nil {
+			if field.Required {
+				return nil, "", fmt.Errorf("sankhya mapper: read required field %q: %w", field.SourceField, err)
+			}
+			continue
+		}
+		if value == nil {
+			if field.Required {
+				return nil, "", fmt.Errorf("sankhya mapper: required field %q is null", field.SourceField)
+			}
+			payload[field.SourceField] = nil
+			continue
+		}
+		trimmed := strings.TrimSpace(*value)
+		if field.Required && trimmed == "" {
+			return nil, "", fmt.Errorf("sankhya mapper: required field %q is empty", field.SourceField)
+		}
+		payload[field.SourceField] = trimmed
+	}
+
+	sourceID, err := sourceIDFromPayload(payload, sourceIDKeys)
+	if err != nil {
+		return nil, "", err
+	}
+	return payload, sourceID, nil
+}
+
+func sourceIDFromPayload(payload map[string]any, keys []string) (string, error) {
+	if len(keys) == 0 {
+		return "", fmt.Errorf("sankhya mapper: source ID keys must not be empty")
+	}
+
+	parts := make([]string, 0, len(keys))
+	for _, key := range keys {
+		value, ok := payload[key]
+		if !ok || value == nil {
+			return "", fmt.Errorf("sankhya mapper: missing source ID field %q", key)
+		}
+		got := strings.TrimSpace(fmt.Sprint(value))
+		if got == "" || got == "<nil>" {
+			return "", fmt.Errorf("sankhya mapper: empty source ID field %q", key)
+		}
+		parts = append(parts, got)
+	}
+	return strings.Join(parts, ":"), nil
 }

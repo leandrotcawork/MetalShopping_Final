@@ -7,10 +7,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"net/url"
+	"strconv"
 	"strings"
+	"time"
 
 	erp_runtime "metalshopping/integration_worker/internal/erp_runtime"
+	"metalshopping/integration_worker/internal/erp_runtime/dbsource"
 )
 
 //go:embed testdata/*.json
@@ -57,21 +59,19 @@ SELECT
   PRO.CODGRUPOPROD,
   PRO.AD_STATUS,
   PRO.AD_COMPETITIVO
-FROM TGFPRO PRO
+FROM METALPRD.TGFPRO PRO
 ORDER BY PRO.CODPROD`
 
 	pricesSnapshotQuery = `
 SELECT
-  TAB.NUTAB,
+  EXC.NUTAB,
   TAB.CODTAB,
-  TAB.NOMETAB,
-  NTA.DTVIGOR,
+  EXC.DHALTREG AS DTVIGOR,
   EXC.CODPROD,
   EXC.VLRVENDA
-FROM TGFTAB TAB
-LEFT JOIN TGFNTA NTA ON NTA.NUTAB = TAB.NUTAB
-LEFT JOIN TGFEXC EXC ON EXC.NUTAB = TAB.NUTAB
-ORDER BY TAB.NUTAB, NTA.DTVIGOR, EXC.CODPROD`
+FROM METALPRD.TGFTAB TAB
+JOIN METALPRD.TGFEXC EXC ON EXC.NUTAB = TAB.NUTAB
+ORDER BY EXC.NUTAB, EXC.DHALTREG, EXC.CODPROD`
 
 	inventorySnapshotQuery = `
 SELECT
@@ -81,7 +81,7 @@ SELECT
   EST.ESTOQUE,
   EST.RESERVADO,
   (NVL(EST.ESTOQUE, 0) - NVL(EST.RESERVADO, 0)) AS RAW_AVAILABLE_POSITION
-FROM TGFEST EST
+FROM METALPRD.TGFEST EST
 ORDER BY EST.CODPROD, EST.CODEMP, EST.CODLOCAL`
 
 	salesSnapshotQuery = `
@@ -91,7 +91,7 @@ SELECT
   CAB.DTNEG,
   CAB.VLRNOTA,
   CAB.TIPMOV
-FROM TGFCAB CAB
+FROM METALPRD.TGFCAB CAB
 ORDER BY CAB.NUNOTA`
 
 	customersSnapshotQuery = `
@@ -101,7 +101,7 @@ SELECT
   PAR.CGC_CPF,
   PAR.EMAIL,
   PAR.CLIENTE
-FROM TGFPAR PAR
+FROM METALPRD.TGFPAR PAR
 ORDER BY PAR.CODPARC`
 
 	suppliersSnapshotQuery = `
@@ -111,45 +111,74 @@ SELECT
   PAR.CGC_CPF,
   PAR.EMAIL,
   PAR.FORNECEDOR
-FROM TGFPAR PAR
+FROM METALPRD.TGFPAR PAR
 ORDER BY PAR.CODPARC`
 )
 
 // Extractor fetches raw records from Sankhya ERP.
-type Extractor struct{}
+type Extractor struct {
+	mapper *Mapper
+}
 
-func newExtractor() *Extractor { return &Extractor{} }
+func newExtractor(mapper *Mapper) *Extractor {
+	return &Extractor{mapper: mapper}
+}
 
-func (e *Extractor) Extract(ctx context.Context, req erp_runtime.ExtractRequest) (*erp_runtime.ExtractionResult, error) {
+func (e *Extractor) Extract(ctx context.Context, req erp_runtime.ExtractRequest, runner dbsource.QueryRunner) (*erp_runtime.ExtractionResult, error) {
 	cfg, ok := entityConfigs[req.Entity]
 	if !ok {
 		return nil, fmt.Errorf("sankhya: no config for entity %q", req.Entity)
 	}
 
-	if strings.TrimSpace(req.ConnectionRef) == "" {
-		return nil, fmt.Errorf("sankhya: connectionRef must not be empty")
-	}
-
-	u, err := url.Parse(req.ConnectionRef)
-	if err != nil {
-		return nil, fmt.Errorf("sankhya: parse connectionRef: %w", err)
-	}
-
-	switch u.Scheme {
-	case "fixture":
+	if isFixtureConnection(req.Connection) {
 		rows, err := loadFixtureRows(cfg.fixtureFile)
 		if err != nil {
 			return nil, err
 		}
-		return e.extractFromRows(req, rows)
-	case "sankhya":
-		return nil, fmt.Errorf("sankhya: live extraction is not wired yet; use fixture:// for deterministic connector tests")
-	default:
-		return nil, fmt.Errorf("sankhya: unsupported connectionRef scheme %q", u.Scheme)
+		return e.extractFromFixtureRows(req, rows)
 	}
+
+	if runner == nil {
+		return nil, fmt.Errorf("sankhya: live extraction requires a query runner")
+	}
+
+	spec := dbsource.QuerySpec{
+		SQL:     cfg.query,
+		Timeout: 5 * time.Minute,
+	}
+	records := make([]*erp_runtime.RawRecord, 0, 64)
+	err := runner.Query(ctx, spec, func(row dbsource.RowReader) error {
+		payload, sourceID, err := e.mapper.MapRow(req.Entity, row, cfg.sourceIDKeys)
+		if err != nil {
+			return err
+		}
+		payloadBytes, err := json.Marshal(payload)
+		if err != nil {
+			return fmt.Errorf("sankhya: marshal %s row: %w", req.Entity, err)
+		}
+		hash := sha256.Sum256(payloadBytes)
+		records = append(records, &erp_runtime.RawRecord{
+			SourceID:      sourceID,
+			ConnectorType: ConnectorType,
+			EntityType:    req.Entity,
+			PayloadJSON:   payloadBytes,
+			PayloadHash:   hex.EncodeToString(hash[:]),
+			BatchOrdinal:  1,
+		})
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &erp_runtime.ExtractionResult{
+		Records:    records,
+		HasMore:    false,
+		NextCursor: nil,
+	}, nil
 }
 
-func (e *Extractor) extractFromRows(req erp_runtime.ExtractRequest, rows []map[string]any) (*erp_runtime.ExtractionResult, error) {
+func (e *Extractor) extractFromFixtureRows(req erp_runtime.ExtractRequest, rows []map[string]any) (*erp_runtime.ExtractionResult, error) {
 	cfg, ok := entityConfigs[req.Entity]
 	if !ok {
 		return nil, fmt.Errorf("sankhya: no config for entity %q", req.Entity)
@@ -157,23 +186,23 @@ func (e *Extractor) extractFromRows(req erp_runtime.ExtractRequest, rows []map[s
 
 	records := make([]*erp_runtime.RawRecord, 0, len(rows))
 	for _, row := range rows {
-		payload, err := json.Marshal(row)
+		payload, sourceID, err := e.mapper.MapRow(req.Entity, newFixtureRowReader(row), cfg.sourceIDKeys)
+		if err != nil {
+			return nil, err
+		}
+		payloadBytes, err := json.Marshal(payload)
 		if err != nil {
 			return nil, fmt.Errorf("sankhya: marshal %s row: %w", req.Entity, err)
 		}
 
-		sourceID := sourceIDForRow(row, cfg.sourceIDKeys)
-		if sourceID == "" {
-			return nil, fmt.Errorf("sankhya: missing source key fields for entity %q", req.Entity)
-		}
-
-		hash := sha256.Sum256(payload)
+		hash := sha256.Sum256(payloadBytes)
 		rec := &erp_runtime.RawRecord{
 			SourceID:      sourceID,
 			ConnectorType: ConnectorType,
 			EntityType:    req.Entity,
-			PayloadJSON:   payload,
+			PayloadJSON:   payloadBytes,
 			PayloadHash:   hex.EncodeToString(hash[:]),
+			BatchOrdinal:  1,
 		}
 		records = append(records, rec)
 	}
@@ -198,22 +227,128 @@ func loadFixtureRows(fileName string) ([]map[string]any, error) {
 	return rows, nil
 }
 
-func sourceIDForRow(row map[string]any, keys []string) string {
-	parts := make([]string, 0, len(keys))
-	for _, key := range keys {
-		value := strings.TrimSpace(fmt.Sprint(row[key]))
-		if value == "" || value == "<nil>" {
-			return ""
-		}
-		parts = append(parts, value)
-	}
-	return strings.Join(parts, ":")
-}
-
 func queryForEntity(entity erp_runtime.EntityType) (string, error) {
 	cfg, ok := entityConfigs[entity]
 	if !ok {
 		return "", fmt.Errorf("sankhya: no config for entity %q", entity)
 	}
 	return cfg.query, nil
+}
+
+func isFixtureConnection(connection erp_runtime.ExtractConnection) bool {
+	if strings.TrimSpace(connection.Host) == "fixture" {
+		return true
+	}
+	if connection.ServiceName != nil && strings.TrimSpace(*connection.ServiceName) == "fixture" {
+		return true
+	}
+	return strings.TrimSpace(connection.Host) == "" &&
+		connection.Port == 0 &&
+		connection.ServiceName == nil &&
+		connection.SID == nil &&
+		strings.TrimSpace(connection.Username) == "" &&
+		strings.TrimSpace(connection.PasswordSecretRef) == ""
+}
+
+type fixtureRowReader struct {
+	values map[string]any
+}
+
+func newFixtureRowReader(values map[string]any) *fixtureRowReader {
+	return &fixtureRowReader{values: values}
+}
+
+func (r *fixtureRowReader) String(name string) (string, error) {
+	value, ok := r.lookup(name)
+	if !ok {
+		return "", fmt.Errorf("sankhya fixture row: column %q not found", name)
+	}
+	if value == nil {
+		return "", fmt.Errorf("sankhya fixture row: column %q is null", name)
+	}
+	return strings.TrimSpace(fmt.Sprint(value)), nil
+}
+
+func (r *fixtureRowReader) NullString(name string) (*string, error) {
+	value, ok := r.lookup(name)
+	if !ok {
+		return nil, fmt.Errorf("sankhya fixture row: column %q not found", name)
+	}
+	if value == nil {
+		return nil, nil
+	}
+	got := strings.TrimSpace(fmt.Sprint(value))
+	return &got, nil
+}
+
+func (r *fixtureRowReader) Float64(name string) (float64, error) {
+	value, ok := r.lookup(name)
+	if !ok {
+		return 0, fmt.Errorf("sankhya fixture row: column %q not found", name)
+	}
+	if value == nil {
+		return 0, fmt.Errorf("sankhya fixture row: column %q is null", name)
+	}
+	raw := strings.TrimSpace(fmt.Sprint(value))
+	got, err := strconv.ParseFloat(raw, 64)
+	if err != nil {
+		return 0, fmt.Errorf("sankhya fixture row: column %q as float64: %w", name, err)
+	}
+	return got, nil
+}
+
+func (r *fixtureRowReader) NullFloat64(name string) (*float64, error) {
+	value, ok := r.lookup(name)
+	if !ok {
+		return nil, fmt.Errorf("sankhya fixture row: column %q not found", name)
+	}
+	if value == nil {
+		return nil, nil
+	}
+	got, err := r.Float64(name)
+	if err != nil {
+		return nil, err
+	}
+	return &got, nil
+}
+
+func (r *fixtureRowReader) Time(name string) (time.Time, error) {
+	value, ok := r.lookup(name)
+	if !ok {
+		return time.Time{}, fmt.Errorf("sankhya fixture row: column %q not found", name)
+	}
+	if value == nil {
+		return time.Time{}, fmt.Errorf("sankhya fixture row: column %q is null", name)
+	}
+	raw := strings.TrimSpace(fmt.Sprint(value))
+	for _, layout := range []string{time.RFC3339Nano, time.RFC3339, "2006-01-02 15:04:05", "2006-01-02"} {
+		if got, err := time.Parse(layout, raw); err == nil {
+			return got, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("sankhya fixture row: column %q unsupported time %q", name, raw)
+}
+
+func (r *fixtureRowReader) NullTime(name string) (*time.Time, error) {
+	value, ok := r.lookup(name)
+	if !ok {
+		return nil, fmt.Errorf("sankhya fixture row: column %q not found", name)
+	}
+	if value == nil {
+		return nil, nil
+	}
+	got, err := r.Time(name)
+	if err != nil {
+		return nil, err
+	}
+	return &got, nil
+}
+
+func (r *fixtureRowReader) lookup(name string) (any, bool) {
+	for key, value := range r.values {
+		if strings.EqualFold(key, name) {
+			return value, true
+		}
+	}
+	return nil, false
 }

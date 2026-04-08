@@ -1,5 +1,5 @@
 # System Pulse - MetalShopping Final
-> Auto-updated: 2026-04-08 | Session: #4
+> Auto-updated: 2026-04-08 | Session: #5
 
 ## Project Identity
 - **Name:** MetalShopping Final
@@ -35,25 +35,24 @@ ADRs, and implementation planning.
 - Frontend uses SDK runtime and design tokens from shared UI.
 
 ## Current Phase
-- **Roadmap phase:** Phase 1 - Layer 0 Data Foundation
-- **Phase goal:** Finish and validate ERP integration before advancing to operational intelligence.
-- **Last completed task:** Layer 0 foundations 0.2-0.6 remain implemented.
-- **Currently working on:** T-001 0.1 ERP Integration
-- **Next up:** Re-run Gate A after qualifying METALPRD table access and confirm ERP snapshot works
-- **Blockers:** Oracle user access to METALPRD tables may be incomplete (ORA-00942)
+- **Roadmap phase:** Phase 2 - Layer 1 Operational Intelligence
+- **Phase goal:** Build the first operational intelligence surfaces on top of validated ERP data.
+- **Last completed task:** T-001 0.1 ERP Integration (Gate A + Gate B acceptance complete).
+- **Currently working on:** T-007 1.1 Analytics Home
+- **Next up:** T-008 1.2 Pricing Intelligence
+- **Blockers:** None
 
 ## Recent Changes (last 3-5 sessions)
-- 2026-04-08: Installed Oracle Instant Client locally, fixed ERP instance list scanning, updated Oracle DSN, and discovered METALPRD schema requirement.
-- 2026-04-06: Corrected roadmap state after confirming Oracle ERP work is still on `feat/erp-oracle-integration` and not live-validated.
-- 2026-04-06: Implemented Oracle query runner, ERP run checkpoints, structured connection, and regenerated contracts on the feature branch.
-- 2026-04-04: Initialized Nexus brain and captured system pulse.
+- 2026-04-08: Gate B ERP Oracle run completed with canonical writes validated for products, prices, and inventory.
+- 2026-04-08: Acceptance workbook updated and committed with Gate B evidence.
+- 2026-04-08: ERP integration runtime tests and contract generation verified in the Oracle worktree.
+- 2026-04-05: Added ERP run entity-step checkpoints and raw/staging batch ordinal persistence (`0038`, `0039`).
+- 2026-04-05: Updated worker execution to structured connection config and dependency-aware entity flow.
 
 ## Active Architectural Decisions
 - ADR-001: Use godror plus a typed query-runner API for Oracle ERP connectivity.
 
 ## Known Risks and Tech Debt
-- ERP integration is not complete on `main`; the full Oracle runtime remains unmerged on `feat/erp-oracle-integration`.
-- Even on the feature branch, Oracle connectivity reaches the host but queries fail with ORA-00942 until schema access is confirmed.
 - Production identity integration not yet connected to a real issuer or JWKS.
 - Broker delivery and worker consumption are not in place for outbox events.
 - Operational governance surfaces still need admin mutation paths.
