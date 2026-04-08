@@ -101,9 +101,9 @@ func TestQueryForEntityReturnsSnapshotSQL(t *testing.T) {
 	t.Parallel()
 
 	cases := map[string]string{
-		"products":  "FROM TGFPRO",
-		"prices":    "FROM TGFTAB",
-		"inventory": "FROM TGFEST",
+		"products":  "FROM METALPRD.TGFPRO",
+		"prices":    "FROM METALPRD.TGFTAB",
+		"inventory": "FROM METALPRD.TGFEST",
 	}
 
 	for entityName, wantFragment := range cases {

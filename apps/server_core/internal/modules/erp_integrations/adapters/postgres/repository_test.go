@@ -10,6 +10,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"metalshopping/server_core/internal/modules/erp_integrations/domain"
 )
 
 type repoScriptStepKind string
@@ -363,6 +365,140 @@ func TestReconciliationRepoResolvePriceContextCodeReturnsNotFoundWithoutError(t 
 	}
 	if got != "" {
 		t.Fatalf("expected empty canonical context on miss, got %q", got)
+	}
+
+	state.done()
+}
+
+func TestInstanceRepoListParsesEnabledEntitiesTextArray(t *testing.T) {
+	now := time.Date(2026, 4, 6, 12, 0, 0, 0, time.UTC)
+	db, state := newRepoScriptedDB(t,
+		repoScriptStep{kind: repoStepBegin},
+		repoScriptStep{kind: repoStepExec, query: "SELECT set_config('app.tenant_id', $1, true)", args: []any{"tenant-1"}},
+		repoScriptStep{
+			kind:    repoStepQuery,
+			query:   "FROM erp_integration_instances",
+			args:    []any{50, 0},
+			columns: []string{
+				"instance_id",
+				"tenant_id",
+				"connector_type",
+				"display_name",
+				"connection_kind",
+				"db_host",
+				"db_port",
+				"db_service_name",
+				"db_sid",
+				"db_username",
+				"db_password_secret_ref",
+				"connect_timeout_seconds",
+				"fetch_batch_size",
+				"entity_batch_size",
+				"enabled_entities",
+				"sync_schedule",
+				"status",
+				"created_at",
+				"updated_at",
+			},
+			rows: [][]driver.Value{{
+				"inst_1",
+				"tenant-1",
+				"oracle",
+				"Main Instance",
+				"oracle",
+				"db.local",
+				int64(1521),
+				"ORCL",
+				nil,
+				"user",
+				"secret-ref",
+				int64(10),
+				int64(500),
+				int64(250),
+				"{products,prices}",
+				nil,
+				"active",
+				now,
+				now,
+			}},
+		},
+		repoScriptStep{kind: repoStepCommit},
+	)
+
+	repo := &InstanceRepo{base{db: db}}
+	items, err := repo.List(context.Background(), "tenant-1", 50, 0)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("expected 1 instance, got %d", len(items))
+	}
+	if got := items[0].EnabledEntities; len(got) != 2 || got[0] != domain.EntityTypeProducts || got[1] != domain.EntityTypePrices {
+		t.Fatalf("unexpected enabled_entities: %#v", got)
+	}
+
+	state.done()
+}
+
+func TestRunRepoListParsesEntityScopeTextArray(t *testing.T) {
+	now := time.Date(2026, 4, 6, 12, 0, 0, 0, time.UTC)
+	db, state := newRepoScriptedDB(t,
+		repoScriptStep{kind: repoStepBegin},
+		repoScriptStep{kind: repoStepExec, query: "SELECT set_config('app.tenant_id', $1, true)", args: []any{"tenant-1"}},
+		repoScriptStep{
+			kind:    repoStepQuery,
+			query:   "FROM erp_sync_runs",
+			args:    []any{"inst_1", 50, 0},
+			columns: []string{
+				"run_id",
+				"tenant_id",
+				"instance_id",
+				"connector_type",
+				"run_mode",
+				"entity_scope",
+				"status",
+				"started_at",
+				"completed_at",
+				"promoted_count",
+				"warning_count",
+				"rejected_count",
+				"review_count",
+				"failure_summary",
+				"cursor_state",
+				"created_at",
+			},
+			rows: [][]driver.Value{{
+				"run_1",
+				"tenant-1",
+				"inst_1",
+				"oracle",
+				"full",
+				"{products}",
+				"pending",
+				nil,
+				nil,
+				int64(0),
+				int64(0),
+				int64(0),
+				int64(0),
+				nil,
+				nil,
+				now,
+			}},
+		},
+		repoScriptStep{kind: repoStepCommit},
+	)
+
+	repo := &RunRepo{base{db: db}}
+	items, err := repo.List(context.Background(), "tenant-1", "inst_1", 50, 0)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("expected 1 run, got %d", len(items))
+	}
+	if got := items[0].EntityScope; len(got) != 1 || got[0] != domain.EntityTypeProducts {
+		t.Fatalf("unexpected entity_scope: %#v", got)
 	}
 
 	state.done()

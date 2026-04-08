@@ -33,14 +33,16 @@ func (c Config) ConnectString() (string, error) {
 
 	query := u.Query()
 	if c.ServiceName != nil {
-		query.Set("service_name", strings.TrimSpace(*c.ServiceName))
+		u.Path = "/" + strings.TrimSpace(*c.ServiceName)
 	} else {
 		query.Set("sid", strings.TrimSpace(*c.SID))
 	}
 	if c.ConnectTimeoutSec > 0 {
 		query.Set("connect_timeout", strconv.Itoa(c.ConnectTimeoutSec))
 	}
-	u.RawQuery = query.Encode()
+	if encoded := query.Encode(); encoded != "" {
+		u.RawQuery = encoded
+	}
 	return u.String(), nil
 }
 

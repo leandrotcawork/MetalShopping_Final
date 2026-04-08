@@ -25,7 +25,7 @@ func TestMarkEntityStepFailedKeepsBatchCheckpoint(t *testing.T) {
 		// MarkBatch
 		scriptStep{kind: stepBegin},
 		scriptStep{kind: stepExec, query: "SELECT set_config('app.tenant_id', $1, true)", args: []any{"tenant-1"}},
-		scriptStep{kind: stepExec, query: "SET batch_ordinal = $4", args: []any{"run-1", "products", "tenant-1", 3, &cursor}},
+		scriptStep{kind: stepExec, query: "SET batch_ordinal = $3", args: []any{"run-1", "products", 3, &cursor}},
 		scriptStep{kind: stepCommit},
 		// MarkFailed
 		scriptStep{kind: stepBegin},

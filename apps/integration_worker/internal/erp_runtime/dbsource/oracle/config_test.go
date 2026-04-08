@@ -61,7 +61,7 @@ func TestConnectStringBuildsServiceNameDsn(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ConnectString returned error: %v", err)
 	}
-	for _, want := range []string{"db.example.internal", "1521", "service_name=ORCL", "erp_user", "erp_secret", "connect_timeout=12"} {
+	for _, want := range []string{"db.example.internal", "1521", "/ORCL", "erp_user", "erp_secret", "connect_timeout=12"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("ConnectString() = %q, missing %q", got, want)
 		}

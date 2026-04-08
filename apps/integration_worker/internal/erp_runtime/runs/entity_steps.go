@@ -78,13 +78,13 @@ func (s *EntityStepStore) MarkBatch(ctx context.Context, tenantID, runID string,
 
 	const q = `
 UPDATE erp_run_entity_steps
-SET batch_ordinal = $4,
-    source_cursor = $5
+SET batch_ordinal = $3,
+    source_cursor = $4
 WHERE tenant_id = current_tenant_id()
   AND run_id = $1
   AND entity_type = $2
   AND status IN ('running', 'failed', 'completed', 'skipped_due_to_dependency')`
-	if _, err := tx.ExecContext(ctx, q, runID, string(entity), tenantID, batchOrdinal, cursor); err != nil {
+	if _, err := tx.ExecContext(ctx, q, runID, string(entity), batchOrdinal, cursor); err != nil {
 		return fmt.Errorf("mark entity batch: %w", err)
 	}
 	return tx.Commit()

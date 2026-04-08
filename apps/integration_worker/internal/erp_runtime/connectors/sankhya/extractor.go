@@ -59,21 +59,19 @@ SELECT
   PRO.CODGRUPOPROD,
   PRO.AD_STATUS,
   PRO.AD_COMPETITIVO
-FROM TGFPRO PRO
+FROM METALPRD.TGFPRO PRO
 ORDER BY PRO.CODPROD`
 
 	pricesSnapshotQuery = `
 SELECT
-  TAB.NUTAB,
+  EXC.NUTAB,
   TAB.CODTAB,
-  TAB.NOMETAB,
-  NTA.DTVIGOR,
+  EXC.DHALTREG AS DTVIGOR,
   EXC.CODPROD,
   EXC.VLRVENDA
-FROM TGFTAB TAB
-LEFT JOIN TGFNTA NTA ON NTA.NUTAB = TAB.NUTAB
-LEFT JOIN TGFEXC EXC ON EXC.NUTAB = TAB.NUTAB
-ORDER BY TAB.NUTAB, NTA.DTVIGOR, EXC.CODPROD`
+FROM METALPRD.TGFTAB TAB
+JOIN METALPRD.TGFEXC EXC ON EXC.NUTAB = TAB.NUTAB
+ORDER BY EXC.NUTAB, EXC.DHALTREG, EXC.CODPROD`
 
 	inventorySnapshotQuery = `
 SELECT
@@ -83,7 +81,7 @@ SELECT
   EST.ESTOQUE,
   EST.RESERVADO,
   (NVL(EST.ESTOQUE, 0) - NVL(EST.RESERVADO, 0)) AS RAW_AVAILABLE_POSITION
-FROM TGFEST EST
+FROM METALPRD.TGFEST EST
 ORDER BY EST.CODPROD, EST.CODEMP, EST.CODLOCAL`
 
 	salesSnapshotQuery = `
@@ -93,7 +91,7 @@ SELECT
   CAB.DTNEG,
   CAB.VLRNOTA,
   CAB.TIPMOV
-FROM TGFCAB CAB
+FROM METALPRD.TGFCAB CAB
 ORDER BY CAB.NUNOTA`
 
 	customersSnapshotQuery = `
@@ -103,7 +101,7 @@ SELECT
   PAR.CGC_CPF,
   PAR.EMAIL,
   PAR.CLIENTE
-FROM TGFPAR PAR
+FROM METALPRD.TGFPAR PAR
 ORDER BY PAR.CODPARC`
 
 	suppliersSnapshotQuery = `
@@ -113,7 +111,7 @@ SELECT
   PAR.CGC_CPF,
   PAR.EMAIL,
   PAR.FORNECEDOR
-FROM TGFPAR PAR
+FROM METALPRD.TGFPAR PAR
 ORDER BY PAR.CODPARC`
 )
 
@@ -144,7 +142,10 @@ func (e *Extractor) Extract(ctx context.Context, req erp_runtime.ExtractRequest,
 		return nil, fmt.Errorf("sankhya: live extraction requires a query runner")
 	}
 
-	spec := dbsource.QuerySpec{SQL: cfg.query}
+	spec := dbsource.QuerySpec{
+		SQL:     cfg.query,
+		Timeout: 5 * time.Minute,
+	}
 	records := make([]*erp_runtime.RawRecord, 0, 64)
 	err := runner.Query(ctx, spec, func(row dbsource.RowReader) error {
 		payload, sourceID, err := e.mapper.MapRow(req.Entity, row, cfg.sourceIDKeys)

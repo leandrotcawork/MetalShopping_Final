@@ -128,6 +128,9 @@ WHERE instance_id = $1
 	var conn erp_runtime.ExtractConnection
 	var serviceName sql.NullString
 	var sid sql.NullString
+	var connectTimeout sql.NullInt64
+	var fetchBatchSize sql.NullInt64
+	var entityBatchSize sql.NullInt64
 	if err := tx.QueryRowContext(ctx, q, instanceID).Scan(
 		&conn.Kind,
 		&conn.Host,
@@ -136,9 +139,9 @@ WHERE instance_id = $1
 		&sid,
 		&conn.Username,
 		&conn.PasswordSecretRef,
-		&conn.ConnectTimeoutSec,
-		&conn.FetchBatchSize,
-		&conn.EntityBatchSize,
+		&connectTimeout,
+		&fetchBatchSize,
+		&entityBatchSize,
 	); err != nil {
 		return erp_runtime.ExtractConnection{}, fmt.Errorf("instance %s: %w", instanceID, err)
 	}
@@ -147,6 +150,15 @@ WHERE instance_id = $1
 	}
 	if sid.Valid {
 		conn.SID = &sid.String
+	}
+	if connectTimeout.Valid {
+		conn.ConnectTimeoutSec = int(connectTimeout.Int64)
+	}
+	if fetchBatchSize.Valid {
+		conn.FetchBatchSize = int(fetchBatchSize.Int64)
+	}
+	if entityBatchSize.Valid {
+		conn.EntityBatchSize = int(entityBatchSize.Int64)
 	}
 	if err := tx.Commit(); err != nil {
 		return erp_runtime.ExtractConnection{}, err
