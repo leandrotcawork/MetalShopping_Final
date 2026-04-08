@@ -128,6 +128,7 @@
 - non-promotable ERP reconciliation paths now route into review flow (`review_required` + visible review items) with idempotent repository semantics for multi-poller retries
 - ERP Oracle runtime baseline advanced: `godror` query runner + typed row reader, Sankhya extraction moved to query-runner path, run/entity checkpoint persistence added (`erp_run_entity_steps`, raw/staging `batch_ordinal`), and worker run execution now uses structured Oracle connection fields instead of legacy `connection_ref`
 - ERP run HTTP payload now includes `cursor_state` and contract schema updated accordingly
+- ERP Oracle integration live acceptance completed on `feat/erp-oracle-integration` with Gate A read-only proof and Gate B canonical write proof for `products`, `prices`, and `inventory`
 
 ## Next
 

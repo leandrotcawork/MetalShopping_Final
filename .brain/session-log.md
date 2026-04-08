@@ -1,20 +1,22 @@
-# Last Session - MetalShopping Final
-> Date: 2026-04-04 | Session: #1
+# Last Session — MetalShopping Final
+> Date: 2026-04-08 | Session: #5
 
 ## What Was Accomplished
-- Initialized the Nexus brain for MetalShopping
-- Generated system pulse from the current codebase and planning docs
-- Rebuilt roadmap to reflect the full master plan layers and domain tasks
+- Executed Gate B ERP Oracle run and confirmed completion with promotion/review counts.
+- Captured canonical catalog, pricing, and inventory evidence and updated the acceptance workbook.
+- Committed Gate B acceptance evidence and fixed ERP integration runtime tests.
+- Ran required verifications: Go tests, contract validation, and contract artifact generation.
+- Updated progress tracking to mark ERP Oracle acceptance complete.
 
 ## What Changed in the System
-- Added .brain/ directory with system-pulse, roadmap, session log, and decision index
-- Replaced the placeholder roadmap with an 8-phase, 36-task roadmap derived from METALSHOPPING_MASTER_PLAN
+- ERP integration runtime tests now expect schema-qualified Sankhya sources.
+- Acceptance evidence recorded in docs and progress updated.
 
 ## Decisions Made This Session
-- None (initialization only)
+- None
 
-## What's Immediately Next
-- Execute or detail T-001 ERP Integration against the approved master plan
+## What’s Immediately Next
+- Update Nexus brain, commit progress/brain updates, and merge `feat/erp-oracle-integration` to `main`.
 
 ## Open Questions
 - None

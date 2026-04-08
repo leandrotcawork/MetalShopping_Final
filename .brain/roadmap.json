@@ -1,23 +1,23 @@
 {
   "project": "MetalShopping Final",
-  "last_updated": "2026-04-04",
-  "current_phase_id": "phase-1",
+  "last_updated": "2026-04-08",
+  "current_phase_id": "phase-2",
   "summary": {
     "total_phases": 8,
-    "completed_phases": 0,
+    "completed_phases": 1,
     "total_tasks": 36,
-    "completed_tasks": 5
+    "completed_tasks": 6
   },
   "phases": [
     {
       "id": "phase-1",
       "name": "Layer 0 - Data Foundation",
       "description": "Establish ERP integration and maintain canonical commerce foundations.",
-      "status": "in_progress",
+      "status": "completed",
       "started_at": null,
-      "completed_at": null,
+      "completed_at": "2026-04-08T17:11:26.7060638-03:00",
       "tasks": [
-        {"id":"T-001","title":"0.1 ERP Integration","description":"Sync raw Sankhya ERP data into MetalShopping canonical tables.","status":"planned","priority":"high","depends_on":[],"started_at":null,"completed_at":null,"notes":"Critical dependency; detailed in master plan section 0.1."},
+        {"id":"T-001","title":"0.1 ERP Integration","description":"Sync raw Sankhya ERP data into MetalShopping canonical tables.","status":"done","priority":"high","depends_on":[],"started_at":null,"completed_at":"2026-04-08T17:11:26.7060638-03:00","notes":"Gate A/Gate B acceptance completed; canonical writes validated."},
         {"id":"T-002","title":"0.2 Catalog","description":"Canonical product identity, taxonomy, identifiers, attributes, and status.","status":"done","priority":"high","depends_on":[],"started_at":null,"completed_at":null,"notes":"Master plan marks as IMPLEMENTED."},
         {"id":"T-003","title":"0.3 Pricing","description":"Internal price, replacement cost, average cost, history, and pricing rules.","status":"done","priority":"high","depends_on":["T-002"],"started_at":null,"completed_at":null,"notes":"Master plan marks as IMPLEMENTED."},
         {"id":"T-004","title":"0.4 Inventory","description":"Current positions, position history, on-hand quantity, and last movement dates.","status":"done","priority":"high","depends_on":["T-002"],"started_at":null,"completed_at":null,"notes":"Master plan marks as IMPLEMENTED."},

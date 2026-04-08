@@ -1,5 +1,5 @@
 # System Pulse - MetalShopping Final
-> Auto-updated: 2026-04-04 | Session: #1
+> Auto-updated: 2026-04-08 | Session: #5
 
 ## Project Identity
 - **Name:** MetalShopping Final
@@ -35,25 +35,24 @@ ADRs, and implementation planning.
 - Frontend uses SDK runtime and design tokens from shared UI.
 
 ## Current Phase
-- **Roadmap phase:** Phase 1 - Layer 0 Data Foundation
-- **Phase goal:** Establish ERP integration (0.1) while preserving the implemented canonical foundations.
-- **Last completed task:** Layer 0 foundations 0.2-0.6 are marked implemented in the master plan.
-- **Currently working on:** T-001 0.1 ERP Integration (Oracle runtime tranche in progress)
-- **Next up:** T-007 1.1 Analytics Home after ERP data is running
-- **Blockers:** Live Oracle/Sankhya connectivity still pending environment execution test (runtime path now wired)
+- **Roadmap phase:** Phase 2 - Layer 1 Operational Intelligence
+- **Phase goal:** Build the first operational intelligence surfaces on top of validated ERP data.
+- **Last completed task:** T-001 0.1 ERP Integration (Gate A + Gate B acceptance complete).
+- **Currently working on:** T-007 1.1 Analytics Home
+- **Next up:** T-008 1.2 Pricing Intelligence
+- **Blockers:** None
 
 ## Recent Changes (last 3-5 sessions)
-- 2026-04-05: Implemented worker Oracle query runner (`godror`) with typed row-reader and tightened test/runtime driver behavior.
-- 2026-04-05: Refactored Sankhya connector to use generic query-runner extraction path with fixture-compatible row-reader tests.
+- 2026-04-08: Gate B ERP Oracle run completed with canonical writes validated for products, prices, and inventory.
+- 2026-04-08: Acceptance workbook updated and committed with Gate B evidence.
+- 2026-04-08: ERP integration runtime tests and contract generation verified in the Oracle worktree.
 - 2026-04-05: Added ERP run entity-step checkpoints and raw/staging batch ordinal persistence (`0038`, `0039`).
 - 2026-04-05: Updated worker execution to structured connection config and dependency-aware entity flow.
-- 2026-04-05: Exposed `cursor_state` in ERP run HTTP response and schema.
 
 ## Active Architectural Decisions
-- None listed here. See docs/adrs/ for the official ADR set.
+- ADR-001: Use godror plus a typed query-runner API for Oracle ERP connectivity.
 
 ## Known Risks and Tech Debt
-- ERP integration not running yet; all intelligence depends on it.
 - Production identity integration not yet connected to a real issuer or JWKS.
 - Broker delivery and worker consumption are not in place for outbox events.
 - Operational governance surfaces still need admin mutation paths.
