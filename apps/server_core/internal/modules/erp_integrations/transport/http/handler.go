@@ -63,11 +63,24 @@ func (h *Handler) listInstances(w http.ResponseWriter, r *http.Request) {
 }
 
 type createInstanceRequest struct {
-	ConnectorType   string   `json:"connector_type"`
-	DisplayName     string   `json:"display_name"`
-	ConnectionRef   string   `json:"connection_ref"`
-	EnabledEntities []string `json:"enabled_entities"`
-	SyncSchedule    *string  `json:"sync_schedule,omitempty"`
+	ConnectorType   string             `json:"connector_type"`
+	DisplayName     string             `json:"display_name"`
+	Connection      connectionRequest  `json:"connection"`
+	EnabledEntities []string           `json:"enabled_entities"`
+	SyncSchedule    *string            `json:"sync_schedule,omitempty"`
+}
+
+type connectionRequest struct {
+	Kind              string  `json:"kind"`
+	Host              string  `json:"host"`
+	Port              int     `json:"port"`
+	ServiceName       *string `json:"service_name,omitempty"`
+	SID               *string `json:"sid,omitempty"`
+	Username          string  `json:"username"`
+	PasswordSecretRef string  `json:"password_secret_ref"`
+	ConnectTimeoutSec *int    `json:"connect_timeout_seconds,omitempty"`
+	FetchBatchSize    *int    `json:"fetch_batch_size,omitempty"`
+	EntityBatchSize   *int    `json:"entity_batch_size,omitempty"`
 }
 
 func (h *Handler) createInstance(w http.ResponseWriter, r *http.Request) {
@@ -92,7 +105,18 @@ func (h *Handler) createInstance(w http.ResponseWriter, r *http.Request) {
 		PrincipalID:     principal.SubjectID,
 		ConnectorType:   domain.ConnectorType(req.ConnectorType),
 		DisplayName:     req.DisplayName,
-		ConnectionRef:   req.ConnectionRef,
+		Connection: domain.InstanceConnectionConfig{
+			Kind:              domain.ConnectionKind(req.Connection.Kind),
+			Host:              req.Connection.Host,
+			Port:              req.Connection.Port,
+			ServiceName:       req.Connection.ServiceName,
+			SID:               req.Connection.SID,
+			Username:          req.Connection.Username,
+			PasswordSecretRef: req.Connection.PasswordSecretRef,
+			ConnectTimeoutSec: req.Connection.ConnectTimeoutSec,
+			FetchBatchSize:    req.Connection.FetchBatchSize,
+			EntityBatchSize:   req.Connection.EntityBatchSize,
+		},
 		EnabledEntities: enabledEntities,
 		SyncSchedule:    req.SyncSchedule,
 	})
@@ -316,7 +340,13 @@ func (h *Handler) writeServiceError(w http.ResponseWriter, r *http.Request, err 
 		errors.Is(err, domain.ErrEmptyEnabledEntities),
 		errors.Is(err, domain.ErrEmptyEntityScope),
 		errors.Is(err, domain.ErrEmptyTenantID),
-		errors.Is(err, domain.ErrInvalidInstanceStatus):
+		errors.Is(err, domain.ErrInvalidInstanceStatus),
+		errors.Is(err, domain.ErrInvalidConnectionKind),
+		errors.Is(err, domain.ErrEmptyOracleHost),
+		errors.Is(err, domain.ErrEmptyOracleUsername),
+		errors.Is(err, domain.ErrEmptyPasswordSecretRef),
+		errors.Is(err, domain.ErrInvalidOracleConnectionTarget),
+		errors.Is(err, domain.ErrInvalidOraclePort):
 		writeAPIError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error(), traceID)
 	default:
 		writeAPIError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "An unexpected error occurred", traceID)
@@ -337,11 +367,32 @@ func mapInstance(i *domain.IntegrationInstance) map[string]any {
 		"tenant_id":        i.TenantID,
 		"connector_type":   string(i.ConnectorType),
 		"display_name":     i.DisplayName,
-		"connection_ref":   i.ConnectionRef,
 		"enabled_entities": entities,
 		"status":           string(i.Status),
 		"created_at":       i.CreatedAt.Format(time.RFC3339),
 		"updated_at":       i.UpdatedAt.Format(time.RFC3339),
+		"connection": map[string]any{
+			"kind":                string(i.Connection.Kind),
+			"host":                i.Connection.Host,
+			"port":                i.Connection.Port,
+			"username":            i.Connection.Username,
+			"password_secret_ref": i.Connection.PasswordSecretRef,
+		},
+	}
+	if i.Connection.ServiceName != nil {
+		m["connection"].(map[string]any)["service_name"] = *i.Connection.ServiceName
+	}
+	if i.Connection.SID != nil {
+		m["connection"].(map[string]any)["sid"] = *i.Connection.SID
+	}
+	if i.Connection.ConnectTimeoutSec != nil {
+		m["connection"].(map[string]any)["connect_timeout_seconds"] = *i.Connection.ConnectTimeoutSec
+	}
+	if i.Connection.FetchBatchSize != nil {
+		m["connection"].(map[string]any)["fetch_batch_size"] = *i.Connection.FetchBatchSize
+	}
+	if i.Connection.EntityBatchSize != nil {
+		m["connection"].(map[string]any)["entity_batch_size"] = *i.Connection.EntityBatchSize
 	}
 	if i.SyncSchedule != nil {
 		m["sync_schedule"] = *i.SyncSchedule

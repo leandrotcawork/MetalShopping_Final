@@ -129,6 +129,45 @@ func buildHandler(instanceRepo ports.InstanceRepository, active bool, createErr 
 	return erphttp.NewHandler(svc)
 }
 
+func stringPtr(v string) *string { return &v }
+
+func connectionPayload() map[string]any {
+	return map[string]any{
+		"kind":                "oracle",
+		"host":                "10.55.10.101",
+		"port":                1521,
+		"service_name":        "ORCL",
+		"username":            "leandroth",
+		"password_secret_ref": "erp/sankhya/password",
+	}
+}
+
+func stringPtr(v string) *string { return &v }
+
+func connectionPayload() map[string]any {
+	return map[string]any{
+		"kind":                "oracle",
+		"host":                "10.55.10.101",
+		"port":                1521,
+		"service_name":        "ORCL",
+		"username":            "leandroth",
+		"password_secret_ref": "erp/sankhya/password",
+	}
+}
+
+func stringPtr(v string) *string { return &v }
+
+func connectionPayload() map[string]any {
+	return map[string]any{
+		"kind":                "oracle",
+		"host":                "10.55.10.101",
+		"port":                1521,
+		"service_name":        "ORCL",
+		"username":            "leandroth",
+		"password_secret_ref": "erp/sankhya/password",
+	}
+}
+
 // injectAuth injects a principal and tenant into the request context so that
 // the handler's requirePrincipalAndTenant check passes.
 func injectAuth(r *http.Request) *http.Request {
@@ -155,7 +194,7 @@ func TestCreateInstance_201(t *testing.T) {
 	body, _ := json.Marshal(map[string]any{
 		"connector_type":   "sankhya",
 		"display_name":     "My ERP",
-		"connection_ref":   "ref-001",
+		"connection":       connectionPayload(),
 		"enabled_entities": []string{"products"},
 	})
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/erp/instances", bytes.NewReader(body))
@@ -178,7 +217,7 @@ func TestCreateInstance_409(t *testing.T) {
 	body, _ := json.Marshal(map[string]any{
 		"connector_type":   "sankhya",
 		"display_name":     "My ERP",
-		"connection_ref":   "ref-001",
+		"connection":       connectionPayload(),
 		"enabled_entities": []string{"products"},
 	})
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/erp/instances", bytes.NewReader(body))
@@ -196,9 +235,9 @@ func TestCreateInstance_409(t *testing.T) {
 func TestListInstances_Paginated(t *testing.T) {
 	// Seed 3 instances.
 	instances := []*domain.IntegrationInstance{
-		{InstanceID: "inst_a", TenantID: "tenant-1", ConnectorType: domain.ConnectorTypeSankhya, DisplayName: "A", ConnectionRef: "r", EnabledEntities: []domain.EntityType{domain.EntityTypeProducts}, Status: domain.InstanceStatusActive, CreatedAt: time.Now(), UpdatedAt: time.Now()},
-		{InstanceID: "inst_b", TenantID: "tenant-1", ConnectorType: domain.ConnectorTypeSankhya, DisplayName: "B", ConnectionRef: "r", EnabledEntities: []domain.EntityType{domain.EntityTypeProducts}, Status: domain.InstanceStatusActive, CreatedAt: time.Now(), UpdatedAt: time.Now()},
-		{InstanceID: "inst_c", TenantID: "tenant-1", ConnectorType: domain.ConnectorTypeSankhya, DisplayName: "C", ConnectionRef: "r", EnabledEntities: []domain.EntityType{domain.EntityTypeProducts}, Status: domain.InstanceStatusActive, CreatedAt: time.Now(), UpdatedAt: time.Now()},
+	{InstanceID: "inst_a", TenantID: "tenant-1", ConnectorType: domain.ConnectorTypeSankhya, DisplayName: "A", Connection: domain.InstanceConnectionConfig{Kind: domain.ConnectionKindOracle, Host: "10.55.10.101", Port: 1521, ServiceName: stringPtr("ORCL"), Username: "leandroth", PasswordSecretRef: "erp/sankhya/password"}, EnabledEntities: []domain.EntityType{domain.EntityTypeProducts}, Status: domain.InstanceStatusActive, CreatedAt: time.Now(), UpdatedAt: time.Now()},
+	{InstanceID: "inst_b", TenantID: "tenant-1", ConnectorType: domain.ConnectorTypeSankhya, DisplayName: "B", Connection: domain.InstanceConnectionConfig{Kind: domain.ConnectionKindOracle, Host: "10.55.10.101", Port: 1521, ServiceName: stringPtr("ORCL"), Username: "leandroth", PasswordSecretRef: "erp/sankhya/password"}, EnabledEntities: []domain.EntityType{domain.EntityTypeProducts}, Status: domain.InstanceStatusActive, CreatedAt: time.Now(), UpdatedAt: time.Now()},
+	{InstanceID: "inst_c", TenantID: "tenant-1", ConnectorType: domain.ConnectorTypeSankhya, DisplayName: "C", Connection: domain.InstanceConnectionConfig{Kind: domain.ConnectionKindOracle, Host: "10.55.10.101", Port: 1521, ServiceName: stringPtr("ORCL"), Username: "leandroth", PasswordSecretRef: "erp/sankhya/password"}, EnabledEntities: []domain.EntityType{domain.EntityTypeProducts}, Status: domain.InstanceStatusActive, CreatedAt: time.Now(), UpdatedAt: time.Now()},
 	}
 	repo := &handlerStubInstanceRepo{instances: instances}
 	h := buildHandler(repo, false, nil)
@@ -280,6 +319,40 @@ func TestListReviewItems_Paginated(t *testing.T) {
 	}
 	if _, ok := first["reconciliation_output"].(map[string]any); !ok {
 		t.Fatalf("expected reconciliation_output object, got %#v", first["reconciliation_output"])
+	}
+}
+
+func TestCreateInstance_DecodesStructuredConnection(t *testing.T) {
+	h := buildHandler(nil, false, nil)
+	mux := newMux(h)
+
+	body, _ := json.Marshal(map[string]any{
+		"connector_type":   "sankhya",
+		"display_name":     "My ERP",
+		"connection":       connectionPayload(),
+		"enabled_entities": []string{"products"},
+	})
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/erp/instances", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = injectAuth(req)
+
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d body=%s", rr.Code, rr.Body.String())
+	}
+
+	var resp map[string]any
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	connection, ok := resp["connection"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected connection object, got %#v", resp["connection"])
+	}
+	if got := connection["password_secret_ref"]; got != "erp/sankhya/password" {
+		t.Fatalf("expected password secret ref, got %#v", got)
 	}
 }
 

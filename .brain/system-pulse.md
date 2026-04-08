@@ -1,5 +1,5 @@
 # System Pulse - MetalShopping Final
-> Auto-updated: 2026-04-04 | Session: #1
+> Auto-updated: 2026-04-08 | Session: #4
 
 ## Project Identity
 - **Name:** MetalShopping Final
@@ -36,20 +36,24 @@ ADRs, and implementation planning.
 
 ## Current Phase
 - **Roadmap phase:** Phase 1 - Layer 0 Data Foundation
-- **Phase goal:** Establish ERP integration (0.1) while preserving the implemented canonical foundations.
-- **Last completed task:** Layer 0 foundations 0.2-0.6 are marked implemented in the master plan.
+- **Phase goal:** Finish and validate ERP integration before advancing to operational intelligence.
+- **Last completed task:** Layer 0 foundations 0.2-0.6 remain implemented.
 - **Currently working on:** T-001 0.1 ERP Integration
-- **Next up:** T-007 1.1 Analytics Home after ERP data is running
-- **Blockers:** ERP integration is still not running against Sankhya
+- **Next up:** Re-run Gate A after qualifying METALPRD table access and confirm ERP snapshot works
+- **Blockers:** Oracle user access to METALPRD tables may be incomplete (ORA-00942)
 
 ## Recent Changes (last 3-5 sessions)
+- 2026-04-08: Installed Oracle Instant Client locally, fixed ERP instance list scanning, updated Oracle DSN, and discovered METALPRD schema requirement.
+- 2026-04-06: Corrected roadmap state after confirming Oracle ERP work is still on `feat/erp-oracle-integration` and not live-validated.
+- 2026-04-06: Implemented Oracle query runner, ERP run checkpoints, structured connection, and regenerated contracts on the feature branch.
 - 2026-04-04: Initialized Nexus brain and captured system pulse.
 
 ## Active Architectural Decisions
-- None listed here. See docs/adrs/ for the official ADR set.
+- ADR-001: Use godror plus a typed query-runner API for Oracle ERP connectivity.
 
 ## Known Risks and Tech Debt
-- ERP integration not running yet; all intelligence depends on it.
+- ERP integration is not complete on `main`; the full Oracle runtime remains unmerged on `feat/erp-oracle-integration`.
+- Even on the feature branch, Oracle connectivity reaches the host but queries fail with ORA-00942 until schema access is confirmed.
 - Production identity integration not yet connected to a real issuer or JWKS.
 - Broker delivery and worker consumption are not in place for outbox events.
 - Operational governance surfaces still need admin mutation paths.

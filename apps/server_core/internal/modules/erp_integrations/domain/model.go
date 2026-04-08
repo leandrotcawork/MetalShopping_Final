@@ -87,6 +87,17 @@ func (r RunStatus) IsValid() bool {
 		r == RunStatusPartial
 }
 
+// ConnectionKind identifies the transport-specific connection configuration.
+type ConnectionKind string
+
+const (
+	ConnectionKindOracle ConnectionKind = "oracle"
+)
+
+func (c ConnectionKind) IsValid() bool {
+	return c == ConnectionKindOracle
+}
+
 // ReviewSeverity classifies the urgency of a review item.
 type ReviewSeverity string
 
@@ -185,12 +196,27 @@ type IntegrationInstance struct {
 	TenantID        string
 	ConnectorType   ConnectorType
 	DisplayName     string
-	ConnectionRef   string
+	Connection      InstanceConnectionConfig
 	EnabledEntities []EntityType
 	SyncSchedule    *string
 	Status          InstanceStatus
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
+}
+
+// InstanceConnectionConfig stores the structured Oracle connection metadata for
+// an ERP integration instance.
+type InstanceConnectionConfig struct {
+	Kind              ConnectionKind
+	Host              string
+	Port              int
+	ServiceName       *string
+	SID               *string
+	Username          string
+	PasswordSecretRef string
+	ConnectTimeoutSec *int
+	FetchBatchSize    *int
+	EntityBatchSize   *int
 }
 
 // ValidateForWrite checks that all required fields are present and valid.
@@ -212,8 +238,35 @@ func (i *IntegrationInstance) ValidateForWrite() error {
 			return ErrInvalidEntityType
 		}
 	}
+	if !i.Connection.Kind.IsValid() {
+		return ErrInvalidConnectionKind
+	}
+	if strings.TrimSpace(i.Connection.Host) == "" {
+		return ErrEmptyOracleHost
+	}
+	if i.Connection.Port <= 0 {
+		return ErrInvalidOraclePort
+	}
+	if strings.TrimSpace(i.Connection.Username) == "" {
+		return ErrEmptyOracleUsername
+	}
+	if strings.TrimSpace(i.Connection.PasswordSecretRef) == "" {
+		return ErrEmptyPasswordSecretRef
+	}
+	if err := validateOracleTarget(i.Connection.ServiceName, i.Connection.SID); err != nil {
+		return err
+	}
 	if !i.Status.IsValid() {
 		return ErrInvalidInstanceStatus
+	}
+	return nil
+}
+
+func validateOracleTarget(serviceName, sid *string) error {
+	hasService := serviceName != nil && strings.TrimSpace(*serviceName) != ""
+	hasSID := sid != nil && strings.TrimSpace(*sid) != ""
+	if hasService == hasSID {
+		return ErrInvalidOracleConnectionTarget
 	}
 	return nil
 }

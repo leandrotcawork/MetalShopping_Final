@@ -5,7 +5,7 @@ info:
   summary: "Public HTTP contract for MetalShopping ERP integration control plane"
   description: >
     Draft OpenAPI contract for tenant-aware ERP integration instance management,
-    sync run operations, and review queue handling.
+    structured Oracle connection metadata, sync run operations, and review queue handling.
   x-metalshopping:
     contract_name: "erp_integrations_v1"
     contract_status: "draft"
@@ -52,7 +52,7 @@ paths:
                 $ref: "../jsonschema/common_error_v1.schema.json"
     post:
       operationId: createErpIntegrationInstance
-      summary: "Create an ERP integration instance for the authenticated tenant"
+      summary: "Create an ERP integration instance with structured Oracle connection metadata for the authenticated tenant"
       requestBody:
         required: true
         content:
@@ -61,7 +61,7 @@ paths:
               $ref: "../jsonschema/erp_create_instance_request_v1.schema.json"
       responses:
         "201":
-          description: "Instance created"
+          description: "Instance created with structured Oracle connection metadata"
           content:
             application/json:
               schema:
